@@ -1,5 +1,7 @@
 class Device(object):
-    pass
+
+    def __init__(self, serial: str):
+        self.serial = serial
 
 
 if __name__ == '__main__':
