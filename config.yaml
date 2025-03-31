@@ -1,0 +1,20 @@
+Memory:
+  # 获取频率
+  speed: 1
+  # 摘要标签
+  label: 摘要标签
+
+Report:
+  # 前台峰值
+  fg-max: 0.00
+  # 前台均值
+  fg-avg: 0.00
+  # 后台峰值
+  bg-max: 0.00
+  # 后台均值
+  bg-avg: 0.00
+  # 报告标题
+  headline: 测试报告
+  # 准出标准
+  criteria: 准出标准
+

@@ -1,0 +1,5 @@
+PyYAML~=6.0.2
+aiofiles~=24.1.0
+loguru~=0.7.3
+rich~=14.0.0
+bokeh~=3.7.2
