@@ -1,5 +1,5 @@
 import argparse
-from engine import const
+from memnova import const
 
 
 class Parser(object):

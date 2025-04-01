@@ -8,7 +8,7 @@ import aiosqlite
 from loguru import logger
 from rich.console import Console
 from rich.logging import RichHandler
-from engine import const
+from memnova import const
 
 
 class _MemrixBaseError(BaseException):

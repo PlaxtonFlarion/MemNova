@@ -24,7 +24,7 @@ import aiofiles
 import aiosqlite
 from loguru import logger
 from collections import Counter
-from engine import const
+from memnova import const
 from engine.manage import Manage
 from engine.parser import Parser
 from engine.tackle import Config, Log, DataBase, Terminal, RAM, MemrixError, ReadFile
