@@ -22,12 +22,21 @@ import shutil
 import asyncio
 import aiofiles
 import aiosqlite
+import uiautomator2
 from loguru import logger
 from collections import Counter
+from rich.console import Console
+from engine.device import Device
 from memnova import const
 from engine.manage import Manage
 from engine.parser import Parser
-from engine.tackle import Config, Log, DataBase, Terminal, RAM, MemrixError, ReadFile
+from engine.analyzer import Analyzer
+from engine.tackle import (
+    Config, Grapher, DataBase,
+    Terminal, RAM, MemrixError, ReadFile
+)
+
+console: typing.Optional["Console"] = Console()
 
 
 class ToolKit(object):
@@ -60,12 +69,19 @@ class ToolKit(object):
             return self.transform(find.group(1))
 
 
+class Player(object):
+    pass
+
+
 class Memrix(object):
 
     data_insert: int
     file_folder: str
-    start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-    close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+
+    exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+    dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+
+    dumped: typing.Optional["asyncio.Event"] = asyncio.Event()
 
     def __init__(
             self,
@@ -77,7 +93,7 @@ class Memrix(object):
     ):
         self.memory, self.script, self.report = memory, script, report
 
-        sylora, self.serial, *_ = args
+        sylora, *_ = args
 
         self.template = kwargs["template"]
         self.src_total_place = kwargs["src_total_place"]
@@ -86,7 +102,8 @@ class Memrix(object):
         if self.report:
             folder: str = sylora
         else:
-            folder: str = time.strftime("%Y%m%d%H%M%S")
+            self.before_time = time.time()
+            folder: str = time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
             self.var_action = sylora
 
         self.total_dirs = os.path.join(self.src_total_place, "Memory_Folder")
@@ -96,7 +113,20 @@ class Memrix(object):
         self.logs_paths = os.path.join(self.group_dirs, f"logs_{folder}.log")
         self.team_paths = os.path.join(self.group_dirs, f"team_{folder}.txt")
 
-    async def dump_task(self):
+    def clean_up(self, *_, **__) -> None:
+        loop = asyncio.get_running_loop()
+        loop.create_task(self.dump_task_close())
+
+    async def dump_task_close(self) -> None:
+        self.dump_close_event.set()
+        await self.dumped.wait()
+        head = f"{self.config.label} -> {self.file_folder} -> "
+        tail = f"获取: {self.data_insert} -> 耗时: {round((time.time() - self.before_time) / 60, 2)} 分钟"
+        logger.info(f"{head + tail}")
+        logger.info(f"{self.group_dirs}")
+        logger.info(f"^* Dump Close *^")
+
+    async def dump_task_start(self, device: "Device"):
 
         async def flash_memory(pid):
             cmd = ["adb", "-s", device.serial, "shell", "dumpsys", "meminfo", self.var_action]
@@ -152,23 +182,29 @@ class Memrix(object):
             return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}
 
         async def flash_memory_launch():
-            start_time = time.time()
+            self.dumped.clear()
 
-            if not (pids := await device.pid_value(self.var_action)):
-                return logger.info(f"{pids}\n")
+            dump_start_time = time.time()
 
             logger.info(device)
+
+            if not (pids := await device.pid_value(self.var_action)):
+                self.dumped.set()
+                return logger.info(f"Process={pids}\n")
+
             logger.info({"Process": pids.member})
             remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
 
             uid = uid if (uid := await device.uid_value(self.var_action)) else 0
 
             if not pids.member:
+                self.dumped.set()
                 return logger.info(f"[{pids.member}]\n")
 
             if not all(info_list := await asyncio.gather(
                     device.adj_value(list(pids.member.keys())[0]), device.act_value()
             )):
+                self.dumped.set()
                 return logger.info(f"{info_list}\n")
 
             adj, act = info_list
@@ -190,6 +226,7 @@ class Memrix(object):
             muster = Counter()
             for result in memory_result:
                 if not result:
+                    self.dumped.set()
                     return logger.info(f"{result}\n")
                 muster.update(result)
             muster = dict(muster)
@@ -203,25 +240,16 @@ class Memrix(object):
                 await DataBase.insert_data(
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
-                logger.info(f"Article {self.data_insert} data insert success ...")
                 self.data_insert += 1
+                logger.info(f"Article {self.data_insert} data insert success ...")
             else:
                 logger.info(f"Data insert skipped ...")
 
-            logger.info(f"{time.time() - start_time:.2f} s\n")
-
-        device = await Manage.operate_device()
+            logger.info(f"{time.time() - dump_start_time:.2f} s\n")
+            self.dumped.set()
 
         logger.add(self.logs_paths, level="INFO", format=const.LOG_FORMAT)
 
-        logger.info(f"{'=' * 10} Memory Dump Start {'=' * 10}")
-        self.data_insert = 0
-        self.file_folder = "DATA_" + time.strftime("%Y%m%d%H%M%S")
-        logger.info(f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}")
-        logger.info(f"{self.var_action}")
-        logger.info(f"{self.config.label}")
-
-        logger.info(f"{self.file_folder}\n")
         async with aiofiles.open(self.team_paths, "a", encoding=const.ENCODING) as f:
             await f.write(f"{self.config.label} -> {self.file_folder}\n")
 
@@ -232,36 +260,111 @@ class Memrix(object):
 
         async with aiosqlite.connect(self.pools_dirs) as db:
             await DataBase.create_table(db)
-            await device.device_online()
-            self.start_event.set()
-            while True:
-                if self.close_event.is_set():
-                    return
+
+            logger.info(f"^* Dump Start *^")
+            self.data_insert = 0
+            self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
+            logger.info(f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(self.before_time))}")
+            logger.info(f"{self.var_action}")
+            logger.info(f"{self.config.label}")
+            logger.info(f"{self.file_folder}\n")
+
+            self.exec_start_event.set()
+            while not self.dump_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.config.speed)
 
-    # todo
-    async def stop_task(self):
-        pass
-
-    # todo
-    async def exec_task(self):
+    async def exec_task_start(self, device: "Device") -> None:
         try:
+            assert os.path.isfile(self.var_action), self.var_action
             open_file = await asyncio.to_thread(ReadFile.read_json, self.var_action)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
+        except (AssertionError, FileNotFoundError, json.JSONDecodeError) as e:
+            raise MemrixError(f"WARN: Json解析错误 {e}")
+
+        if not (script := open_file.get("script", {})):
+            raise MemrixError(f"WARN: 没有获取到脚本 ...")
+
+        try:
+            await device.u2_active()
+        except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
             raise MemrixError(e)
 
-        print(open_file)
+        auto_dump_task = asyncio.create_task(
+            self.dump_task_start(device)
+        )
+        exec_done = asyncio.Event()
 
-    # todo
-    async def stop_exec(self):
-        pass
+        player = Player()
 
-    # todo
+        async def auto_exec_task():
+            await self.exec_start_event.wait()
+
+            logger.info(f"^* Exec Start *^")
+            for data in range(open_file.get("looper", 1)):
+                for key, values in script.items():
+                    func_task_list = []
+                    for i in values:
+                        if self.dump_close_event.is_set():
+                            return
+                        if not (cmds := i.get("cmds", None)) or cmds not in ["u2", "sleep", "audio"]:
+                            continue
+                        if callable(func := getattr(player if cmds == "audio" else device, cmds)):
+                            logger.info(
+                                f"{func.__name__} {(vals := i.get('vals', []))} {(args := i.get('args', []))} {(kwds := i.get('kwds', {}))}"
+                            )
+                            func_task_list.append(asyncio.create_task(func(*vals, *args, **kwds)))
+                            # logger.info(f"Returns: {await func(*vals, *args, **kwds)}")
+                    await asyncio.gather(*func_task_list)
+            exec_done.set()
+
+        await auto_exec_task()
+        await self.dump_task_close() if exec_done.is_set() else None
+
+        auto_dump_task.cancel()
+        try:
+            await auto_dump_task
+        except asyncio.CancelledError:
+            logger.info(f"^* Exec Close *^")
+
     async def create_report(self):
         assert os.path.isfile(self.pools_dirs), self.pools_dirs
         assert os.path.isfile(self.logs_paths), self.logs_paths
         assert os.path.isfile(self.team_paths), self.team_paths
+
+        async with aiosqlite.connect(self.pools_dirs) as db:
+            analyzer = Analyzer(
+                db, os.path.join(self.group_dirs, f"Report_{os.path.basename(self.group_dirs)}")
+            )
+
+            report_mains_dict = {
+                "times": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "headline": self.config.headline,
+                "criteria": self.config.criteria,
+            }
+            report_level_dict = {
+                "fg_max": self.config.fg_max,
+                "fg_avg": self.config.fg_avg,
+                "bg_max": self.config.bg_max,
+                "bg_avg": self.config.bg_avg
+            }
+
+            async with aiofiles.open(self.team_paths, "r", encoding=const.ENCODING) as file:
+                memory_data_list = [
+                    re.search(r"DATA_\d+", m).group() for m in await file.readlines()
+                ]
+
+            finals = await asyncio.gather(
+                *(analyzer.draw_memory(directory) for directory in memory_data_list)
+            )
+
+            if report_list := [mem for mem in finals if mem]:
+                return await analyzer.form_report(
+                    report_mains_dict,
+                    report_level_dict,
+                    report_list,
+                    os.path.dirname(self.template)
+                )
+            return logger.info("One Scenes Data ...")
 
 
 async def main():
@@ -276,12 +379,19 @@ async def main():
             return logger.info(f"--sylora 参数不能为空 ...")
 
         memrix = Memrix(
-            memory, script, report, sylora, _cmd_lines.serial, **_keywords
+            memory, script, report, sylora, **_keywords
         )
+
         if memory:
-            return await memrix.dump_task()
+            signal.signal(signal.SIGINT, memrix.clean_up)
+            return await memrix.dump_task_start(
+                await Manage(console).operate_device(_cmd_lines.serial)
+            )
         elif script:
-            return await memrix.exec_task()
+            signal.signal(signal.SIGINT, memrix.clean_up)
+            return await memrix.exec_task_start(
+                await Manage(console).operate_device(_cmd_lines.serial)
+            )
         elif report:
             return await memrix.create_report()
 
@@ -291,7 +401,7 @@ async def main():
 if __name__ == '__main__':
     _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
 
-    _log = Log()
+    Grapher("INFO", console)
 
     if _software == f"{const.APP_NAME}.exe":
         # Windows
@@ -331,11 +441,9 @@ if __name__ == '__main__':
 
     _cmd_lines = Parser.parse_cmd()
 
-    _main_loop: "asyncio.AbstractEventLoop" = asyncio.get_event_loop()
-
     try:
-        _main_loop.run_until_complete(main())
-    except (KeyboardInterrupt, MemrixError):
+        asyncio.run(main())
+    except (KeyboardInterrupt, AssertionError, MemrixError):
         sys.exit(1)
     else:
         sys.exit(0)

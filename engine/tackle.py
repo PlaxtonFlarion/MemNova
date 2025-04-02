@@ -9,6 +9,7 @@ from loguru import logger
 from rich.console import Console
 from rich.logging import RichHandler
 from memnova import const
+from engine.parser import Parser
 
 
 class _MemrixBaseError(BaseException):
@@ -32,7 +33,10 @@ class Terminal(object):
         )
 
         encode = "GBK" if sys.platform == "win32" else "UTF-8"
-        stdout, stderr = await transports.communicate()
+        try:
+            stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+        except asyncio.TimeoutError:
+            return None
 
         if stdout:
             return stdout.decode(encoding=encode, errors="ignore").strip()
@@ -48,7 +52,10 @@ class Terminal(object):
         )
 
         encode = "GBK" if sys.platform == "win32" else "UTF-8"
-        stdout, stderr = await transports.communicate()
+        try:
+            stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+        except asyncio.TimeoutError:
+            return None
 
         if stdout:
             return stdout.decode(encoding=encode, errors="ignore").strip()
@@ -69,15 +76,13 @@ class ReadFile(object):
             return json.loads(f.read())
 
 
-class Log(object):
+class Grapher(object):
 
-    console: typing.Optional["Console"] = Console()
-
-    def __init__(self):
+    def __init__(self, log_level: str, console: "Console"):
         logger.remove()
         logger.add(
-            RichHandler(console=self.console, show_level=False, show_path=False, show_time=False),
-            level="INFO",
+            RichHandler(console=console, show_level=False, show_path=False, show_time=False),
+            level=log_level,
             format=const.LOG_FORMAT
         )
 
@@ -174,7 +179,7 @@ class Config(object):
 
     @speed.setter
     def speed(self, value: typing.Any):
-        self.__config["Memory"]["speed"] = value
+        self.__config["Memory"]["speed"] = Parser.parse_integer(value)
 
     @label.setter
     def label(self, value: typing.Any):
@@ -182,19 +187,19 @@ class Config(object):
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
-        self.__config["Report"]["fg_max"] = value
+        self.__config["Report"]["fg_max"] = Parser.parse_decimal(value)
 
     @fg_avg.setter
     def fg_avg(self, value: typing.Any):
-        self.__config["Report"]["fg_avg"] = value
+        self.__config["Report"]["fg_avg"] = Parser.parse_decimal(value)
 
     @bg_max.setter
     def bg_max(self, value: typing.Any):
-        self.__config["Report"]["bg_max"] = value
+        self.__config["Report"]["bg_max"] = Parser.parse_decimal(value)
 
     @bg_avg.setter
     def bg_avg(self, value: typing.Any):
-        self.__config["Report"]["bg_avg"] = value
+        self.__config["Report"]["bg_avg"] = Parser.parse_decimal(value)
 
     @headline.setter
     def headline(self, value: typing.Any):

@@ -1,8 +1,23 @@
+import typing
 import argparse
 from memnova import const
 
 
 class Parser(object):
+
+    @staticmethod
+    def parse_integer(content: typing.Any) -> int:
+        try:
+            return int(max(1, min(10, content)))
+        except TypeError:
+            return 1
+
+    @staticmethod
+    def parse_decimal(content: typing.Any) -> float:
+        try:
+            return float(max(0, content))
+        except TypeError:
+            return 0.0
 
     @staticmethod
     def parse_cmd() -> "argparse.Namespace":

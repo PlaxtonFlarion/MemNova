@@ -2,7 +2,9 @@ import re
 import typing
 import asyncio
 import uiautomator2
-from engine.tackle import PID, Terminal
+from engine.tackle import (
+    PID, Terminal
+)
 
 
 class Device(object):
@@ -29,10 +31,10 @@ class Device(object):
     async def u2(self, choice: dict, method: str, *args, **kwargs) -> typing.Optional[str]:
         element = self.u2_device(**choice) if choice else self.u2_device
         if callable(method := getattr(element, method)):
-            return result if (result := await asyncio.to_thread(method, *args, **kwargs)) else None
+            return await asyncio.to_thread(method, *args, **kwargs)
 
     @staticmethod
-    async def sleep(delay: float) -> None:
+    async def sleep(delay: float, *_, **__) -> None:
         await asyncio.sleep(delay)
 
     async def pid_value(self, package: str) -> typing.Optional["PID"]:
@@ -71,10 +73,6 @@ class Device(object):
         cmd = ["adb", "-s", self.serial, "shell", "dumpsys", "deviceidle", "|", "grep", "mScreenOn"]
         if result := await Terminal.cmd_line(*cmd):
             return bool(re.search(r"(?<=mScreenOn=).*", result).group())
-
-    async def device_online(self) -> None:
-        cmd = ["adb", "-s", self.serial, "wait-for-device"]
-        await Terminal.cmd_line(*cmd)
 
 
 if __name__ == '__main__':
