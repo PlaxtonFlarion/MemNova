@@ -289,10 +289,11 @@ class Memrix(object):
         except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
             raise MemrixError(e)
 
-        auto_dump_task = asyncio.create_task(
-            self.dump_task_start(device)
-        )
+        auto_dump_task = asyncio.create_task(self.dump_task_start(device))
+
         exec_done = asyncio.Event()
+
+        func_task_list = []
 
         player = Player()
 
@@ -302,7 +303,6 @@ class Memrix(object):
             logger.info(f"^* Exec Start *^")
             for data in range(open_file.get("looper", 1)):
                 for key, values in script.items():
-                    func_task_list = []
                     for i in values:
                         if self.dump_close_event.is_set():
                             return
@@ -313,15 +313,21 @@ class Memrix(object):
                                 f"{func.__name__} {(vals := i.get('vals', []))} {(args := i.get('args', []))} {(kwds := i.get('kwds', {}))}"
                             )
                             func_task_list.append(asyncio.create_task(func(*vals, *args, **kwds)))
-                            # logger.info(f"Returns: {await func(*vals, *args, **kwds)}")
-                    await asyncio.gather(*func_task_list)
             exec_done.set()
 
         await auto_exec_task()
-        await self.dump_task_close() if exec_done.is_set() else None
 
-        auto_dump_task.cancel()
+        if exec_done.is_set():
+            if func_task_list:
+                await asyncio.gather(*func_task_list)
+            await self.dump_task_close()
+        else:
+            if func_task_list:
+                for task in func_task_list:
+                    task.cancel()
+
         try:
+            auto_dump_task.cancel()
             await auto_dump_task
         except asyncio.CancelledError:
             logger.info(f"^* Exec Close *^")

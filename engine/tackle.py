@@ -67,12 +67,12 @@ class ReadFile(object):
 
     @staticmethod
     def read_yaml(file: str) -> dict:
-        with open(file, "r", encoding="UTF-8") as f:
+        with open(file, "r", encoding=const.ENCODING) as f:
             return yaml.load(f.read(), Loader=yaml.FullLoader)
 
     @staticmethod
     def read_json(file: str) -> dict:
-        with open(file, "r", encoding="UTF-8") as f:
+        with open(file, "r", encoding=const.ENCODING) as f:
             return json.loads(f.read())
 
 
@@ -82,8 +82,7 @@ class Grapher(object):
         logger.remove()
         logger.add(
             RichHandler(console=console, show_level=False, show_path=False, show_time=False),
-            level=log_level,
-            format=const.LOG_FORMAT
+            level=log_level, format=const.LOG_FORMAT
         )
 
 
