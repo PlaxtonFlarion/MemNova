@@ -318,16 +318,13 @@ class Memrix(object):
         await auto_exec_task()
 
         if exec_done.is_set():
-            if func_task_list:
-                await asyncio.gather(*func_task_list)
+            await asyncio.gather(*func_task_list)
             await self.dump_task_close()
         else:
-            if func_task_list:
-                for task in func_task_list:
-                    task.cancel()
+            await asyncio.gather(*[task.cancel() for task in func_task_list])
 
+        auto_dump_task.cancel()
         try:
-            auto_dump_task.cancel()
             await auto_dump_task
         except asyncio.CancelledError:
             logger.info(f"^* Exec Close *^")
