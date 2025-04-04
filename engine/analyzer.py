@@ -1,3 +1,17 @@
+#      _                _
+#     / \   _ __   __ _| |_   _ _______ _ __
+#    / _ \ | '_ \ / _` | | | | |_  / _ \ '__|
+#   / ___ \| | | | (_| | | |_| |/ /  __/ |
+#  /_/   \_\_| |_|\__,_|_|\__, /___\___|_|
+#                         |___/
+#
+# 版权所有 (c) 2024  Memrix(记忆星核)
+# 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
+#
+# Copyright (c) 2024  Memrix(记忆星核)
+# This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
+#
+
 import os
 import time
 import asyncio
@@ -23,18 +37,18 @@ class Analyzer(object):
         self.db = db
         self.download = download
 
-    async def form_report(self, mains: dict, level: dict, report_list: list, template_dirs: str) -> None:
-        loader = FileSystemLoader(template_dirs)
+    async def form_report(self, template_dir: str, *args, **kwargs) -> None:
+        loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
-        template = environment.get_template("memory.html")
-        html = template.render(mains=mains, level=level, report_list=report_list)
+        template = environment.get_template(const.TEMPLATE_FILE)
+        html = template.render(*args, **kwargs)
 
         html_file = os.path.join(self.download, f"Inform_{time.strftime('%Y%m%d%H%M%S')}.html")
         async with aiofiles.open(html_file, "w", encoding=const.ENCODING) as f:
             await f.write(html)
             logger.info(html_file)
 
-    async def draw_memory(self, data_dirs: str) -> dict[str, str]:
+    async def draw_memory(self, data_dir: str) -> dict[str, str]:
 
         async def draw(file_name, data_list):
             if not data_list:
@@ -175,27 +189,26 @@ class Analyzer(object):
             # 主题
             curdoc().theme = "light_minimal"
 
-            file_path = os.path.join(group, f"{file_name.upper()}_{data_dirs}.html")
+            file_path = os.path.join(group, f"{file_name.upper()}_{data_dir}.html")
             output_file(file_path)
             save(p)
 
             return {
-                f"{file_name}_max": f"{max_value:.2f}",
-                f"{file_name}_avg": f"{avg_value:.2f}",
-                f"{file_name}_loc": os.path.join(const.SUMMARY, data_dirs, os.path.basename(file_path))
+                f"{file_name}_max": round(float(max_value), 2),
+                f"{file_name}_avg": round(float(avg_value), 2),
+                f"{file_name}_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
             }
 
-        fg_list, bg_list = await DataBase.query_data(self.db, data_dirs)
-        os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dirs), exist_ok=True)
+        fg_list, bg_list = await DataBase.query_data(self.db, data_dir)
+        os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
         fg, bg = await asyncio.gather(
             draw("fg", fg_list), draw("bg", bg_list)
         )
 
-        handler = "Done" if len(merged := fg | bg | {"minor_title": data_dirs}) == 7 else "One Scenes"
-        logger.info(f"{data_dirs} Handler {handler} ...")
+        logger.info(f"{data_dir} Handler Done ...")
 
-        return merged
+        return fg | bg | {"minor_title": data_dir}
 
 
 if __name__ == '__main__':

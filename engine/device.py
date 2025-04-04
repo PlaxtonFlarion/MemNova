@@ -28,10 +28,13 @@ class Device(object):
     async def u2_active(self) -> None:
         self.u2_device = await asyncio.to_thread(uiautomator2.connect, self.serial)
 
-    async def u2(self, choice: dict, method: str, *args, **kwargs) -> typing.Optional[str]:
+    async def u2(self, choice: dict, method: str, *args, **kwargs) -> None | Exception | typing.Any:
         element = self.u2_device(**choice) if choice else self.u2_device
         if callable(method := getattr(element, method)):
-            return await asyncio.to_thread(method, *args, **kwargs)
+            try:
+                return await asyncio.to_thread(method, *args, **kwargs)
+            except Exception as e:
+                return e
 
     @staticmethod
     async def sleep(delay: float, *_, **__) -> None:
@@ -73,6 +76,14 @@ class Device(object):
         cmd = ["adb", "-s", self.serial, "shell", "dumpsys", "deviceidle", "|", "grep", "mScreenOn"]
         if result := await Terminal.cmd_line(*cmd):
             return bool(re.search(r"(?<=mScreenOn=).*", result).group())
+
+    async def examine_package(self, package: str) -> typing.Optional[str]:
+        cmd = ["adb", "-s", self.serial, "shell", "dumpsys", "package", package]
+        return result if (result := await Terminal.cmd_line(*cmd)) else None
+
+    async def memory_info(self, package: str) -> typing.Optional[str]:
+        cmd = ["adb", "-s", self.serial, "shell", "dumpsys", "meminfo", package]
+        return result if (result := await Terminal.cmd_line(*cmd)) else None
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import yaml
 import json
 import typing
@@ -20,6 +21,11 @@ class MemrixError(_MemrixBaseError):
 
     def __init__(self, msg: typing.Any):
         self.msg = msg
+
+    def __str__(self):
+        return f"[#FF4C4C]<{const.APP_DESC}Error> {self.msg}"
+
+    __repr__ = __str__
 
 
 class Terminal(object):
@@ -63,7 +69,7 @@ class Terminal(object):
             return stderr.decode(encoding=encode, errors="ignore").strip()
 
 
-class ReadFile(object):
+class FileAssistant(object):
 
     @staticmethod
     def read_yaml(file: str) -> dict:
@@ -75,14 +81,33 @@ class ReadFile(object):
         with open(file, "r", encoding=const.ENCODING) as f:
             return json.loads(f.read())
 
+    @staticmethod
+    def dump_yaml(src: typing.Any, dst: dict) -> None:
+        with open(src, "w", encoding="utf-8") as f:
+            yaml.dump(dst, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+    @staticmethod
+    def dump_json(src: typing.Any, dst: dict) -> None:
+        with open(src, "w", encoding=const.ENCODING) as f:
+            json.dump(dst, f, indent=4, separators=(",", ":"), ensure_ascii=False)
+
 
 class Grapher(object):
 
-    def __init__(self, log_level: str, console: "Console"):
+    console: typing.Optional["Console"] = Console()
+
+    @staticmethod
+    def active(log_level: str) -> None:
         logger.remove()
         logger.add(
-            RichHandler(console=console, show_level=False, show_path=False, show_time=False),
+            RichHandler(console=Grapher.console, show_level=False, show_path=False, show_time=False),
             level=log_level, format=const.LOG_FORMAT
+        )
+
+    @staticmethod
+    def view(msg: typing.Any) -> None:
+        Grapher.console.print(
+            f"{const.APP_DESC} {time.strftime('%Y-%m-%d %H:%M:%S')} | [#00D787]VIEW[/] | {msg}"
         )
 
 
@@ -121,19 +146,22 @@ class RAM(object):
 class Config(object):
 
     __config = {
-                "Memory": {
-                    "speed": 1,
-                    "label": "摘要标签"
-                },
-                "Report": {
-                    "fg_max": 0.0,
-                    "fg_avg": 0.0,
-                    "bg_max": 0.0,
-                    "bg_avg": 0.0,
-                    "headline": "报告标题",
-                    "criteria": "准出标准"
-                }
-            }
+        "Memory": {
+            "speed": 1,
+            "label": "摘要标签"
+        },
+        "Script": {
+            "files": os.path.join(os.path.expanduser("~"), "Documents", "example.json")
+        },
+        "Report": {
+            "fg_max": 0.0,
+            "fg_avg": 0.0,
+            "bg_max": 0.0,
+            "bg_avg": 0.0,
+            "headline": "报告标题",
+            "criteria": "准出标准"
+        }
+    }
 
     def __init__(self, config_file: typing.Any):
         self.__load_config(config_file)
@@ -151,6 +179,10 @@ class Config(object):
     @property
     def label(self):
         return self.__config["Memory"]["label"]
+
+    @property
+    def files(self):
+        return self.__config["Script"]["files"]
 
     @property
     def fg_max(self):
@@ -184,6 +216,10 @@ class Config(object):
     def label(self, value: typing.Any):
         self.__config["Memory"]["label"] = value
 
+    @files.setter
+    def files(self, value: typing.Any):
+        self.__config["Script"]["files"] = value
+
     @fg_max.setter
     def fg_max(self, value: typing.Any):
         self.__config["Report"]["fg_max"] = Parser.parse_decimal(value)
@@ -210,7 +246,7 @@ class Config(object):
 
     def __load_config(self, config_file: typing.Any) -> None:
         try:
-            user_config = ReadFile.read_yaml(config_file)
+            user_config = FileAssistant.read_yaml(config_file)
             for key, value in self.__config.items():
                 for k, v in value.items():
                     setattr(self, k, user_config.get(key, {}).get(k, v))
