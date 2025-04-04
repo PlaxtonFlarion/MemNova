@@ -60,7 +60,7 @@ If you have any questions about this license or need further information, please
 
     版权所有 [yyyy] [版权所有者姓名]
     
-    根据 Framix(画帧秀) 许可证 1.0 版（“许可证”）获得许可；
+    根据 Memrix(记忆星核) 许可证 1.0 版（“许可证”）获得许可；
     除非遵守许可证，否则您不得使用此文件。
     您可以在以下位置获取许可证副本
     
