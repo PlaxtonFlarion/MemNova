@@ -12,6 +12,7 @@
 #
 
 import os
+import shutil
 import sys
 import time
 import yaml
@@ -86,7 +87,10 @@ class FileAssist(object):
 
     @staticmethod
     async def open(file: str) -> typing.Optional[str]:
-        cmd = ["notepad++"] if sys.platform == "win32" else ["open", "-W", "-a", "TextEdit"]
+        if sys.platform == "win32":
+            cmd = ["notepad++"] if shutil.which("notepad++") else ["Notepad"]
+        else:
+            cmd = ["open", "-W", "-a", "TextEdit"]
         return await Terminal.cmd_line(*(cmd + [file]))
 
     @staticmethod
