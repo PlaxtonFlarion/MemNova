@@ -1,8 +1,9 @@
-#  __  __                     _
-# |  \/  | ___ _ __ ___  _ __(_)_  __
-# | |\/| |/ _ \ '_ ` _ \| '__| \ \/ /
-# | |  | |  __/ | | | | | |  | |>  <
-# |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
+#      _                _
+#     / \   _ __   __ _| |_   _ _______ _ __
+#    / _ \ | '_ \ / _` | | | | |_  / _ \ '__|
+#   / ___ \| | | | (_| | | |_| |/ /  __/ |
+#  /_/   \_\_| |_|\__,_|_|\__, /___\___|_|
+#                         |___/
 #
 # 版权所有 (c) 2024  Memrix(记忆星核)
 # 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
@@ -123,6 +124,7 @@ class Analyzer(object):
             )
             p.add_layout(min_line)
 
+            # 悬浮提示
             tooltips = """
                 <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); padding: 5px 10px;">
                     <div>
@@ -201,13 +203,13 @@ class Analyzer(object):
         fg_list, bg_list = await DataBase.query_data(self.db, data_dir)
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
-        fg, bg = await asyncio.gather(
+        fg_data_dict, bg_data_dict = await asyncio.gather(
             draw("fg", fg_list), draw("bg", bg_list)
         )
 
         logger.info(f"{data_dir} Handler Done ...")
 
-        return fg | bg | {"minor_title": data_dir}
+        return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
 
 
 if __name__ == '__main__':

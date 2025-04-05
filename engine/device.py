@@ -1,8 +1,8 @@
-#  __  __                     _
-# |  \/  | ___ _ __ ___  _ __(_)_  __
-# | |\/| |/ _ \ '_ ` _ \| '__| \ \/ /
-# | |  | |  __/ | | | | | |  | |>  <
-# |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
+#   ____             _
+#  |  _ \  _____   _(_) ___ ___
+#  | | | |/ _ \ \ / / |/ __/ _ \
+#  | |_| |  __/\ V /| | (_|  __/
+#  |____/ \___| \_/ |_|\___\___|
 #
 # 版权所有 (c) 2024  Memrix(记忆星核)
 # 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
@@ -16,7 +16,7 @@ import typing
 import asyncio
 import uiautomator2
 from engine.tackle import (
-    PID, Terminal
+    Pid, Terminal
 )
 
 
@@ -41,7 +41,10 @@ class Device(object):
     async def u2_active(self) -> None:
         self.u2_device = await asyncio.to_thread(uiautomator2.connect, self.serial)
 
-    async def u2(self, choice: dict, method: str, *args, **kwargs) -> None | Exception | typing.Any:
+    async def u2(
+            self, choice: dict, method: str, *args, **kwargs
+    ) -> typing.Optional[typing.Union[typing.Any, Exception]]:
+
         element = self.u2_device(**choice) if choice else self.u2_device
         if callable(method := getattr(element, method)):
             try:
@@ -53,12 +56,12 @@ class Device(object):
     async def sleep(delay: float, *_, **__) -> None:
         await asyncio.sleep(delay)
 
-    async def pid_value(self, package: str) -> typing.Optional["PID"]:
+    async def pid_value(self, package: str) -> typing.Optional["Pid"]:
         cmd = ["adb", "-s", self.serial, "shell", "ps", "-A", "|", "grep", package]
         result = await Terminal.cmd_line(*cmd)
         if result and (pid_list := result.split("\n")):
             try:
-                return PID(
+                return Pid(
                     {i.split()[1]: name for i in pid_list if (name := i.split()[8]) == package}
                 )
             except IndexError:

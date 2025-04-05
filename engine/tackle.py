@@ -1,8 +1,8 @@
-#  __  __                     _
-# |  \/  | ___ _ __ ___  _ __(_)_  __
-# | |\/| |/ _ \ '_ ` _ \| '__| \ \/ /
-# | |  | |  __/ | | | | | |  | |>  <
-# |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
+#   _____          _    _
+#  |_   _|_ _  ___| | _| | ___
+#    | |/ _` |/ __| |/ / |/ _ \
+#    | | (_| | (__|   <| |  __/
+#    |_|\__,_|\___|_|\_\_|\___|
 #
 # 版权所有 (c) 2024  Memrix(记忆星核)
 # 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
@@ -124,7 +124,7 @@ class Grapher(object):
         )
 
 
-class PID(object):
+class Pid(object):
 
     def __init__(self, member: typing.Optional[dict] = None):
         self.__member = member
@@ -134,9 +134,9 @@ class PID(object):
         return self.__member
 
 
-class RAM(object):
+class Ram(object):
 
-    def __init__(self, details: dict):
+    def __init__(self, details: dict[str, dict]):
         self.__details = details
 
     @property
@@ -152,7 +152,7 @@ class RAM(object):
         return self.__details.get("memory_map", None)
 
     @property
-    def memory_vms(self) -> typing.Optional[typing.Any]:
+    def memory_vms(self) -> typing.Optional[dict]:
         return self.__details.get("memory_vms", None)
 
 
@@ -321,7 +321,7 @@ class DataBase(object):
             remark_map: dict,
             resume_map: dict,
             memory_map: dict,
-            vmrss: str
+            vmrss: dict
     ):
         await db.execute('''INSERT INTO memory_data (
             data_dir, 
@@ -388,7 +388,7 @@ class DataBase(object):
                 memory_map["GL mtrack"],
                 memory_map["Unknown"],
 
-                vmrss
+                vmrss["vms"]
             )
         )
         await db.commit()

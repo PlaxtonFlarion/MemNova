@@ -31,7 +31,7 @@ from engine.parser import Parser
 from engine.analyzer import Analyzer
 from engine.tackle import (
     Config, Grapher, DataBase,
-    RAM, MemrixError, FileAssistant
+    Ram, MemrixError, FileAssistant
 )
 
 try:
@@ -46,29 +46,30 @@ class ToolKit(object):
     text_content: typing.Optional[str] = None
 
     @staticmethod
-    def transform(number: typing.Any):
+    def transform(number: typing.Any) -> float:
         try:
             return round(float(number) / 1024, 2)
         except TypeError:
             return 0.00
 
     @staticmethod
-    def addition(*args):
+    def addition(*numbers) -> float:
         try:
-            return round(sum([float(arg) for arg in args]), 2)
+            return round(sum([float(number) for number in numbers]), 2)
         except TypeError:
             return 0.00
 
     @staticmethod
-    def subtract(n1: typing.Any, n2: typing.Any):
+    def subtract(number_begin: typing.Any, number_final: typing.Any) -> float:
         try:
-            return round(float(n1) - float(n2), 2)
+            return round(float(number_begin) - float(number_final), 2)
         except TypeError:
             return 0.00
 
-    def fit(self, pattern: typing.Any):
-        if find := re.search(fr"{pattern}", self.text_content, re.S):
-            return self.transform(find.group(1))
+    def fit(self, pattern: typing.Union[str, "re.Pattern[str]"]) -> float:
+        return self.transform(find.group(1)) if (
+            find := re.search(fr"{pattern}", self.text_content, re.S)
+        ) else 0.00
 
 
 class Player(object):
@@ -85,8 +86,8 @@ class Player(object):
 
 class Memrix(object):
 
-    data_insert: int
-    file_folder: str
+    file_insert: typing.Optional[int]
+    file_folder: typing.Optional[str]
 
     exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
     dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
@@ -138,15 +139,16 @@ class Memrix(object):
         except asyncio.CancelledError:
             Grapher.view(f"[#E69F00]Canceled Task ...")
 
-        head = f"{self.config.label} -> {self.file_folder} -> "
-        tail = f"获取: {self.data_insert} -> 耗时: {round((time.time() - self.before_time) / 60, 2)} 分钟"
-        logger.info(f"{head + tail}")
+        time_cost = round((time.time() - self.before_time) / 60, 2)
+        logger.info(
+            f"{self.config.label} -> {self.file_folder} -> 获取: {self.file_insert} -> 耗时: {time_cost} 分钟"
+        )
         logger.info(f"{self.group_dir}")
         logger.info(f"^* Dump Close *^")
 
     async def dump_task_start(self, device: "Device") -> None:
 
-        async def flash_memory(pid):
+        async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
             if not (memory := await device.memory_info(package)):
                 return None
 
@@ -194,36 +196,33 @@ class Memrix(object):
                     }
                 )
 
-            memory_vms = toolkit.transform(await device.pkg_value(pid))
+            memory_vms: dict = {"vms": toolkit.transform(await device.pkg_value(pid))}
 
             return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}
 
-        async def flash_memory_launch():
+        async def flash_memory_launch() -> None:
             self.dumped.clear()
 
             dump_start_time = time.time()
 
-            if not (pids := await device.pid_value(package)):
+            if not (app_pid := await device.pid_value(package)):
                 self.dumped.set()
-                return logger.info(f"Process={pids}\n")
+                return logger.info(f"Process={app_pid}\n")
 
             logger.info(device)
-            logger.info({"Process": pids.member})
-            remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
+            logger.info(f"Process={app_pid.member}")
+
+            if not all(current_info_list := await asyncio.gather(
+                    device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
+            )):
+                self.dumped.set()
+                return logger.info(f"{current_info_list}\n")
+
+            adj, act = current_info_list
 
             uid = uid if (uid := await device.uid_value(package)) else 0
 
-            if not pids.member:
-                self.dumped.set()
-                return logger.info(f"[{pids.member}]\n")
-
-            if not all(info_list := await asyncio.gather(
-                    device.adj_value(list(pids.member.keys())[0]), device.act_value()
-            )):
-                self.dumped.set()
-                return logger.info(f"{info_list}\n")
-
-            adj, act = info_list
+            remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
             remark_map.update({"uid": uid, "adj": adj, "act": act})
             remark_map.update({"frg": "前台" if (int(remark_map["adj"])) <= 0 else "后台"})
             logger.info(f"{remark_map['tms']}")
@@ -232,39 +231,38 @@ class Memrix(object):
             logger.info(f"{remark_map['act']}")
             logger.info(f"{remark_map['frg']}")
 
-            for k, v in pids.member.items():
+            for k, v in app_pid.member.items():
                 remark_map.update({"pid": k + " - " + v})
 
-            memory_result = await asyncio.gather(
-                *(flash_memory(key) for key in list(pids.member.keys()))
-            )
+            if all(memory_result := await asyncio.gather(
+                *(flash_memory(k) for k in list(app_pid.member.keys()))
+            )):
+                muster = {}
+                for result in memory_result:
+                    for k, v in result.items():
+                        muster[k] = muster.get(k, Counter()) + Counter(v)
+                muster = {k: dict(v) for k, v in muster.items()}
+            else:
+                self.dumped.set()
+                return logger.info(f"{memory_result}\n")
 
-            muster = Counter()
-            for result in memory_result:
-                if not result:
-                    self.dumped.set()
-                    return logger.info(f"{result}\n")
-                muster.update(result)
-            muster = dict(muster)
+            logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
 
-            display_map = muster["resume_map"].copy()
-            logger.info(display_map | {"VmRss": muster["memory_vms"]})
-
-            ram = RAM({"remark_map": remark_map} | muster)
+            ram = Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
                 await DataBase.insert_data(
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
-                self.data_insert += 1
-                logger.info(f"Article {self.data_insert} data insert success ...")
+                self.file_insert += 1
+                logger.info(f"Article {self.file_insert} data insert success ...")
             else:
                 logger.info(f"Data insert skipped ...")
 
-            logger.info(f"{time.time() - dump_start_time:.2f} s\n")
             self.dumped.set()
+            return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        package: str = self.sylora
+        package: typing.Optional[str] = self.sylora
 
         if "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
@@ -274,7 +272,7 @@ class Memrix(object):
         logger.info(f"^* Dump Start *^")
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
-        self.data_insert = 0
+        self.file_insert = 0
         self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
 
         logger.info(f"{format_before_time}")
@@ -289,15 +287,18 @@ class Memrix(object):
             scene = {
                 "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
             }
-        await asyncio.to_thread(FileAssistant.dump_yaml, self.team_file, scene)
+        dump_file_task = asyncio.create_task(
+            asyncio.to_thread(FileAssistant.dump_yaml, self.team_file, scene)
+        )
 
         if not os.path.exists(self.other_dir):
             os.makedirs(self.other_dir, exist_ok=True)
 
-        toolkit = ToolKit()
+        toolkit: "ToolKit" = ToolKit()
 
         async with aiosqlite.connect(self.db_file) as db:
             await DataBase.create_table(db)
+            await dump_file_task
             self.exec_start_event.set()
             while not self.dump_close_event.is_set():
                 await flash_memory_launch()
@@ -326,7 +327,7 @@ class Memrix(object):
 
         auto_dump_task = asyncio.create_task(self.dump_task_start(device))
 
-        player = Player()
+        player: "Player" = Player()
 
         logger.info(f"^* Exec Start *^")
         for data in range(open_file.get("looper", 1)):
@@ -433,6 +434,12 @@ async def main():
 
 
 if __name__ == '__main__':
+    #   __  __                     _        ____  _             _
+    #  |  \/  | ___ _ __ ___  _ __(_)_  __ / ___|| |_ __ _ _ __| |_ ___ _ __
+    #  | |\/| |/ _ \ '_ ` _ \| '__| \ \/ / \___ \| __/ _` | '__| __/ _ \ '__|
+    #  | |  | |  __/ | | | | | |  | |>  <   ___) | || (_| | |  | ||  __/ |
+    #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\ |____/ \__\__,_|_|   \__\___|_|
+
     _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
 
     Grapher.active("INFO")
@@ -477,6 +484,7 @@ if __name__ == '__main__':
         "template_dir": _template_dir, "src_total_place": _src_total_place, "config": _config
     }
 
+    # 命令行
     _cmd_lines = Parser.parse_cmd()
 
     try:
