@@ -17,7 +17,7 @@ APP_CN: str = f"记忆星核"
 APP_VERSION: str = f"1.0.0"
 APP_LICENSE: str = r"MIT"
 APP_URL: str = f"https://github.com/PlaxtonFlarion/MemNova"
-APP_DECLARE: str = f"[bold]^* {APP_DESC}({APP_CN}) version [bold #FFAA33]{APP_VERSION}[/] Copyright (c) 2024 the {APP_DESC} developers *^[/]\n"
+APP_DECLARE: str = f"[bold]^* [bold #00D7AF]{APP_DESC}[/]({APP_CN}) [bold #FFAA33]V{APP_VERSION}[/] Copyright (c) 2024 the {APP_DESC} developers *^[/]\n"
 
 AUTHOR: str = r"AceKeppel"
 EMAIL: str = r"AceKeppel@outlook.com"

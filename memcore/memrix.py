@@ -28,6 +28,7 @@ from engine.device import Device
 from memnova import const
 from engine.manage import Manage
 from engine.parser import Parser
+from engine.display import Display
 from engine.analyzer import Analyzer
 from engine.tackle import (
     Config, Grapher, DataBase,
@@ -401,8 +402,6 @@ class Memrix(object):
 
 
 async def main():
-    Grapher.console.print(const.APP_DECLARE)
-
     if not shutil.which("adb"):
         raise MemrixError(f"ADB 环境变量未配置 ...")
 
@@ -412,6 +411,9 @@ async def main():
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (sylora := _cmd_lines.sylora):
             raise MemrixError(f"--sylora 参数不能为空 ...")
+
+        Display.show_logo()
+        Display.show_license()
 
         memrix = Memrix(
             memory, script, report, sylora, **_keywords
@@ -439,6 +441,8 @@ if __name__ == '__main__':
     #  | |\/| |/ _ \ '_ ` _ \| '__| \ \/ / \___ \| __/ _` | '__| __/ _ \ '__|
     #  | |  | |  __/ | | | | | |  | |>  <   ___) | || (_| | |  | ||  __/ |
     #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\ |____/ \__\__,_|_|   \__\___|_|
+
+    Display.show_animate()
 
     _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
 
