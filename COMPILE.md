@@ -37,8 +37,8 @@
   - supports
     - MacOS
     - Windows
-      - notepad
-        - notepad.exe
+      - npp_portable_mini
+        - notepad++.exe
         - ...
 
 ### 拷贝 `memnova/templates` 目录
