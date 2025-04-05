@@ -464,6 +464,7 @@ if __name__ == '__main__':
         Grapher.view(
             MemrixError(f"Adaptation Platform Windows or MacOS ...")
         )
+        Display.show_fail()
         sys.exit(1)
 
     # 模板文件夹
@@ -495,8 +496,11 @@ if __name__ == '__main__':
         asyncio.run(main())
     except MemrixError as _memrix_error:
         Grapher.view(_memrix_error)
+        Display.show_fail()
         sys.exit(1)
     except (KeyboardInterrupt, asyncio.CancelledError):
+        Display.show_done()
         sys.exit(0)
     else:
+        Display.show_done()
         sys.exit(0)

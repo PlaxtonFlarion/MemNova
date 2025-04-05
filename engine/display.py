@@ -32,27 +32,47 @@ banner = r"""[bold #00D7AF] __  __                     _
 |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
 """
 
+task_done = fr"""[bold #00FF88]
++----------------------------------------+
+|            {const.APP_DESC} Task Done            |
++----------------------------------------+
+"""
+
+task_fail = fr"""[bold #FF4444]
++----------------------------------------+
+|            {const.APP_DESC} Task Fail            |
++----------------------------------------+
+"""
+
 
 class Display(object):
 
     @staticmethod
-    def clear():
-        os.system('cls' if os.name == 'nt' else 'clear')
+    def clear_screen() -> None:
+        os.system("cls" if os.name == "nt" else "clear")
 
     @staticmethod
-    def show_logo():
+    def show_logo() -> None:
         Grapher.console.print(banner)
 
     @staticmethod
-    def show_license():
+    def show_license() -> None:
         Grapher.console.print(const.APP_DECLARE)
 
     @staticmethod
-    def show_animate():
-        Display.clear()
+    def show_done() -> None:
+        Grapher.console.print(task_done)
+
+    @staticmethod
+    def show_fail() -> None:
+        Grapher.console.print(task_fail)
+
+    @staticmethod
+    def show_animate() -> None:
+        Display.clear_screen()
         for _ in range(3):
             for frame in loading_frames:
-                Display.clear()
+                Display.clear_screen()
                 Grapher.console.print(frame)
                 time.sleep(0.2)
         Grapher.console.print(
