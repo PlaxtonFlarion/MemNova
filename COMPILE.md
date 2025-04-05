@@ -31,6 +31,12 @@
 - schematic
   - resources
 
+### 拷贝 `memnova/templates` 目录
+- schematic
+  - resources
+  - templates
+    - ...
+
 ---
 
 ## Windows 操作系统
