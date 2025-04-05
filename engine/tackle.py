@@ -82,7 +82,12 @@ class Terminal(object):
             return stderr.decode(encoding=encode, errors="ignore").strip()
 
 
-class FileAssistant(object):
+class FileAssist(object):
+
+    @staticmethod
+    async def open(file: str) -> typing.Optional[str]:
+        cmd = ["notepad++"] if sys.platform == "win32" else ["open", "-W", "-a", "TextEdit"]
+        return await Terminal.cmd_line(*(cmd + [file]))
 
     @staticmethod
     def read_yaml(file: str) -> dict:
@@ -158,118 +163,117 @@ class Ram(object):
 
 class Config(object):
 
-    __config = {
+    configs = {
         "Memory": {
             "speed": 1,
-            "label": "摘要标签"
+            "label": "应用名称"
         },
         "Script": {
-            "files": os.path.join(os.path.expanduser("~"), "Documents", "example.json")
+            "group": "mission"
         },
         "Report": {
             "fg_max": 0.0,
             "fg_avg": 0.0,
             "bg_max": 0.0,
             "bg_avg": 0.0,
-            "headline": "报告标题",
-            "criteria": "准出标准"
+            "headline": "标题",
+            "criteria": "标准"
         }
     }
 
     def __init__(self, config_file: typing.Any):
-        self.__load_config(config_file)
+        self.load_config(config_file)
 
     def __getstate__(self):
-        return self.__config
+        return self.configs
 
     def __setstate__(self, state):
-        self.__config = state
+        self.configs = state
 
     @property
     def speed(self):
-        return self.__config["Memory"]["speed"]
+        return self.configs["Memory"]["speed"]
 
     @property
     def label(self):
-        return self.__config["Memory"]["label"]
+        return self.configs["Memory"]["label"]
 
     @property
-    def files(self):
-        return self.__config["Script"]["files"]
+    def group(self):
+        return self.configs["Script"]["group"]
 
     @property
     def fg_max(self):
-        return self.__config["Report"]["fg_max"]
+        return self.configs["Report"]["fg_max"]
 
     @property
     def fg_avg(self):
-        return self.__config["Report"]["fg_avg"]
+        return self.configs["Report"]["fg_avg"]
 
     @property
     def bg_max(self):
-        return self.__config["Report"]["bg_max"]
+        return self.configs["Report"]["bg_max"]
 
     @property
     def bg_avg(self):
-        return self.__config["Report"]["bg_avg"]
+        return self.configs["Report"]["bg_avg"]
 
     @property
     def headline(self):
-        return self.__config["Report"]["headline"]
+        return self.configs["Report"]["headline"]
 
     @property
     def criteria(self):
-        return self.__config["Report"]["criteria"]
+        return self.configs["Report"]["criteria"]
 
     @speed.setter
     def speed(self, value: typing.Any):
-        self.__config["Memory"]["speed"] = Parser.parse_integer(value)
+        self.configs["Memory"]["speed"] = Parser.parse_integer(value)
 
     @label.setter
     def label(self, value: typing.Any):
-        self.__config["Memory"]["label"] = value
+        self.configs["Memory"]["label"] = value
 
-    @files.setter
-    def files(self, value: typing.Any):
-        self.__config["Script"]["files"] = value
+    @group.setter
+    def group(self, value: typing.Any):
+        self.configs["Script"]["group"] = value
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
-        self.__config["Report"]["fg_max"] = Parser.parse_decimal(value)
+        self.configs["Report"]["fg_max"] = Parser.parse_decimal(value)
 
     @fg_avg.setter
     def fg_avg(self, value: typing.Any):
-        self.__config["Report"]["fg_avg"] = Parser.parse_decimal(value)
+        self.configs["Report"]["fg_avg"] = Parser.parse_decimal(value)
 
     @bg_max.setter
     def bg_max(self, value: typing.Any):
-        self.__config["Report"]["bg_max"] = Parser.parse_decimal(value)
+        self.configs["Report"]["bg_max"] = Parser.parse_decimal(value)
 
     @bg_avg.setter
     def bg_avg(self, value: typing.Any):
-        self.__config["Report"]["bg_avg"] = Parser.parse_decimal(value)
+        self.configs["Report"]["bg_avg"] = Parser.parse_decimal(value)
 
     @headline.setter
     def headline(self, value: typing.Any):
-        self.__config["Report"]["headline"] = value
+        self.configs["Report"]["headline"] = value
 
     @criteria.setter
     def criteria(self, value: typing.Any):
-        self.__config["Report"]["criteria"] = value
+        self.configs["Report"]["criteria"] = value
 
-    def __load_config(self, config_file: typing.Any) -> None:
+    def load_config(self, config_file: typing.Any) -> None:
         try:
-            user_config = FileAssistant.read_yaml(config_file)
-            for key, value in self.__config.items():
+            user_config = FileAssist.read_yaml(config_file)
+            for key, value in self.configs.items():
                 for k, v in value.items():
                     setattr(self, k, user_config.get(key, {}).get(k, v))
         except (FileNotFoundError, yaml.YAMLError):
-            self.__dump_config(config_file)
+            self.dump_config(config_file)
 
-    def __dump_config(self, config_file: typing.Any) -> None:
+    def dump_config(self, config_file: typing.Any) -> None:
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
-        with open(config_file, "w", encoding="UTF-8") as f:
-            yaml.dump(self.__config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        FileAssist.dump_yaml(config_file, self.configs)
 
 
 class DataBase(object):

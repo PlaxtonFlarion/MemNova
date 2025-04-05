@@ -32,7 +32,7 @@ from engine.display import Display
 from engine.analyzer import Analyzer
 from engine.tackle import (
     Config, Grapher, DataBase,
-    Ram, MemrixError, FileAssistant
+    Ram, MemrixError, FileAssist
 )
 
 try:
@@ -107,8 +107,8 @@ class Memrix(object):
 
         self.sylora, *_ = args
 
-        self.template_dir = kwargs["template_dir"]
         self.src_total_place = kwargs["src_total_place"]
+        self.template = kwargs["template"]
         self.config = kwargs["config"]
 
         if self.report:
@@ -282,14 +282,14 @@ class Memrix(object):
         logger.info(f"{self.file_folder}\n")
 
         if os.path.isfile(self.team_file):
-            scene = await asyncio.to_thread(FileAssistant.read_yaml, self.team_file)
+            scene = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
             scene["file"].append(self.file_folder)
         else:
             scene = {
                 "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
             }
         dump_file_task = asyncio.create_task(
-            asyncio.to_thread(FileAssistant.dump_yaml, self.team_file, scene)
+            asyncio.to_thread(FileAssist.dump_yaml, self.team_file, scene)
         )
 
         if not os.path.exists(self.other_dir):
@@ -307,16 +307,16 @@ class Memrix(object):
 
     async def exec_task_start(self, device: "Device") -> None:
         try:
-            open_file = await asyncio.to_thread(FileAssistant.read_json, self.config.files)
+            open_file = await asyncio.to_thread(FileAssist.read_json, self.sylora)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             raise MemrixError(e)
 
         try:
-            assert (script := open_file["script"]), f"脚本为空 {script}"
-        except (AssertionError, KeyError) as e:
+            assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
+            assert (package := open_file["package"]), f"包名为空 {package}"
+            assert (mission := open_file[self.config.group]), f"脚本文件为空 {mission}"
+        except (AssertionError, KeyError, TypeError) as e:
             raise MemrixError(e)
-
-        package: str = self.sylora
 
         if "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
@@ -331,8 +331,8 @@ class Memrix(object):
         player: "Player" = Player()
 
         logger.info(f"^* Exec Start *^")
-        for data in range(open_file.get("looper", 1)):
-            for key, values in script.items():
+        for data in range(loopers):
+            for key, values in mission.items():
                 for i in values:
                     if not (cmds := i.get("cmds", None)) or cmds not in ["u2", "sleep", "audio"]:
                         continue
@@ -362,7 +362,7 @@ class Memrix(object):
                 db, os.path.join(self.group_dir, f"Report_{os.path.basename(self.group_dir)}")
             )
 
-        team_data = await asyncio.to_thread(FileAssistant.read_yaml, self.team_file)
+        team_data = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
         if not (memory_data_list := team_data["file"]):
             raise MemrixError(f"No data scenario {memory_data_list} ...")
 
@@ -398,20 +398,29 @@ class Memrix(object):
             },
             "report_list": report_list
         }
-        return await analyzer.form_report(self.template_dir, **rendering)
+        return await analyzer.form_report(self.template, **rendering)
 
 
-async def main():
+async def main() -> typing.Optional[typing.Any]:
     if not shutil.which("adb"):
         raise MemrixError(f"ADB 环境变量未配置 ...")
 
     if len(sys.argv) == 1:
         raise MemrixError(f"命令参数为空 ...")
 
+    if _cmd_lines.config:
+        # 显示 Logo & License
+        Display.show_logo()
+        Display.show_license()
+
+        Grapher.console.print_json(data=_config.configs)
+        return await FileAssist.open(_config_file)
+
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (sylora := _cmd_lines.sylora):
             raise MemrixError(f"--sylora 参数不能为空 ...")
 
+        # 显示 Logo & License
         Display.show_logo()
         Display.show_license()
 
@@ -442,12 +451,19 @@ if __name__ == '__main__':
     #  | |  | |  __/ | | | | | |  | |>  <   ___) | || (_| | |  | ||  __/ |
     #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\ |____/ \__\__,_|_|   \__\___|_|
 
+    # 显示加载动画
     Display.show_animate()
 
+    # 获取当前操作系统平台和应用名称
+    _platform = sys.platform.strip().lower()
     _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
+    _sys_symbol = os.sep
+    _env_symbol = os.path.pathsep
 
+    # 激活日志
     Grapher.active("INFO")
 
+    # 根据应用名称确定工作目录和配置目录
     if _software == f"{const.APP_NAME}.exe":
         # Windows
         _mx_work = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -462,31 +478,59 @@ if __name__ == '__main__':
         _mx_feasible = os.path.dirname(_mx_work)
     else:
         Grapher.view(
-            MemrixError(f"Adaptation Platform Windows or MacOS ...")
+            MemrixError(f"{const.APP_DESC} Adaptation Platform Windows or MacOS ...")
         )
         Display.show_fail()
         sys.exit(1)
 
     # 模板文件夹
-    _template_dir = os.path.join(_mx_work, *const.TEMPLATE_DIR)
+    _template = os.path.join(_mx_work, const.SCHEMATIC, "templates", "memory.html")
+    # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
+    if not os.path.isfile(_template) and os.path.basename(_template).endswith(".html"):
+        _tmp_name = os.path.basename(_template)
+        Grapher.view(
+            MemrixError(f"{const.APP_DESC}  missing files {_tmp_name} ...")
+        )
+        Display.show_fail()
+        sys.exit(1)
 
-    # 初始路径
+    # 设置工具源路径
+    _turbo = os.path.join(_mx_work, const.SCHEMATIC, "supports").format()
+
+    # 根据平台设置工具路径
+    if _platform == "win32":
+        # Windows
+        _npp = os.path.join(_turbo, "Windows", "npp_portable_mini", "notepad++.exe")
+        # 将工具路径添加到系统 PATH 环境变量中
+        os.environ["PATH"] = os.path.dirname(_npp) + _env_symbol + os.environ.get("PATH", "")
+        # 检查工具是否存在，如果缺失则显示错误信息并退出程序
+        if not shutil.which((_tls_name := os.path.basename(_npp))):
+            Grapher.view(
+                MemrixError(f"{const.APP_DESC} missing files {_tls_name}")
+            )
+            Display.show_fail()
+            sys.exit(1)
+
+    # 设置初始路径
     if not os.path.exists(
             _initial_source := os.path.join(_mx_feasible, "Specially").format()
     ):
         os.makedirs(_initial_source, exist_ok=True)
 
-    # 报告文件夹路径
+    # 设置报告路径
     if not os.path.exists(
             _src_total_place := os.path.join(_initial_source, "Memrix_Report").format()
     ):
         os.makedirs(_src_total_place, exist_ok=True)
 
-    # 配置文件路径
-    _config = Config(os.path.join(_initial_source, "Memrix_Mix", "config.yaml"))
+    # 设置初始配置文件路径
+    _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
+    # 加载初始配置
+    _config = Config(_config_file)
 
+    # 打包关键字参数
     _keywords = {
-        "template_dir": _template_dir, "src_total_place": _src_total_place, "config": _config
+        "src_total_place": _src_total_place, "template": _template, "config": _config,
     }
 
     # 命令行

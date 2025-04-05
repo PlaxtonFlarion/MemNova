@@ -37,10 +37,11 @@ class Analyzer(object):
         self.db = db
         self.download = download
 
-    async def form_report(self, template_dir: str, *args, **kwargs) -> None:
+    async def form_report(self, template: str, *args, **kwargs) -> None:
+        template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
-        template = environment.get_template(const.TEMPLATE_FILE)
+        template = environment.get_template(template_file)
         html = template.render(*args, **kwargs)
 
         html_file = os.path.join(self.download, f"Inform_{time.strftime('%Y%m%d%H%M%S')}.html")

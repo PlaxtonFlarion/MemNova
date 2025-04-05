@@ -42,6 +42,7 @@ class Parser(object):
         items_group.add_argument("--memory", action="store_true", help="开始测试")
         items_group.add_argument("--script", action="store_true", help="自动测试")
         items_group.add_argument("--report", action="store_true", help="生成报告")
+        items_group.add_argument("--config", action="store_true", help="配置文件")
 
         parser.add_argument("--sylora", type=str, default=None, help="数据集合")
         parser.add_argument("--serial", type=str, default=None, help="测试设备")

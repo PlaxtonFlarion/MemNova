@@ -26,8 +26,8 @@ ENCODING: str = f"UTF-8"
 LOG_FORMAT: str = f"{APP_DESC} {{time:YYYY-MM-DD HH:mm:ss}} | {{level}} | {{message}}"
 
 SUMMARY: str = f"Summary"
-TEMPLATE_DIR: tuple[str, str] = f"schematic", f"templates"
-TEMPLATE_FILE: str = f"memory.html"
+
+SCHEMATIC: str = f"schematic"
 
 
 if __name__ == '__main__':

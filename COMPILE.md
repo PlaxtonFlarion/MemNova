@@ -31,9 +31,20 @@
 - schematic
   - resources
 
+### 新建 `supports` 目录以及子目录，拷贝可执行文件至对应目录
+- schematic
+  - resources
+  - supports
+    - MacOS
+    - Windows
+      - notepad
+        - notepad.exe
+        - ...
+
 ### 拷贝 `memnova/templates` 目录
 - schematic
   - resources
+  - supports
   - templates
     - ...
 
