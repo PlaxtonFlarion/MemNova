@@ -43,6 +43,7 @@ except ImportError:
 
 
 class ToolKit(object):
+
     text_content: typing.Optional[str] = None
 
     @staticmethod
@@ -406,8 +407,9 @@ class Memrix(object):
 async def main() -> typing.Optional[typing.Any]:
 
     if len(sys.argv) == 1:
-        raise MemrixError(f"命令参数为空 ...")
-    elif not shutil.which("adb"):
+        return _parser.parse_engine.print_help()
+
+    if not shutil.which("adb"):
         raise MemrixError(f"ADB 环境变量未配置 ...")
 
     if _cmd_lines.config:
@@ -533,8 +535,10 @@ if __name__ == '__main__':
         "src_total_place": _src_total_place, "template": _template, "config": _config,
     }
 
+    # 命令行解析器
+    _parser = Parser()
     # 命令行
-    _cmd_lines = Parser.parse_cmd()
+    _cmd_lines = Parser().parse_cmd
 
     try:
         asyncio.run(main())
