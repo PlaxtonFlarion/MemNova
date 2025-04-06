@@ -43,7 +43,6 @@ except ImportError:
 
 
 class ToolKit(object):
-
     text_content: typing.Optional[str] = None
 
     @staticmethod
@@ -87,8 +86,8 @@ class Player(object):
 
 class Memrix(object):
 
-    file_insert: typing.Optional[int]
-    file_folder: typing.Optional[str]
+    file_insert: typing.Optional[int] = 0
+    file_folder: typing.Optional[str] = ""
 
     exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
     dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
@@ -147,6 +146,7 @@ class Memrix(object):
         logger.info(f"{self.group_dir}")
         logger.info(f"^* Dump Close *^")
 
+    # """记忆风暴"""
     async def dump_task_start(self, device: "Device") -> None:
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
@@ -236,7 +236,7 @@ class Memrix(object):
                 remark_map.update({"pid": k + " - " + v})
 
             if all(memory_result := await asyncio.gather(
-                *(flash_memory(k) for k in list(app_pid.member.keys()))
+                    *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
                 muster = {}
                 for result in memory_result:
@@ -305,6 +305,7 @@ class Memrix(object):
                 await flash_memory_launch()
                 await asyncio.sleep(self.config.speed)
 
+    # """巡航引擎"""
     async def exec_task_start(self, device: "Device") -> None:
         try:
             open_file = await asyncio.to_thread(FileAssist.read_json, self.sylora)
@@ -350,6 +351,7 @@ class Memrix(object):
         except asyncio.CancelledError:
             logger.info(f"^* Exec Close *^")
 
+    # """真相快照"""
     async def create_report(self) -> None:
         for file in [self.db_file, self.log_file, self.team_file]:
             try:
@@ -367,7 +369,7 @@ class Memrix(object):
             raise MemrixError(f"No data scenario {memory_data_list} ...")
 
         if not (report_list := await asyncio.gather(
-            *(analyzer.draw_memory(data_dir) for data_dir in memory_data_list)
+                *(analyzer.draw_memory(data_dir) for data_dir in memory_data_list)
         )):
             raise MemrixError(f"No data scenario {report_list} ...")
 
@@ -402,14 +404,13 @@ class Memrix(object):
 
 
 async def main() -> typing.Optional[typing.Any]:
-    if not shutil.which("adb"):
-        raise MemrixError(f"ADB 环境变量未配置 ...")
 
     if len(sys.argv) == 1:
         raise MemrixError(f"命令参数为空 ...")
+    elif not shutil.which("adb"):
+        raise MemrixError(f"ADB 环境变量未配置 ...")
 
     if _cmd_lines.config:
-        # 显示 Logo & License
         Display.show_logo()
         Display.show_license()
 
@@ -420,7 +421,6 @@ async def main() -> typing.Optional[typing.Any]:
         if not (sylora := _cmd_lines.sylora):
             raise MemrixError(f"--sylora 参数不能为空 ...")
 
-        # 显示 Logo & License
         Display.show_logo()
         Display.show_license()
 
@@ -538,8 +538,8 @@ if __name__ == '__main__':
 
     try:
         asyncio.run(main())
-    except MemrixError as _memrix_error:
-        Grapher.view(_memrix_error)
+    except MemrixError as _error:
+        Grapher.view(_error)
         Display.show_fail()
         sys.exit(1)
     except (KeyboardInterrupt, asyncio.CancelledError):
