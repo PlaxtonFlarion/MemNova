@@ -22,20 +22,36 @@ class Parser(object):
     __parse_engine: typing.Optional["argparse.ArgumentParser"] = None
 
     def __init__(self):
+        custom_made_usage = f"""\
+        --------------------------------------------
+        \033[1;35m{const.APP_NAME}\033[0m --memory --sylora <com.example.application> --serial <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --script --sylora <file.path> --serial <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --report --sylora <file.name>
+        \033[1;35m{const.APP_NAME}\033[0m --config
+        """
         self.__parse_engine = argparse.ArgumentParser(
-            const.APP_NAME, usage=None, description=textwrap.dedent(f'''\
-                \033[1;32mMemrix · 记忆星核\033[0m
+            const.APP_NAME,
+            usage=f" \033[1;35m{const.APP_NAME}\033[0m [-h] [--help] View help documentation\n" + custom_made_usage,
+            description=textwrap.dedent(f'''\
+                \033[1;32m{const.APP_DESC} · {const.APP_CN}\033[0m
                 \033[1m-----------------------------\033[0m
                 \033[1;32mCommand Line Arguments {const.APP_DESC}\033[0m
             '''),
             formatter_class=argparse.RawTextHelpFormatter
         )
 
-        items_group = self.__parse_engine.add_mutually_exclusive_group()
-        items_group.add_argument(
+        mutually_exclusive = self.__parse_engine.add_argument_group(
+            title="\033[1m^* 核心操控 *^\033[0m",
+            description=textwrap.dedent(f'''\
+                \033[1;33m参数互斥\033[0m
+            '''),
+        )
+        major_group = mutually_exclusive.add_mutually_exclusive_group()
+
+        major_group.add_argument(
             "--memory", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m<核心操控> - ^*记忆风暴*^\033[0m
+                \033[1;34m^*记忆风暴*^\033[0m
                 -------------------------
                 启动 **记忆风暴模式**，以持续的周期性方式拉取目标应用的内存使用情况，并将数据写入本地数据库中，供后续报告分析与可视化展示使用。
                 可通过 `--sylora` 指定目标应用包名，通过配置文件自定义拉取频率（默认 1 秒，可设定范围为 1~10 秒）。
@@ -44,10 +60,10 @@ class Parser(object):
 
             ''')
         )
-        items_group.add_argument(
+        major_group.add_argument(
             "--script", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m<核心操控> - ^*巡航引擎*^\033[0m 
+                \033[1;34m^*巡航引擎*^\033[0m 
                 -------------------------
                 启动 **巡航引擎模式**，读取指定的 **JSON** 文件，根据其中定义的关键步骤，执行 **UI** 自动化操作。
                 **Memrix** 会在执行过程中使用 **异步协程机制**，持续实时检测内存状态，确保测试流程与内存监控同步进行。
@@ -57,10 +73,10 @@ class Parser(object):
 
             ''')
         )
-        items_group.add_argument(
+        major_group.add_argument(
             "--report", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m<核心操控> - ^*真相快照*^\033[0m 
+                \033[1;34m^*真相快照*^\033[0m 
                 -------------------------
                 启动 **真相快照模式**，从测试过程中记录的本地数据库中提取原始数据，执行统计分析（如均值、峰值、波动区段）。
                 自动生成结构化、可视化的 **HTML** 格式报告，包含内存曲线图、异常区域标记、基本统计指标、测试元信息等。
@@ -68,10 +84,10 @@ class Parser(object):
 
             ''')
         )
-        items_group.add_argument(
+        major_group.add_argument(
             "--config", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m<核心操控> - ^*星核蓝图*^\033[0m 
+                \033[1;34m^*星核蓝图*^\033[0m 
                 -------------------------
                 启动 **星核蓝图模式**，**Memrix** 将自动调用系统内置的文本编辑器，打开主配置文件（YAML 格式）。
                 文件将以格式化、美观、带注释的方式呈现，便于修改参数行为、默认模式、报告设置等。
@@ -81,10 +97,16 @@ class Parser(object):
             ''')
         )
 
-        self.__parse_engine.add_argument(
+        minor_group = self.__parse_engine.add_argument_group(
+            title="\033[1m^* 环境桥接 *^\033[0m",
+            description=textwrap.dedent(f'''\
+                \033[1;32m参数兼容\033[0m
+            '''),
+        )
+        minor_group.add_argument(
             "--sylora", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m<环境桥接> - ^*数据魔方*^\033[0m 
+                \033[1;36m^*数据魔方*^\033[0m 
                 -------------------------
                 用于传递关键上下文信息，根据核心操控命令的不同将自动转换为对应的上下文用途，提供结构化参数支持。
                 **记忆风暴模式** 传递 -> **应用程序包名**
@@ -93,10 +115,10 @@ class Parser(object):
 
             ''')
         )
-        self.__parse_engine.add_argument(
+        minor_group.add_argument(
             "--serial", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m<环境桥接> - ^*宿主代号*^\033[0m 
+                \033[1;36m^*宿主代号*^\033[0m 
                 -------------------------
                 指定目标设备的唯一序列号（Serial Number），当连接多个设备或自动识别失败时强制绑定目标设备。
                 它是 **Memrix** 与设备之间的“精确信标”，确保测试任务落在指定设备之上，防止误测、多测或设备错位操作。
