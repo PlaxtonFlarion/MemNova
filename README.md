@@ -102,18 +102,22 @@ memrix --memory --sylora <com.example.application>
 ```
 memrix --script --sylora <file.path>
 ```
+#### 📔 脚本说明:
+- `loopers` 脚本需要循环的次数
+- `package` 应用程序包名
+- `mission` 自动化指令集名称
+  - `case` 业务名称
+    - `cmds` `u2`需要调用的自动化指令
+    - `vals` `u2`自动化指令接收的参数
+    - `args` `method`接收的不定长参数
+    - `kwds` `method`接收的关键字参数
 #### 📔 脚本示例:
 ```json
 {
     "loopers": 10,
     "package": "com.example.application",
     "mission": {
-        "case_1": [
-            {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
-            {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
-            {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}}
-        ], 
-        "case_2": [
+        "case": [
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}}
