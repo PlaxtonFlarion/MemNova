@@ -32,12 +32,73 @@ from engine.tackle import DataBase
 
 
 class Analyzer(object):
+    """
+    Memrix 分析器类，用于生成内存测试报告，包括统计图表绘制与 HTML 页面渲染。
+
+    该类负责读取采集数据库中的内存数据，提取前台与后台运行阶段的指标曲线，
+    通过 Bokeh 绘制可交互图表，并基于 Jinja2 模板渲染完整的 HTML 报告页面。
+
+    适用于批量测试后的数据分析与可视化场景。
+
+    Parameters
+    ----------
+    db : aiosqlite.Connection
+        已连接的异步 SQLite 数据库对象，包含内存采集结果表。
+
+    download : str
+        报告输出路径，所有生成的 HTML 图表与页面文件将保存至该目录。
+
+    Attributes
+    ----------
+    db : aiosqlite.Connection
+        采集数据数据库连接对象，供后续查询与分析调用。
+
+    download : str
+        报告输出路径，包含图表文件与最终报告 HTML 文件。
+
+    Methods
+    -------
+    form_report(template: str, *args, **kwargs)
+        使用 Jinja2 渲染 HTML 报告页面，将分析结果注入模板。
+
+    draw_memory(data_dir: str) -> dict
+        读取数据库数据，生成前后台 PSS 曲线图，计算均值峰值并返回路径与统计结果。
+    """
 
     def __init__(self, db: "aiosqlite.Connection", download: str):
         self.db = db
         self.download = download
 
     async def form_report(self, template: str, *args, **kwargs) -> None:
+        """
+        渲染最终 HTML 报告页面，并保存至下载目录。
+
+        使用 Jinja2 模板引擎将传入的统计结果、图表路径等数据注入 HTML 模板中。
+        输出文件名以 `Inform_时间戳.html` 命名，存放在 `self.download` 指定目录。
+
+        Parameters
+        ----------
+        template : str
+            HTML 模板文件的绝对路径。
+
+        *args :
+            位置参数，传递给 Jinja2 模板。
+
+        **kwargs :
+            关键字参数，作为模板渲染上下文传入。
+
+        Returns
+        -------
+        None
+            异步执行，无返回值。成功后在输出目录生成 HTML 报告。
+
+        Notes
+        -----
+        - 模板必须为合法 Jinja2 文件，包含可注入变量。
+        - 输出文件编码遵循系统预设常量 `const.ENCODING`。
+        - 模板与数据解耦，支持自定义报告样式与结构。
+        """
+
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -50,8 +111,74 @@ class Analyzer(object):
             logger.info(html_file)
 
     async def draw_memory(self, data_dir: str) -> dict[str, str]:
+        """
+        生成指定数据目录下的前台与后台内存曲线图（HTML 格式），并返回关键统计结果。
 
-        async def draw(file_name, data_list):
+        本方法将从数据库中提取对应轮次的数据，分别绘制前台（fg）与后台（bg）曲线图，
+        每张图均包含：
+        - PSS 曲线
+        - 峰值 / 均值标记点与标注线
+        - RSS / USS 数据悬浮提示
+        - 当前 Activity 与 UID 优先级信息
+        - 可隐藏图例、平滑颜色渐变、平均带宽区间标识
+
+        Parameters
+        ----------
+        data_dir : str
+            数据目录标识（即本轮采集数据的标记，用于生成报告路径和图表命名）。
+
+        Returns
+        -------
+        dict[str, str]
+            包含以下键的字典：
+            - fg_max / bg_max：PSS 峰值（MB）
+            - fg_avg / bg_avg：PSS 均值（MB）
+            - fg_loc / bg_loc：图表文件相对路径
+            - minor_title：本轮任务的标识标题
+
+        Notes
+        -----
+        - 图表文件将以 `FG_<data_dir>.html` / `BG_<data_dir>.html` 命名
+        - 所有图表使用 Bokeh 绘制，支持交互与动态图例
+        - 如果数据缺失或结构异常，将自动跳过绘图并返回空结果
+        - 输出路径结构为 `{download}/summary/{data_dir}/`
+        """
+
+        async def draw(file_name: str, data_list: list[tuple]) -> dict:
+            """
+            绘制指定数据列表的内存曲线图（PSS），并保存为交互式 HTML 文件。
+
+            图表使用 Bokeh 构建，展示内存随时间变化的趋势线，并附带峰值、均值标记，
+            支持自定义颜色、图例折叠、悬浮提示、横向辅助线等视觉信息。
+
+            Parameters
+            ----------
+            file_name : str
+                图表类型标识（如 "fg" 或 "bg"），用于文件命名与图例标识。
+
+            data_list : list[tuple]
+                从数据库中提取的原始内存数据，每项包含：
+                (timestamp, rss, pss, uss, opss, activity, adj, foreground)
+
+            Returns
+            -------
+            dict
+                图表渲染后的统计信息字典，包含：
+                - {file_name}_max : float
+                    当前数据中的 PSS 峰值（单位 MB）
+                - {file_name}_avg : float
+                    当前数据中的 PSS 平均值（单位 MB）
+                - {file_name}_loc : str
+                    图表文件的相对路径（用于最终报告整合）
+
+            Notes
+            -----
+            - 使用 Bokeh 的 HoverTool 提供悬浮提示，包括 PSS、RSS、USS、Activity 和 ADJ 状态
+            - 峰值（红）、均值（粉）、最小值（绿）使用散点与辅助线标注
+            - 图表输出位置为：`{download}/summary/{data_dir}/FG_*.html 或 BG_*.html`
+            - 若数据为空或结构异常将返回空字典，不影响报告主流程
+            """
+
             if not data_list:
                 return {}
 

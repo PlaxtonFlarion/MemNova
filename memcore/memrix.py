@@ -43,11 +43,34 @@ except ImportError:
 
 
 class ToolKit(object):
+    """
+    内存工具类，用于执行单位转换、数值计算与文本匹配等基础功能。
+
+    Attributes
+    ----------
+    text_content : Optional[str]
+        用于正则匹配的文本内容。可通过 `fit()` 方法执行查找与转换。
+    """
 
     text_content: typing.Optional[str] = None
 
     @staticmethod
     def transform(number: typing.Any) -> float:
+        """
+        将任意数字（或可转换为数字的值）转换为以 KB 为单位的浮点数。
+
+        Parameters
+        ----------
+        number : Any
+            任意可被转换为 float 的值（通常为字节数或字符串表示的数字）。
+
+        Returns
+        -------
+        float
+            返回值为输入数值除以 1024 后的结果，精确到小数点后两位。
+            若转换失败，则返回 0.00。
+        """
+
         try:
             return round(float(number) / 1024, 2)
         except TypeError:
@@ -55,6 +78,21 @@ class ToolKit(object):
 
     @staticmethod
     def addition(*numbers) -> float:
+        """
+        执行多个数值的加法求和。
+
+        Parameters
+        ----------
+        *numbers : float or str
+            任意数量的参数，每个都应可被转换为 float。
+
+        Returns
+        -------
+        float
+            所有数值之和，四舍五入保留两位小数。
+            若存在无法转换的值，则返回 0.00。
+        """
+
         try:
             return round(sum([float(number) for number in numbers]), 2)
         except TypeError:
@@ -62,21 +100,80 @@ class ToolKit(object):
 
     @staticmethod
     def subtract(number_begin: typing.Any, number_final: typing.Any) -> float:
+        """
+        执行两个数值之间的减法操作。
+
+        Parameters
+        ----------
+        number_begin : Any
+            被减数，需可转换为 float。
+        number_final : Any
+            减数，需可转换为 float。
+
+        Returns
+        -------
+        float
+            差值结果，四舍五入保留两位小数。
+            若任一参数无法转换为 float，则返回 0.00。
+        """
+
         try:
             return round(float(number_begin) - float(number_final), 2)
         except TypeError:
             return 0.00
 
     def fit(self, pattern: typing.Union[str, "re.Pattern[str]"]) -> float:
+        """
+         使用正则表达式在 `text_content` 中提取匹配的第一个分组，并转换为 KB 单位。
+
+         Parameters
+         ----------
+         pattern : str or Pattern[str]
+             要匹配的正则表达式，可以是字符串或已编译的 re.Pattern。
+
+         Returns
+         -------
+         float
+             若匹配成功，返回分组内容转换为 KB 后的浮点值；
+             若匹配失败或分组无效，返回 0.00。
+         """
+
         return self.transform(find.group(1)) if (
-            find := re.search(fr"{pattern}", self.text_content, re.S)
+            find := re.search(pattern, self.text_content, re.S)
         ) else 0.00
 
 
 class Player(object):
+    """
+    音频播放工具类，用于异步播放本地音频文件。
+    """
 
     @staticmethod
     async def audio(audio_file: str) -> None:
+        """
+        异步播放指定的音频文件（支持常见音频格式）。
+
+        使用 pygame 的音频引擎进行加载与播放。函数在播放期间会阻塞，直到播放结束。
+        适用于需要在异步流程中播放提示音或语音反馈的场景。
+
+        Parameters
+        ----------
+        audio_file : str
+            音频文件的路径，支持 `.mp3`, `.wav`, `.ogg` 等格式。
+
+        Returns
+        -------
+        None
+            无返回值。方法在音频播放完成后自动退出。
+
+        Notes
+        -----
+        - 本方法需在支持 asyncio 的事件循环中运行。
+        - pygame 必须已正确初始化，并具备音频播放环境。
+        - 音量默认设置为最大（1.0），可在必要时添加音量控制参数。
+        - 若音频播放失败（如文件路径无效或格式不受支持），可能抛出 pygame 错误。
+        """
+
         pygame.mixer.init()
         pygame.mixer.music.load(audio_file)
         pygame.mixer.music.set_volume(1.0)
@@ -86,6 +183,29 @@ class Player(object):
 
 
 class Memrix(object):
+    """
+    Memrix 核心控制类，用于协调内存采集（记忆风暴）、自动化测试（巡航引擎）和报告生成（真相快照）。
+
+    类实例在初始化时根据运行模式自动构建工作路径、配置数据库与日志文件，
+    并提供事件同步机制以支持异步任务的协同关闭。
+
+    Attributes
+    ----------
+    file_insert : Optional[int]
+        成功插入的采集数据条数，记录写入数据库的轮次数。
+
+    file_folder : Optional[str]
+        当前采集数据所属的文件夹名称，用于组织日志与中间输出。
+
+    exec_start_event : asyncio.Event
+        自动化任务开始的事件标记，供其他协程判断任务是否已启动。
+
+    dump_close_event : asyncio.Event
+        控制内存采集任务是否退出的同步事件。
+
+    dumped : asyncio.Event
+        内存采集任务单轮完成的标志，用于同步数据写入与下一轮调度。
+    """
 
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
@@ -103,13 +223,43 @@ class Memrix(object):
             *args,
             **kwargs
     ):
+        """
+        初始化 Memrix 实例，根据所选运行模式（memory/script/report）配置任务路径与环境变量。
+
+        初始化过程包括文件目录创建、数据库路径设定、日志与 YAML 场景文件命名等，
+        并绑定配置文件对象与模板路径。
+
+        Parameters
+        ----------
+        memory : Optional[bool]
+            是否启用内存采集任务（记忆风暴模式）。
+
+        script : Optional[bool]
+            是否启用 UI 自动化测试任务（巡航引擎模式）。
+
+        report : Optional[bool]
+            是否启用报告生成流程（真相快照模式）。
+
+        *args :
+            额外位置参数，约定第一个为 sylora（测试任务标识或包名）。
+
+        **kwargs :
+            命名参数集合，必须包含以下键：
+            - src_total_place : str
+                输出根目录（用于存放 Memory_Folder 等结构）。
+            - template : str
+                报告模板文件路径。
+            - config : Config
+                从配置文件中解析出的运行配置对象。
+        """
+
         self.memory, self.script, self.report = memory, script, report
 
         self.sylora, *_ = args
 
-        self.src_total_place = kwargs["src_total_place"]
-        self.template = kwargs["template"]
-        self.config = kwargs["config"]
+        self.src_total_place: str = kwargs["src_total_place"]
+        self.template: str = kwargs["template"]
+        self.config: "Config" = kwargs["config"]
 
         if self.report:
             folder: str = self.sylora
@@ -126,10 +276,50 @@ class Memrix(object):
         self.team_file = os.path.join(self.group_dir, f"team_{folder}.yaml")
 
     def clean_up(self, *_, **__) -> None:
+        """
+        异步触发内存采集任务的收尾流程。
+
+        该方法可在外部逻辑（如 UI 自动化任务结束）中调用，用于通知内存拉取逻辑停止，
+        并调度关闭流程 `dump_task_close()`。本方法本身不等待任务执行完成，仅注册关闭任务。
+
+        Parameters
+        ----------
+        *_ :
+            占位参数，未使用。
+
+        **__ :
+            占位关键字参数，未使用。
+
+        Returns
+        -------
+        None
+            无返回值。调用后会异步调度关闭操作。
+        """
+
         loop = asyncio.get_running_loop()
         loop.create_task(self.dump_task_close())
 
     async def dump_task_close(self) -> None:
+        """
+        执行内存采集任务的完整关闭流程（含事件通知、任务取消、日志输出）。
+
+        本方法在接收到停止信号后执行，首先设置关闭事件，
+        等待正在进行的拉取任务结束，随后取消所有 asyncio 任务（包括自动化、采集等后台任务），
+        并记录总耗时和当前任务状态。
+
+        Returns
+        -------
+        None
+            异步执行，无返回值。
+
+        Notes
+        -----
+        - 所有任务通过 `asyncio.all_tasks()` 获取并逐个调用 `.cancel()`。
+        - 使用 `self.dumped.wait()` 等待采集完成标志。
+        - 在关闭过程中写入标准日志信息，包括任务标识、采集条数和耗时分钟数。
+        - 若存在被取消的协程任务，会记录相关提示。
+        """
+
         self.dump_close_event.set()
         await self.dumped.wait()
 
@@ -149,60 +339,144 @@ class Memrix(object):
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device") -> None:
+        """
+        启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
+
+        方法内部包含多级流程，包括：
+        - 设备 PID / UID / Activity 状态获取
+        - 内存快照解析（PSS、RSS、USS、SWAP、Graphics 等）
+        - 多进程内存合并与结构构建
+        - 数据持久化（使用 SQLite）
+        - 文件结构与任务标识管理
+
+        内部定义的协程包括：
+        - `flash_memory(pid)`：对单个 PID 进行内存解析与归类
+        - `flash_memory_launch()`：执行一次完整的采集流程，并组织入库结构
+
+        采集周期由配置文件中的 `config.speed` 控制，任务会持续运行直到 `dump_close_event` 被触发。
+
+        Parameters
+        ----------
+        device : Device
+            目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
+
+        Returns
+        -------
+        None
+            异步执行，无返回值。函数结束表示内存拉取流程被主动中断或关闭。
+
+        Raises
+        ------
+        MemrixError
+            当目标包无法识别，或采集初始化失败时抛出异常。
+
+        Notes
+        -----
+        - 拉取结果会写入数据库文件：`memory_data.db`
+        - 每一轮采集完成后会写入日志，并更新进度统计
+        - 日志与数据目录按时间命名，支持场景标记（YAML）
+        - 多进程结构通过 `Counter` 聚合并转换为嵌套字典
+        - 如果 YAML 场景文件已存在，当前轮次将追加入 file 列表中
+
+        Examples
+        --------
+        memrix = Memrix(memory=True, script=False, report=False, ..., config=...)
+        await memrix.dump_task_start(device)
+        """
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
+            """
+            拉取并解析指定进程（PID）的内存信息。
+
+            调用设备的 `memory_info()` 接口获取完整原始内存数据（/proc/pid 等），
+            解析后提取三大内存映射结构：
+
+            - resume_map：汇总性指标（USS、RSS、PSS、Graphics、SWAP 等）
+            - memory_map：详细结构（Native Heap、mmap 分段等）
+            - memory_vms：VMS 估值（通过 pkg_value 拉取）
+
+            使用正则表达式提取文本内容，结合 `ToolKit.fit()` 进行数据清洗与单位转换。
+
+            Parameters
+            ----------
+            pid : str
+                目标进程的 PID，用于获取应用的内存快照。
+
+            Returns
+            -------
+            Optional[dict[str, dict]]
+                包含三个键的字典（resume_map, memory_map, memory_vms）。
+                若内存数据拉取失败，则返回 None。
+
+            Notes
+            -----
+            - 使用多个正则表达式进行分段提取，并做空值过滤与容错
+            - 支持识别 "App Summary" 与 "TOTAL" 结构
+            - 采集结果为标准化后的数值映射（单位为 MB，四舍五入）
+            """
+
             if not (memory := await device.memory_info(package)):
                 return None
 
             logger.info(f"Dump memory [{pid}] - [{package}]")
             resume_map: dict = {}
             memory_map: dict = {}
+            memory_vms: dict = {}
 
             if match_memory := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", memory, re.S):
                 toolkit.text_content = (clean_memory := re.sub(r"\s+", " ", match_memory.group()))
-                memory_map.update({
-                    "Native Heap": toolkit.fit("Native Heap .*?(\\d+)"),
-                    "Dalvik Heap": toolkit.fit("Dalvik Heap .*?(\\d+)"),
-                    "Dalvik Other": toolkit.fit("Dalvik Other .*?(\\d+)"),
-                    "Stack": toolkit.fit("Stack .*?(\\d+)"),
-                    "Ashmem": toolkit.fit("Ashmem .*?(\\d+)"),
-                    "Other dev": toolkit.fit("Other dev .*?(\\d+)"),
-                    ".so mmap": toolkit.fit(".so mmap .*?(\\d+)"),
-                    ".jar mmap": toolkit.fit(".jar mmap .*?(\\d+)"),
-                    ".apk mmap": toolkit.fit(".apk mmap .*?(\\d+)"),
-                    ".ttf mmap": toolkit.fit(".ttf mmap .*?(\\d+)"),
-                    ".dex mmap": toolkit.fit(".dex mmap .*?(\\d+)"),
-                    ".oat mmap": toolkit.fit(".oat mmap .*?(\\d+)"),
-                    ".art mmap": toolkit.fit(".art mmap .*?(\\d+)"),
-                    "Other mmap": toolkit.fit("Other mmap .*?(\\d+)"),
-                    "GL mtrack": toolkit.fit("GL mtrack .*?(\\d+)"),
-                    "Unknown": toolkit.fit("Unknown .*?(\\d+)")
-                })
+
+                for element in [
+                    "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
+                    ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
+                    "Other mmap", "GL mtrack", "Unknown"
+                ]:
+                    memory_map[element] = toolkit.fit(f"{element} .*?(\\d+)")
+
                 if total_memory := re.search(r"TOTAL.*\d+", clean_memory, re.S):
                     if part := total_memory.group().split():
-                        resume_map.update({"TOTAL USS": toolkit.transform(part[2])})
+                        resume_map["TOTAL USS"] = toolkit.transform(part[2])
 
             if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", memory, re.S):
                 toolkit.text_content = re.sub(r"\s+", " ", match_resume.group())
-                resume_map.update(
-                    {
-                        "Graphics": toolkit.fit("Graphics: .*?(\\d+)"),
-                        "TOTAL RSS": toolkit.fit("TOTAL RSS: .*?(\\d+)"),
-                        "TOTAL PSS": toolkit.fit("TOTAL PSS: .*?(\\d+)"),
-                        "TOTAL SWAP": toolkit.fit("TOTAL SWAP.*(\\d+)")
-                    }
-                )
-                resume_map.update(
-                    {
-                        "OPSS": toolkit.subtract(resume_map.get("TOTAL PSS"), resume_map.get("Graphics"))
-                    }
-                )
 
-            memory_vms: dict = {"vms": toolkit.transform(await device.pkg_value(pid))}
+                resume_map["Graphics"] = toolkit.fit("Graphics: .*?(\\d+)")
+                resume_map["TOTAL RSS"] = toolkit.fit("TOTAL RSS: .*?(\\d+)")
+                resume_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
+                resume_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
+
+                resume_map["OPSS"] = toolkit.subtract(resume_map["TOTAL PSS"], resume_map["Graphics"])
+
+            memory_vms["vms"] = toolkit.transform(await device.pkg_value(pid))
 
             return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}
 
         async def flash_memory_launch() -> None:
+            """
+            执行一轮完整的内存采集任务流程（包括应用状态 & 多进程内存分析）。
+
+            步骤如下：
+            1. 获取应用 PID 列表（支持多进程）
+            2. 获取 UID / ADJ / ACT 状态信息
+            3. 并发执行 `flash_memory(pid)`，合并所有结果
+            4. 构建标准结构 Ram 对象
+            5. 插入数据库并打印采集结果
+
+            采集完成后自动触发 `self.dumped.set()`，用于通知主控制循环进入下一轮。
+
+            Returns
+            -------
+            None
+                无返回值，任务完成后直接更新数据记录与标志位。
+
+            Notes
+            -----
+            - 使用 `asyncio.gather()` 并发拉取进程数据
+            - 使用 Counter 对结果进行多进程合并，保证结构完整性
+            - 使用 `Ram(...)` 对象包装采集结果用于入库
+            - 若数据不完整，将跳过插入并记录日志
+            """
+
             self.dumped.clear()
 
             dump_start_time = time.time()
@@ -308,6 +582,62 @@ class Memrix(object):
 
     # """巡航引擎"""
     async def exec_task_start(self, device: "Device") -> None:
+        """
+        执行自动化脚本任务（巡航引擎），按 JSON 文件中的流程指令驱动设备操作，并并行进行内存采集。
+
+        支持的自动化指令包括：
+        - `u2`：调用 uiautomator2 的控件操作接口
+        - `sleep`：等待延时
+        - `audio`：播放音频反馈（通过 Player.audio 实现）
+
+        该方法将从指定的 JSON 文件中解析：
+        - 循环次数（loopers）
+        - 应用包名（package）
+        - 对应任务组（由配置文件中的 `group` 指定）
+
+        脚本执行过程中，会并行启动内存采集任务（`dump_task_start()`），
+        并在主控流程结束后主动关闭采集任务。
+
+        Parameters
+        ----------
+        device : Device
+            被测试设备对象，需支持 u2_active、examine_package、u2/sleep 等命令映射接口。
+
+        Returns
+        -------
+        None
+            异步执行，无返回值。执行完成后自动关闭内存采集任务。
+
+        Raises
+        ------
+        MemrixError
+            - 当 JSON 文件缺失、字段不合法、数据类型错误
+            - 当设备连接失败或包名无效
+            - 当任务组名称不存在或解析失败
+
+        Notes
+        -----
+        - 使用 asyncio 并发机制启动内存拉取任务
+        - 所有指令通过 `getattr()` 动态调用：支持扩展其他命令类型
+        - 使用 `Grapher.view()` 记录每一步执行命令和返回值
+        - 主流程执行完毕后主动调用 `dump_task_close()` 清理资源
+
+        Examples
+        --------
+        config.group = "mission"
+        # 脚本结构：
+        # {
+        #   "loopers": 3,
+        #   "package": "com.example.app",
+        #   "mission": {
+        #       "step1": [{"cmds": "u2", "vals": [...], "args": [...]}],
+        #       ...
+        #   }
+        # }
+
+        await memrix.exec_task_start(device)
+        """
+
         try:
             open_file = await asyncio.to_thread(FileAssist.read_json, self.sylora)
         except (FileNotFoundError, json.JSONDecodeError) as e:
@@ -354,6 +684,46 @@ class Memrix(object):
 
     # """真相快照"""
     async def create_report(self) -> None:
+        """
+        生成内存测试报告（真相快照），基于数据库与中间缓存构建完整 HTML 分析结果。
+
+        本方法会执行以下步骤：
+        1. 验证采集数据（数据库、日志、任务标记文件）是否存在
+        2. 读取 YAML 场景文件，获取所有已记录数据目录
+        3. 使用 `Analyzer.draw_memory()` 渲染每一轮数据的统计图与数值结果
+        4. 汇总所有测试轮次的前后台内存指标均值、峰值
+        5. 调用 `Analyzer.form_report()` 根据模板生成最终报告页面
+
+        报告结构将包含：
+        - 测试信息（时间、设备、任务标签、评价标准）
+        - 每轮数据对比分析图（柱状图、折线图等）
+        - 总体统计：前台/后台峰值、均值
+        - 数据详情列表（每轮一项）
+
+        Returns
+        -------
+        None
+            异步执行，无返回值。成功后将在报告目录中生成 HTML 文件。
+
+        Raises
+        ------
+        MemrixError
+            - 当所需文件不存在或路径错误
+            - 当 YAML 场景中无采集数据记录
+            - 当报告数据生成失败或为空
+
+        Notes
+        -----
+        - 场景文件由 `dump_task_start()` 创建，每轮采集结束追加记录
+        - 最终报告文件路径为：`{group_dir}/Report_{group_dir_name}/index.html`
+        - 使用配置对象中的 `template`, `criteria`, `headline` 等参数进行个性化渲染
+        - 报告内容适用于浏览器查看，也可导出为 PDF
+
+        Examples
+        --------
+        await memrix.create_report()
+        """
+
         for file in [self.db_file, self.log_file, self.team_file]:
             try:
                 assert os.path.isfile(file), f"文件无效 {file}"
@@ -405,6 +775,49 @@ class Memrix(object):
 
 
 async def main() -> typing.Optional[typing.Any]:
+    """
+    Memrix 命令行工具的主执行入口。
+
+    根据命令行参数解析执行不同的操作模式，包括：
+    - `--config`：打开配置文件编辑器，并显示当前配置
+    - `--memory`：启动记忆风暴模式，持续拉取设备内存状态
+    - `--script`：启动巡航引擎模式，执行 UI 自动化测试脚本
+    - `--report`：生成 HTML 内存报告（真相快照）
+
+    如果未指定参数，则显示帮助信息；如未检测到 ADB 环境，将抛出异常。
+
+    Returns
+    -------
+    Optional[Any]
+        根据所选模式返回不同结果（通常无返回值或为任务句柄）；如无参数则返回帮助输出。
+
+    Raises
+    ------
+    MemrixError
+        - 若未配置 ADB 环境变量
+        - 若未传入有效命令
+        - 若 `--sylora` 参数缺失但 memory/script/report 被调用
+
+    Notes
+    -----
+    - 在 `--memory` 与 `--script` 模式中，注册了 SIGINT (Ctrl+C) 信号监听以触发资源清理
+    - 内部通过 `Memrix` 类组合并调度各个子模块的异步操作
+    - 所有参数来自 `_cmd_lines`，配置来自 `_config.configs`
+
+    Examples
+    --------
+    # 打开配置编辑器
+    $ memrix --config
+
+    # 启动内存采集任务
+    $ memrix --memory --sylora com.example.app
+
+    # 执行自动化测试任务
+    $ memrix --script --sylora example..json
+
+    # 生成测试报告
+    $ memrix --report --sylora 20240405123000
+    """
 
     if len(sys.argv) == 1:
         return _parser.parse_engine.print_help()
@@ -452,6 +865,47 @@ if __name__ == '__main__':
     #  | |\/| |/ _ \ '_ ` _ \| '__| \ \/ / \___ \| __/ _` | '__| __/ _ \ '__|
     #  | |  | |  __/ | | | | | |  | |>  <   ___) | || (_| | |  | ||  __/ |
     #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\ |____/ \__\__,_|_|   \__\___|_|
+    #
+    # 版权所有 (c) 2024  Memrix(记忆星核)
+    # 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
+    #
+    # Copyright (c) 2024  Memrix(记忆星核)
+    # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
+    #
+
+    """
+    Memrix 启动入口脚本。
+
+    根据操作系统平台、运行方式（打包/源码/安装），自动配置运行环境与依赖路径，加载命令行参数，初始化配置，并启动主逻辑。
+
+    启动流程包括：
+    1. 显示加载动画与界面信息
+    2. 判断平台（Windows / MacOS / IDE），设置工作路径与工具路径
+    3. 检查 HTML 模板与辅助工具是否完整
+    4. 设置报告目录与初始配置文件路径
+    5. 加载配置（YAML），打包关键字参数供主类使用
+    6. 解析命令行参数并调用主异步执行入口 `main()`
+
+    环境要求：
+    - Windows：支持可执行文件打包（`Memrix.exe`）
+    - MacOS：支持通过 `sys.executable` 启动
+    - IDE：支持 `python memrix.py` 调试运行
+
+    错误处理：
+    - 若缺少必要文件或适配失败，将抛出 `MemrixError` 并以视觉提示退出
+    - 支持 `Ctrl+C` 中断操作，提供友好提示
+
+    示例启动方式：
+    ----------------
+    Windows 可执行文件：
+        Memrix.exe --memory --sylora com.example.app
+
+    MacOS 可执行脚本：
+        ./Memrix --report --sylora 20240405123000
+
+    源码调试：
+        python memrix.py --script --sylora example.json
+    """
 
     # 显示加载动画
     Display.show_animate()

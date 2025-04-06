@@ -106,7 +106,7 @@ memrix --script --sylora <file.path>
 - `loopers` 脚本需要循环的次数
 - `package` 应用程序包名
 - `mission` 自动化指令集名称
-  - `case` 业务名称
+  - `step1` 业务名称
     - `cmds` `u2`需要调用的自动化指令
     - `vals` `u2`自动化指令接收的参数
     - `args` `method`接收的不定长参数
@@ -117,7 +117,7 @@ memrix --script --sylora <file.path>
     "loopers": 10,
     "package": "com.example.application",
     "mission": {
-        "case": [
+        "step1": [
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}},
             {"cmds": "u2", "vals": [null, "method"], "args": ["arg"], "kwds": {"k": "v"}}
