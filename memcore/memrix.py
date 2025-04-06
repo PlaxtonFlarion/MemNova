@@ -149,7 +149,7 @@ class Player(object):
     """
 
     @staticmethod
-    async def audio(audio_file: str) -> None:
+    async def audio(audio_file: str, *_, **__) -> None:
         """
         异步播放指定的音频文件（支持常见音频格式）。
 
@@ -160,6 +160,12 @@ class Player(object):
         ----------
         audio_file : str
             音频文件的路径，支持 `.mp3`, `.wav`, `.ogg` 等格式。
+
+        *_ :
+            占位参数，未使用。
+
+        **__ :
+            占位关键字参数，未使用。
 
         Returns
         -------
@@ -513,10 +519,39 @@ class Memrix(object):
             if all(memory_result := await asyncio.gather(
                     *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
+                """
+                合并多个进程的内存数据结果。
+
+                将每个采样返回的 result 中的 resume_map、memory_map 等字典类型字段，
+                通过 Counter 进行逐字段合并，得到全量指标统计结果（汇总总量）。
+
+                最终将所有 Counter 转换为普通 dict，用于统一插入数据库或生成报告。
+
+                Parameters
+                ----------
+                memory_result : list[dict[str, dict]]
+                    多个进程的内存数据结果列表，每项结构如：
+                    {
+                        "resume_map": {...},
+                        "memory_map": {...},
+                        ...
+                    }
+
+                Returns
+                -------
+                muster : dict[str, dict]
+                    合并后的指标字典，每个子字段为多进程数据的字段级累加结果。
+                """
+
+                # 初始化总汇字典，用于累加多个进程的内存采样结果
                 muster = {}
+                # 遍历所有进程采样结果（每个 result 是一个包含多个指标映射的 dict）
                 for result in memory_result:
                     for k, v in result.items():
+                        # 将每个指标（如 resume_map、memory_map）按字段进行 Counter 累加合并
+                        # 相同字段名的值会自动累加（如多进程的 PSS 值合计）
                         muster[k] = muster.get(k, Counter()) + Counter(v)
+                # 将 Counter 类型转换回普通字典，便于数据库写入与后续处理
                 muster = {k: dict(v) for k, v in muster.items()}
             else:
                 self.dumped.set()
@@ -662,14 +697,45 @@ class Memrix(object):
 
         player: "Player" = Player()
 
+        """
+        执行 JSON 自动化任务脚本中的所有命令。
+
+        每个任务循环 loopers 次，任务脚本结构为：
+        {
+            "loopers": 10,
+            "package": com.example.app,
+            "mission": {
+                "step1": [
+                    {"cmds": "u2", "vals": [...], "args": [...], "kwds": {...}},
+                    {"cmds": "audio", "vals": [...]},
+                    ...
+                ]
+            }
+        }
+
+        支持命令类型：
+        - u2    -> 通过 uiautomator2 执行 UI 控制命令
+        - sleep -> 延迟（异步等待）
+        - audio -> 播放音频片段
+
+        每条命令会根据类型选择目标对象（device 或 player），
+        并执行对应方法，打印带参数的运行结果日志。
+        """
         logger.info(f"^* Exec Start *^")
+        # 外层循环，控制任务执行次数（loopers 次）
         for data in range(loopers):
+            # 遍历 JSON 脚本中每个任务组（如 click、input、swipe 等）
             for key, values in mission.items():
+                # 遍历该任务组内的每条指令
                 for i in values:
+                    # 提取命令类型（cmds），并检查是否在支持的类型列表中
                     if not (cmds := i.get("cmds", None)) or cmds not in ["u2", "sleep", "audio"]:
                         continue
+                    # 根据 cmds 类型选择对应执行对象（device 或 player），获取方法引用
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
+                        # 提取参数：位置参数 vals、额外 args、关键字参数 kwds
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
+                        # 打印即将执行的函数与参数，并异步执行该方法
                         Grapher.view(
                             f"[#AFD7FF]{func.__name__} {vals} {args} {kwds} -> {await func(*vals, *args, **kwds)}"
                         )
@@ -813,7 +879,7 @@ async def main() -> typing.Optional[typing.Any]:
     $ memrix --memory --sylora com.example.app
 
     # 执行自动化测试任务
-    $ memrix --script --sylora example..json
+    $ memrix --script --sylora example.json
 
     # 生成测试报告
     $ memrix --report --sylora 20240405123000
@@ -898,10 +964,10 @@ if __name__ == '__main__':
     示例启动方式：
     ----------------
     Windows 可执行文件：
-        Memrix.exe --memory --sylora com.example.app
+        memrix.exe --memory --sylora com.example.app
 
     MacOS 可执行脚本：
-        ./Memrix --report --sylora 20240405123000
+        ./memrix --report --sylora 20240405123000
 
     源码调试：
         python memrix.py --script --sylora example.json
