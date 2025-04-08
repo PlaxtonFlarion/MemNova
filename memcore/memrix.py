@@ -521,11 +521,40 @@ class Memrix(object):
             if all(memory_result := await asyncio.gather(
                     *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
+                """
+                合并多个进程的 memory_result 结果，按 key 分类累加字段值。
+
+                适用于多进程采样场景：
+                - 每个 result 是结构为 {"resume_map": {...}, "memory_map": {...}} 的字典
+                - 对每一类 map 中的数值字段执行逐字段加和
+
+                使用双层 defaultdict(float) 结构自动初始化字段，避免 KeyError。
+
+                最终返回结构为：
+                {
+                    "resume_map": {
+                        "TOTAL PSS": float,
+                        "TOTAL RSS": float,
+                        ...
+                    },
+                    "memory_map": {
+                        "Native Heap": float,
+                        ...
+                    },
+                    ...
+                }
+                """
+
+                # 使用双层 defaultdict 构建合并容器：
+                # muster[key][k] -> 对应 resume_map / memory_map 等子字段
                 muster = defaultdict(lambda: defaultdict(float))
+                # 遍历所有进程的 memory_result（每项包含多个子映射：resume_map、memory_map 等）
                 for result in memory_result:
                     for key, value in result.items():
                         for k, v in value.items():
+                            # 对同一个字段名累加所有进程的值（如 TOTAL PSS）
                             muster[key][k] += v
+                # 将内部 defaultdict 转换为普通 dict 结构，便于后续使用（如插入数据库、写入 YAML）
                 muster = {k: dict(v) for k, v in muster.items()}
             else:
                 self.dumped.set()
