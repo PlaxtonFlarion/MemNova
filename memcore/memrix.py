@@ -25,8 +25,8 @@ import uiautomator2
 from loguru import logger
 from collections import defaultdict
 from engine.device import Device
-from memnova import const
 from engine.manage import Manage
+from memnova import const
 from engine.parser import Parser
 from engine.display import Display
 from engine.analyzer import Analyzer
@@ -217,9 +217,10 @@ class Memrix(object):
     file_folder: typing.Optional[str] = ""
 
     exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+
     dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
 
-    dumped: typing.Optional["asyncio.Event"] = asyncio.Event()
+    dumped: typing.Optional["asyncio.Event"] = None
 
     def __init__(
             self,
@@ -307,43 +308,43 @@ class Memrix(object):
 
     async def dump_task_close(self) -> None:
         """
-        执行内存采集任务的完整关闭流程（含事件通知、任务取消、日志输出）。
+        关闭内存采样任务，释放资源并触发报告生成。
 
-        本方法在接收到停止信号后执行，首先设置关闭事件，
-        等待正在进行的拉取任务结束，随后取消所有 asyncio 任务（包括自动化、采集等后台任务），
-        并记录总耗时和当前任务状态。
+        该方法通常在用户中断（Ctrl+C）或任务完成后调用，执行以下流程：
+        - 通知设备检查任务退出（设置事件）
+        - 通知采样任务退出（设置事件）
+        - 等待最后一次内存采样写入完成
+        - 取消所有后台 asyncio 任务
+        - 输出日志（采样次数、耗时等）
+        - 若存在有效数据，调用报告生成器 `create_report()`
 
         Returns
         -------
         None
-            异步执行，无返回值。
-
-        Notes
-        -----
-        - 所有任务通过 `asyncio.all_tasks()` 获取并逐个调用 `.cancel()`。
-        - 使用 `self.dumped.wait()` 等待采集完成标志。
-        - 在关闭过程中写入标准日志信息，包括任务标识、采集条数和耗时分钟数。
-        - 若存在被取消的协程任务，会记录相关提示。
+            无返回值，作为清理收尾动作。
         """
 
         self.dump_close_event.set()
-        await self.dumped.wait()
+
+        if self.dumped:
+            Grapher.view(f"[#00AFFF]等待任务结束 ...")
+            await self.dumped.wait()  # 等待本轮拉取完成
 
         try:
+            # 退出所有任务
             await asyncio.gather(
                 *(asyncio.to_thread(task.cancel) for task in asyncio.all_tasks())
             )
         except asyncio.CancelledError:
-            Grapher.view(f"[#E69F00]Canceled Task ...")
+            Grapher.view(f"[#00AFFF]任务已经退出 ...")
 
         time_cost = round((time.time() - self.before_time) / 60, 2)
         logger.info(
             f"{self.config.label} -> {self.file_folder} -> 获取: {self.file_insert} -> 耗时: {time_cost} 分钟"
         )
         logger.info(f"{self.group_dir}")
-        if self.file_insert:
-            await self.create_report()
-        logger.info(f"^* Dump Close *^")
+
+        logger.info(f"^===^ {const.APP_DESC} Engine Close ^===^")
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device") -> None:
@@ -576,14 +577,14 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        package: typing.Optional[str] = self.target
+        package: typing.Optional[str] = self.target  # 传入的应用名称
 
         if "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
 
         logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
 
-        logger.info(f"^* Dump Start *^")
+        logger.info(f"^===^ {const.APP_DESC} Engine Start ^===^")
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
         self.file_insert = 0
@@ -608,7 +609,9 @@ class Memrix(object):
         if not os.path.exists(self.other_dir):
             os.makedirs(self.other_dir, exist_ok=True)
 
-        toolkit: "ToolKit" = ToolKit()
+        toolkit: typing.Optional["ToolKit"] = ToolKit()
+
+        self.dumped = asyncio.Event()
 
         async with aiosqlite.connect(self.db_file) as db:
             await DataBase.create_table(db)
@@ -864,6 +867,7 @@ async def main() -> typing.Optional[typing.Any]:
     ------
     MemrixError
         - 若未配置 ADB 环境变量
+        - 无连接设备
         - 若未传入有效命令
         - 若 `--target` 参数缺失但 memory/script/report 被调用
 
@@ -913,15 +917,17 @@ async def main() -> typing.Optional[typing.Any]:
         )
 
         if memory:
+            if not (device := await Manage.operate_device(_cmd_lines.serial)):
+                raise MemrixError(f"没有连接设备 ...")
             signal.signal(signal.SIGINT, memrix.clean_up)
-            return await memrix.dump_task_start(
-                await Manage.operate_device(_cmd_lines.serial)
-            )
+            return await memrix.dump_task_start(device)
+
         elif script:
+            if not (device := await Manage.operate_device(_cmd_lines.serial)):
+                raise MemrixError(f"没有连接设备 ...")
             signal.signal(signal.SIGINT, memrix.clean_up)
-            return await memrix.exec_task_start(
-                await Manage.operate_device(_cmd_lines.serial)
-            )
+            return await memrix.exec_task_start(device)
+
         elif report:
             return await memrix.create_report()
 
@@ -956,7 +962,7 @@ if __name__ == '__main__':
     6. 解析命令行参数并调用主异步执行入口 `main()`
 
     环境要求：
-    - Windows：支持可执行文件打包（`Memrix.exe`）
+    - Windows：支持可执行文件打包（`memrix.exe`）
     - MacOS：支持通过 `sys.executable` 启动
     - IDE：支持 `python memrix.py` 调试运行
 
@@ -1053,15 +1059,15 @@ if __name__ == '__main__':
     # 加载初始配置
     _config = Config(_config_file)
 
-    # 打包关键字参数
-    _keywords = {
-        "src_total_place": _src_total_place, "template": _template, "config": _config,
-    }
-
     # 命令行解析器
     _parser = Parser()
     # 命令行
     _cmd_lines = Parser().parse_cmd
+
+    # 打包关键字参数
+    _keywords = {
+        "src_total_place": _src_total_place, "template": _template, "config": _config
+    }
 
     try:
         asyncio.run(main())
