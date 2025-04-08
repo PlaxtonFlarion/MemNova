@@ -79,14 +79,14 @@
 ### ⚜️ 记忆风暴 (`--memory`)
 #### 📔 功能描述:
 - 启动 **记忆风暴模式**，以持续的周期性方式拉取目标应用的内存使用情况，并将数据写入本地数据库中，供后续报告分析与可视化展示使用。
-- 可通过 `--sylora` 指定目标应用包名，通过配置文件自定义拉取频率（默认 1 秒，可设定范围为 1~10 秒）。
+- 可通过 `--target` 指定目标应用包名，通过配置文件自定义拉取频率（默认 1 秒，可设定范围为 1~10 秒）。
 - 适用于长时间稳定性监控、内存波动追踪、异常捕捉及前后台行为对比等复杂测试场景。
 - 手动中断（Ctrl+C）。
 #### 📔 参数说明: 
 - **布尔值**
 #### 📔 实际应用: 
 ```
-memrix --memory --sylora <com.example.application>
+memrix --memory --target <com.example.application>
 ```
 
 ### ⚜️ 巡航引擎 (`--script`)
@@ -100,7 +100,7 @@ memrix --memory --sylora <com.example.application>
 - **布尔值**
 #### 📔 实际应用: 
 ```
-memrix --script --sylora <file.path>
+memrix --script --target <file.path>
 ```
 #### 📔 脚本说明:
 - `loopers` 脚本需要循环的次数
@@ -130,12 +130,12 @@ memrix --script --sylora <file.path>
 #### 📔 功能描述:
 - 启动 **真相快照模式**，从测试过程中记录的本地数据库中提取原始数据，执行统计分析（如均值、峰值、波动区段）。
 - 自动生成结构化、可视化的 **HTML** 格式报告，包含内存曲线图、异常区域标记、基本统计指标、测试元信息等。
-- 支持配合 `--sylora` 限定输出指定批次的数据报告。
+- 支持配合 `--target` 限定输出指定批次的数据报告。
 #### 📔 参数说明: 
 - **布尔值**
 #### 📔 实际应用: 
 ```
-memrix --report --sylora <file.name>
+memrix --report --target <file.name>
 ```
 
 ### ⚜️ 星核蓝图 (`--config`)
@@ -183,7 +183,7 @@ Report:
 
 ## 🔰 环境桥接
 
-### ⚜️ 数据魔方 (`--sylora`)
+### ⚜️ 数据魔方 (`--target`)
 #### 📔 功能描述:
 - 用于传递关键上下文信息，根据核心操控命令的不同将自动转换为对应的上下文用途，提供结构化参数支持。
 #### 📔 参数说明:
@@ -192,7 +192,7 @@ Report:
 - **真相快照模式** 传递 -> **指定报告编号**
 #### 📔 实际应用: 
 ```
-memrix --memory --sylora <variable>
+memrix --memory --target <variable>
 ```
 
 ### ⚜️ 宿主代号 (`--serial`)
@@ -203,24 +203,24 @@ memrix --memory --sylora <variable>
 - **字符串**
 #### 📔 实际应用: 
 ```
-memrix --memory --sylora <com.example.application> --serial <device.serial>
+memrix --memory --target <com.example.application> --serial <device.serial>
 ```
 
 ---
 
 ## 🖥️ 使用示例
  
-### 💾 持续监控 (`--memory --sylora`)
+### 💾 持续监控 (`--memory --target`)
 ```
-memrix --memory --sylora <com.example.application>
-```
-
-### 💾 自动监控 (`--script --sylora`)
-```
-memrix --script --sylora <file.path>
+memrix --memory --target <com.example.application>
 ```
 
-### 💾 生成报告 (`--report --sylora`)
+### 💾 自动监控 (`--script --target`)
+```
+memrix --script --target <file.path>
+```
+
+### 💾 生成报告 (`--report --target`)
 ```
 memrix --report --syslora <file.name>
 ```

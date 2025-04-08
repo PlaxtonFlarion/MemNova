@@ -247,7 +247,7 @@ class Memrix(object):
             是否启用报告生成流程（真相快照模式）。
 
         *args :
-            额外位置参数，约定第一个为 sylora（测试任务标识或包名）。
+            额外位置参数，约定第一个为 target（测试任务标识或包名）。
 
         **kwargs :
             命名参数集合，必须包含以下键：
@@ -261,14 +261,14 @@ class Memrix(object):
 
         self.memory, self.script, self.report = memory, script, report
 
-        self.sylora, *_ = args
+        self.target, *_ = args
 
         self.src_total_place: str = kwargs["src_total_place"]
         self.template: str = kwargs["template"]
         self.config: "Config" = kwargs["config"]
 
         if self.report:
-            folder: str = self.sylora
+            folder: str = self.target
         else:
             self.before_time = time.time()
             folder: str = time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
@@ -545,7 +545,7 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        package: typing.Optional[str] = self.sylora
+        package: typing.Optional[str] = self.target
 
         if "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
@@ -646,7 +646,7 @@ class Memrix(object):
         """
 
         try:
-            open_file = await asyncio.to_thread(FileAssist.read_json, self.sylora)
+            open_file = await asyncio.to_thread(FileAssist.read_json, self.target)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             raise MemrixError(e)
 
@@ -834,7 +834,7 @@ async def main() -> typing.Optional[typing.Any]:
     MemrixError
         - 若未配置 ADB 环境变量
         - 若未传入有效命令
-        - 若 `--sylora` 参数缺失但 memory/script/report 被调用
+        - 若 `--target` 参数缺失但 memory/script/report 被调用
 
     Notes
     -----
@@ -848,13 +848,13 @@ async def main() -> typing.Optional[typing.Any]:
     $ memrix --config
 
     # 启动内存采集任务
-    $ memrix --memory --sylora com.example.app
+    $ memrix --memory --target com.example.app
 
     # 执行自动化测试任务
-    $ memrix --script --sylora example.json
+    $ memrix --script --target example.json
 
     # 生成测试报告
-    $ memrix --report --sylora 20240405123000
+    $ memrix --report --target 20240405123000
     """
 
     if len(sys.argv) == 1:
@@ -871,14 +871,14 @@ async def main() -> typing.Optional[typing.Any]:
         return await FileAssist.open(_config_file)
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
-        if not (sylora := _cmd_lines.sylora):
-            raise MemrixError(f"--sylora 参数不能为空 ...")
+        if not (target := _cmd_lines.target):
+            raise MemrixError(f"--target 参数不能为空 ...")
 
         Display.show_logo()
         Display.show_license()
 
         memrix = Memrix(
-            memory, script, report, sylora, **_keywords
+            memory, script, report, target, **_keywords
         )
 
         if memory:
@@ -936,13 +936,13 @@ if __name__ == '__main__':
     示例启动方式：
     ----------------
     Windows 可执行文件：
-        memrix.exe --memory --sylora com.example.app
+        memrix.exe --memory --target com.example.app
 
     MacOS 可执行脚本：
-        ./memrix --report --sylora 20240405123000
+        ./memrix --report --target 20240405123000
 
     源码调试：
-        python memrix.py --script --sylora example.json
+        python memrix.py --script --target example.json
     """
 
     # 显示加载动画

@@ -22,7 +22,7 @@ class Parser(object):
     命令行解析控制器类，用于统一管理 Memrix 的命令参数、使用说明与美化输出。
 
     封装了 `argparse.ArgumentParser` 实例，并对核心功能参数（如 --memory, --script, --report）与
-    拓展参数（如 --sylora, --serial）进行了分组与格式化说明，支持彩色 usage 文案与详细 help 信息，
+    拓展参数（如 --target, --serial）进行了分组与格式化说明，支持彩色 usage 文案与详细 help 信息，
     同时提供整数/小数的容错转换方法。
     """
 
@@ -31,9 +31,9 @@ class Parser(object):
     def __init__(self):
         custom_made_usage = f"""\
         --------------------------------------------
-        \033[1;35m{const.APP_NAME}\033[0m --memory --sylora <com.example.application> --serial <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --script --sylora <file.path> --serial <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --report --sylora <file.name>
+        \033[1;35m{const.APP_NAME}\033[0m --memory --target <com.example.application> --serial <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --script --target <file.path> --serial <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --report --target <file.name>
         \033[1;35m{const.APP_NAME}\033[0m --config
         """
         self.__parse_engine = argparse.ArgumentParser(
@@ -61,7 +61,7 @@ class Parser(object):
                 \033[1;34m^*记忆风暴*^\033[0m
                 -------------------------
                 启动 **记忆风暴模式**，以持续的周期性方式拉取目标应用的内存使用情况，并将数据写入本地数据库中，供后续报告分析与可视化展示使用。
-                可通过 `--sylora` 指定目标应用包名，通过配置文件自定义拉取频率（默认 1 秒，可设定范围为 1~10 秒）。
+                可通过 `--target` 指定目标应用包名，通过配置文件自定义拉取频率（默认 1 秒，可设定范围为 1~10 秒）。
                 适用于长时间稳定性监控、内存波动追踪、异常捕捉及前后台行为对比等复杂测试场景。
                 手动中断（Ctrl+C）。
 
@@ -87,7 +87,7 @@ class Parser(object):
                 -------------------------
                 启动 **真相快照模式**，从测试过程中记录的本地数据库中提取原始数据，执行统计分析（如均值、峰值、波动区段）。
                 自动生成结构化、可视化的 **HTML** 格式报告，包含内存曲线图、异常区域标记、基本统计指标、测试元信息等。
-                支持配合 `--sylora` 限定输出指定批次的数据报告。
+                支持配合 `--target` 限定输出指定批次的数据报告。
 
             ''')
         )
@@ -111,7 +111,7 @@ class Parser(object):
             '''),
         )
         minor_group.add_argument(
-            "--sylora", type=str, default=None,
+            "--target", type=str, default=None,
             help=textwrap.dedent(f'''\
                 \033[1;36m^*数据魔方*^\033[0m 
                 -------------------------
