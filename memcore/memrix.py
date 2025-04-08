@@ -481,7 +481,7 @@ class Memrix(object):
             Notes
             -----
             - 使用 `asyncio.gather()` 并发拉取进程数据
-            - 使用 defaultdict() 对结果进行多进程合并，保证结构完整性
+            - 使用 `defaultdict()` 对结果进行多进程合并，保证结构完整性
             - 使用 `Ram(...)` 对象包装采集结果用于入库
             - 若数据不完整，将跳过插入并记录日志
             """
@@ -546,8 +546,7 @@ class Memrix(object):
                 }
                 """
 
-                # 使用双层 defaultdict 构建合并容器：
-                # muster[key][k] -> 对应 resume_map / memory_map 等子字段
+                # 使用双层 defaultdict 构建合并容器
                 muster = defaultdict(lambda: defaultdict(float))
                 # 遍历所有进程的 memory_result（每项包含多个子映射：resume_map、memory_map 等）
                 for result in memory_result:
@@ -671,7 +670,7 @@ class Memrix(object):
         #   "loopers": 3,
         #   "package": "com.example.app",
         #   "mission": {
-        #       "step1": [{"cmds": "u2", "vals": [...], "args": [...]}],
+        #       "step1": [{"cmds": "u2", "vals": [...], "args": [...], "kwds": {...}}],
         #       ...
         #   }
         # }

@@ -55,14 +55,6 @@ class Analyzer(object):
 
     download : str
         报告输出路径，包含图表文件与最终报告 HTML 文件。
-
-    Methods
-    -------
-    form_report(template: str, *args, **kwargs)
-        使用 Jinja2 渲染 HTML 报告页面，将分析结果注入模板。
-
-    draw_memory(data_dir: str) -> dict
-        读取数据库数据，生成前后台 PSS 曲线图，计算均值峰值并返回路径与统计结果。
     """
 
     def __init__(self, db: "aiosqlite.Connection", download: str):

@@ -53,17 +53,13 @@ class MemrixError(_MemrixBaseError):
     ----------
     msg : Any
         存储传入的异常信息内容，用于渲染提示。
-
-    Methods
-    -------
-    __str__() -> str
-        返回带有 rich 渲染标记的异常信息，适配 Grapher.view() 等日志系统。
     """
 
     def __init__(self, msg: typing.Any):
         self.msg = msg
 
     def __str__(self):
+        """返回带有 rich 渲染标记的异常信息，适配 Grapher.view() 等日志系统。"""
         return f"[#FF4C4C]<{const.APP_DESC}Error> {self.msg}"
 
     __repr__ = __str__
@@ -77,14 +73,6 @@ class Terminal(object):
     并根据当前平台自动适配编码格式（Windows 使用 GBK，其他平台默认 UTF-8）。
 
     用于异步执行 ADB、系统命令、工具链等指令，并可统一捕获标准输出与错误输出。
-
-    Methods
-    -------
-    cmd_line(cmd: list[str]) -> Optional[str]
-        异步执行命令列表（推荐使用形式），自动解码输出。
-
-    cmd_line_shell(cmd: str) -> Optional[str]
-        异步执行 shell 字符串命令（适用于管道、重定向等场景）。
     """
 
     @staticmethod
@@ -196,23 +184,6 @@ class FileAssist(object):
 
     提供异步和同步方式的文件读写方法，支持编码处理、美化输出、键排序控制等，广泛用于 Memrix 配置、
     场景记录、报告数据缓存等操作。
-
-    Methods
-    -------
-    open(file: str) -> Optional[str]
-        调用系统默认编辑器打开指定文件，支持 macOS 与 Windows。
-
-    read_yaml(file: str) -> dict
-        读取 YAML 文件为 Python 字典。
-
-    read_json(file: str) -> dict
-        读取 JSON 文件为 Python 字典。
-
-    dump_yaml(src: str, dst: dict) -> None
-        将字典写入 YAML 文件，支持中文与格式化。
-
-    dump_json(src: str, dst: dict) -> None
-        将字典写入 JSON 文件，格式美化并保持中文。
     """
 
     @staticmethod
@@ -344,14 +315,6 @@ class Grapher(object):
     ----------
     console : Console
         rich 的终端渲染器实例，用于支持彩色、高亮、结构化输出。
-
-    Methods
-    -------
-    active(log_level: str) -> None
-        初始化 loguru 日志系统，绑定 rich 样式并设置日志等级。
-
-    view(msg: Any) -> None
-        格式化打印一条视觉日志信息，带时间与颜色标记。
     """
 
     console: typing.Optional["Console"] = Console()
@@ -484,14 +447,6 @@ class Config(object):
     ----------
     configs : dict
         当前完整的配置字典结构，按功能模块划分为 Memory / Script / Report。
-
-    Methods
-    -------
-    load_config(config_file: Any) -> None
-        从配置文件中加载内容到内部结构，若失败则使用默认配置并写入。
-
-    dump_config(config_file: Any) -> None
-        将当前配置写入指定路径，生成格式化的 YAML 文件。
     """
 
     configs = {
@@ -661,17 +616,6 @@ class DataBase(object):
 
     基于 aiosqlite 提供的异步接口，实现数据表创建、内存数据插入与采集结果查询。
     所有操作基于统一结构的 memory_data 表，支持前后台筛选与图表构建数据输出。
-
-    Methods
-    -------
-    create_table(db: aiosqlite.Connection)
-        创建 memory_data 表结构（如不存在则创建）。
-
-    insert_data(db, data_dir, label, remark_map, resume_map, memory_map, vmrss)
-        插入一条内存采样记录数据，包含各类映射字典的展开写入。
-
-    query_data(db, data_dir) -> tuple[list, list]
-        查询指定数据目录下的前台与后台内存数据列表。
     """
 
     @staticmethod
