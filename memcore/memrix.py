@@ -341,6 +341,8 @@ class Memrix(object):
             f"{self.config.label} -> {self.file_folder} -> 获取: {self.file_insert} -> 耗时: {time_cost} 分钟"
         )
         logger.info(f"{self.group_dir}")
+        if self.file_insert:
+            await self.create_report()
         logger.info(f"^* Dump Close *^")
 
     # """记忆风暴"""
