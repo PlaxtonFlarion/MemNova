@@ -23,7 +23,7 @@ import asyncio
 import aiosqlite
 import uiautomator2
 from loguru import logger
-from collections import Counter
+from collections import defaultdict
 from engine.device import Device
 from memnova import const
 from engine.manage import Manage
@@ -381,7 +381,7 @@ class Memrix(object):
         - 拉取结果会写入数据库文件：`memory_data.db`
         - 每一轮采集完成后会写入日志，并更新进度统计
         - 日志与数据目录按时间命名，支持场景标记（YAML）
-        - 多进程结构通过 `Counter` 聚合并转换为嵌套字典
+        - 多进程结构通过 `defaultdict()` 聚合并转换为嵌套字典
         - 如果 YAML 场景文件已存在，当前轮次将追加入 file 列表中
 
         Examples
@@ -478,7 +478,7 @@ class Memrix(object):
             Notes
             -----
             - 使用 `asyncio.gather()` 并发拉取进程数据
-            - 使用 Counter 对结果进行多进程合并，保证结构完整性
+            - 使用 defaultdict() 对结果进行多进程合并，保证结构完整性
             - 使用 `Ram(...)` 对象包装采集结果用于入库
             - 若数据不完整，将跳过插入并记录日志
             """
@@ -519,39 +519,11 @@ class Memrix(object):
             if all(memory_result := await asyncio.gather(
                     *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
-                """
-                合并多个进程的内存数据结果。
-
-                将每个采样返回的 result 中的 resume_map、memory_map 等字典类型字段，
-                通过 Counter 进行逐字段合并，得到全量指标统计结果（汇总总量）。
-
-                最终将所有 Counter 转换为普通 dict，用于统一插入数据库或生成报告。
-
-                Parameters
-                ----------
-                memory_result : list[dict[str, dict]]
-                    多个进程的内存数据结果列表，每项结构如：
-                    {
-                        "resume_map": {...},
-                        "memory_map": {...},
-                        ...
-                    }
-
-                Returns
-                -------
-                muster : dict[str, dict]
-                    合并后的指标字典，每个子字段为多进程数据的字段级累加结果。
-                """
-
-                # 初始化总汇字典，用于累加多个进程的内存采样结果
-                muster = {}
-                # 遍历所有进程采样结果（每个 result 是一个包含多个指标映射的 dict）
+                muster = defaultdict(lambda: defaultdict(float))
                 for result in memory_result:
-                    for k, v in result.items():
-                        # 将每个指标（如 resume_map、memory_map）按字段进行 Counter 累加合并
-                        # 相同字段名的值会自动累加（如多进程的 PSS 值合计）
-                        muster[k] = muster.get(k, Counter()) + Counter(v)
-                # 将 Counter 类型转换回普通字典，便于数据库写入与后续处理
+                    for key, value in result.items():
+                        for k, v in value.items():
+                            muster[key][k] += v
                 muster = {k: dict(v) for k, v in muster.items()}
             else:
                 self.dumped.set()

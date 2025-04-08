@@ -65,7 +65,7 @@ class Manage(object):
 
         while True:
             device_dict = {}
-            if result := await Terminal.cmd_line(*["adb", "devices"]):
+            if result := await Terminal.cmd_line(["adb", "devices"]):
                 if serial_list := [line.split()[0] for line in result.split("\n")[1:]]:
                     device_dict = {
                         str(index): Device(serial) for index, serial in enumerate(serial_list, 1)

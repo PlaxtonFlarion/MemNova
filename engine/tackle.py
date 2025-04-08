@@ -80,7 +80,7 @@ class Terminal(object):
 
     Methods
     -------
-    cmd_line(*cmd: str) -> Optional[str]
+    cmd_line(cmd: list[str]) -> Optional[str]
         异步执行命令列表（推荐使用形式），自动解码输出。
 
     cmd_line_shell(cmd: str) -> Optional[str]
@@ -88,31 +88,36 @@ class Terminal(object):
     """
 
     @staticmethod
-    async def cmd_line(*cmd: str) -> typing.Optional[str]:
+    async def cmd_line(cmd: list[str], timeout: bool = True) -> typing.Optional[str]:
         """
-        异步执行命令参数序列（非 shell 模式），返回标准输出或错误输出内容。
+        异步执行命令行指令，支持超时控制与跨平台编码适配。
 
-        参数应按程序和参数拆分传入，例如：
-        `("adb", "-s", "123456", "shell", "dumpsys", "meminfo")`
+        使用 `asyncio.create_subprocess_exec()` 调用传入的命令参数，
+        并自动捕获标准输出或标准错误输出（优先返回 stdout）。
+        若启用超时限制，默认 3 秒后超时返回 None。
 
         Parameters
         ----------
-        *cmd : str
-            命令及其参数，按顺序传入，不需要 shell 包裹。
+        cmd : list[str]
+            要执行的命令及其参数列表，按顺序传入（非 shell 字符串形式）。
+            例如：["adb", "-s", "123456", "shell", "dumpsys", "meminfo"]
+
+        timeout : bool, default=True
+            是否启用 3 秒的超时限制。若为 False，则等待命令自然执行完毕。
 
         Returns
         -------
         Optional[str]
-            命令输出内容（优先返回 stdout；若无则返回 stderr；若超时则返回 None）。
+            命令的输出结果（stdout > stderr），若超时则返回 None。
 
         Notes
         -----
-        - 超时时间固定为 3 秒
-        - 自动根据平台选择解码方式（Windows: GBK；其他: UTF-8）
-        - 出错或超时不抛异常，返回 None
+        - Windows 平台使用 GBK 编码，其它平台使用 UTF-8
+        - 返回内容会移除首尾空白字符
+        - 捕获异常为 asyncio.TimeoutError，内部不抛出错误
         """
 
-        logger.debug([c for c in cmd])
+        logger.debug(cmd)
         transports = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
@@ -120,7 +125,10 @@ class Terminal(object):
 
         encode = "GBK" if sys.platform == "win32" else "UTF-8"
         try:
-            stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+            if timeout:
+                stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+            else:
+                stdout, stderr = await transports.communicate()
         except asyncio.TimeoutError:
             return None
 
@@ -130,28 +138,35 @@ class Terminal(object):
             return stderr.decode(encoding=encode, errors="ignore").strip()
 
     @staticmethod
-    async def cmd_line_shell(cmd: str) -> typing.Optional[str]:
+    async def cmd_line_shell(cmd: str, timeout: bool = True) -> typing.Optional[str]:
         """
-        异步执行单行 shell 字符串命令（带管道、重定向时使用）。
+        异步执行单条 shell 命令字符串，支持超时控制与跨平台输出编码。
 
-        示例：`"adb shell dumpsys | grep mScreenOn"`
+        使用 `asyncio.create_subprocess_shell()` 执行完整 shell 指令，
+        适用于包含管道、重定向、逻辑运算符等复杂表达式的场景。
+        支持自定义是否启用 3 秒超时限制。
 
         Parameters
         ----------
         cmd : str
-            完整的 shell 命令字符串。
+            要执行的 shell 命令字符串。
+            例如："adb shell dumpsys meminfo | grep TOTAL"
+
+        timeout : bool, default=True
+            是否启用 3 秒的超时限制。设为 False 时将等待命令自然结束。
 
         Returns
         -------
         Optional[str]
-            命令输出内容（优先返回 stdout；若无则返回 stderr；若超时则返回 None）。
+            命令输出结果（优先返回 stdout，若无则返回 stderr），
+            如果超时或异常则返回 None。
 
         Notes
         -----
-        - 推荐用于有 shell 特性（如管道、逻辑运算、变量替换）的复杂命令
-        - 超时时间固定为 3 秒
-        - 出错或超时不抛异常，返回 None
-        - 解码方式与 `cmd_line` 相同
+        - Windows 使用 GBK 编码，其它平台使用 UTF-8
+        - 输出内容默认自动 strip 去除首尾空白
+        - 不抛出异常，所有超时内部处理返回 None
+        - 推荐用于包含管道符（|）、重定向（>）等复杂结构的命令
         """
 
         logger.debug(cmd)
@@ -162,7 +177,10 @@ class Terminal(object):
 
         encode = "GBK" if sys.platform == "win32" else "UTF-8"
         try:
-            stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+            if timeout:
+                stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
+            else:
+                stdout, stderr = await transports.communicate()
         except asyncio.TimeoutError:
             return None
 
@@ -220,7 +238,7 @@ class FileAssist(object):
             cmd = ["notepad++"] if shutil.which("notepad++") else ["Notepad"]
         else:
             cmd = ["open", "-W", "-a", "TextEdit"]
-        return await Terminal.cmd_line(*(cmd + [file]))
+        return await Terminal.cmd_line(cmd + [file], timeout=False)
 
     @staticmethod
     def read_yaml(file: str) -> dict:
