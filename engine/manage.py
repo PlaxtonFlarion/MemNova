@@ -73,17 +73,20 @@ class Manage(object):
                 await asyncio.sleep(5)
                 continue
 
-            if len(device_dict) == 1:
-                return device_dict["1"]
+            if (loc := len(device_dict)) == 1:
+                Grapher.view(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
+                return device_dict[f"{loc}"]
 
-            current: typing.Optional["Device"] = None
+            device: typing.Optional["Device"] = None
             for k, v in device_dict.items():
                 Grapher.view(f"[#00FA9A]Connect ->[/] [{k}] {v}")
                 if serial == v.serial:
-                    current = v
+                    device = v
 
             try:
-                return current if current else device_dict[Prompt.ask(f"请选择", console=Grapher.console)]
+                return device if device else (
+                    device_dict
+                )[Prompt.ask(f"请选择", console=Grapher.console)]
             except KeyError:
                 Grapher.view(f"[#FF005F]没有该设备，请重新选择 ...\n")
             finally:
