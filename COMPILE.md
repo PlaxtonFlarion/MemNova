@@ -57,7 +57,7 @@
 
 ### 运行 Nuitka 命令
 ```
-python -m nuitka --standalone --windows-icon-from-ico=resources/icons/memrix_icn_1.ico --nofollow-import-to=uiautomator2 --include-module=deprecation,xmltodict --include-package=adbutils,apkutils2,cigam,pygments --show-progress --show-memory --output-dir=applications memcore/memrix.py
+python -m nuitka --standalone --windows-icon-from-ico=resources/icons/memrix_icn_1.ico --nofollow-import-to=uiautomator2 --include-module=deprecation --include-package=adbutils,pygments --show-progress --show-memory --output-dir=applications memcore/memrix.py   
 ```
 
 ### 目录结构
@@ -76,7 +76,7 @@ python -m nuitka --standalone --windows-icon-from-ico=resources/icons/memrix_icn
 
 ### 运行 Nuitka 命令
 ```
-python -m nuitka --standalone --macos-create-app-bundle --macos-app-icon=resources/images/macos/memrix_macos_icn.png --nofollow-import-to=uiautomator2 --include-module=deprecation,xmltodict --include-package=adbutils,apkutils2,cigam,pygments --show-progress --show-memory --output-dir=applications memcore/memorix.py
+python -m nuitka --standalone --macos-create-app-bundle --macos-app-icon=resources/images/macos/memrix_macos_icn.png --nofollow-import-to=uiautomator2 --include-module=deprecation --include-package=adbutils,pygments --show-progress --show-memory --output-dir=applications memcore/memorix.py
 ```
 
 ### 目录结构

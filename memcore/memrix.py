@@ -988,7 +988,7 @@ if __name__ == '__main__':
             _mx_work = os.path.dirname(os.path.abspath(__file__))
             _mx_feasible = os.path.dirname(_mx_work)
         else:
-            raise MemrixError(f"{const.APP_DESC} Adaptation Platform Windows or MacOS")
+            raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
 
         # 模板文件夹
         _template = os.path.join(_mx_work, const.SCHEMATIC, "templates", "memory.html")
