@@ -156,9 +156,9 @@ class Analyzer(object):
             -------
             dict
                 图表渲染后的统计信息字典，包含：
-                - {file_name}_max : float
+                - {file_name}_max : str
                     当前数据中的 PSS 峰值（单位 MB）
-                - {file_name}_avg : float
+                - {file_name}_avg : str
                     当前数据中的 PSS 平均值（单位 MB）
                 - {file_name}_loc : str
                     图表文件的相对路径（用于最终报告整合）
@@ -315,8 +315,8 @@ class Analyzer(object):
             save(p)
 
             return {
-                f"{file_name}_max": round(float(max_value), 2),
-                f"{file_name}_avg": round(float(avg_value), 2),
+                f"{file_name}_max": f"{float(max_value):.2f}",
+                f"{file_name}_avg": f"{float(avg_value):.2f}",
                 f"{file_name}_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
             }
 

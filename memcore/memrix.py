@@ -11,6 +11,7 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
+# ====[ 内置模块 ]====
 import os
 import re
 import sys
@@ -20,10 +21,18 @@ import typing
 import signal
 import shutil
 import asyncio
+
+# ====[ 第三方库 ]====
 import aiosqlite
 import uiautomator2
-from loguru import logger
+
+# ====[ from: 内置模块 ]====
 from collections import defaultdict
+
+# ====[ from: 第三方库 ]====
+from loguru import logger
+
+# ====[ from: 本地模块 ]====
 from engine.device import Device
 from engine.manage import Manage
 from memnova import const
@@ -347,7 +356,7 @@ class Memrix(object):
         logger.info(f"^===^ {const.APP_DESC} Engine Close ^===^")
 
     # """记忆风暴"""
-    async def dump_task_start(self, device: "Device") -> None:
+    async def dump_task_start(self, device: "Device", deliver_package: typing.Optional[str] = None) -> None:
         """
         启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
 
@@ -368,6 +377,9 @@ class Memrix(object):
         ----------
         device : Device
             目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
+
+        deliver_package : typing.Optional[str]
+            可以传入的应用包名。
 
         Returns
         -------
@@ -509,7 +521,8 @@ class Memrix(object):
 
             remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
             remark_map.update({"uid": uid, "adj": adj, "act": act})
-            remark_map.update({"frg": "前台" if (int(remark_map["adj"])) <= 0 else "后台"})
+            remark_map.update({"frg": "前台" if self.target in act else "前台" if (int(adj)) <= 0 else "后台"})
+
             logger.info(f"{remark_map['tms']}")
             logger.info(f"UID: {remark_map['uid']}")
             logger.info(f"ADJ: {remark_map['adj']}")
@@ -578,8 +591,9 @@ class Memrix(object):
 
         package: typing.Optional[str] = self.target  # 传入的应用名称
 
-        if "Unable" in (check := await device.examine_package(package)):
-            raise MemrixError(check)
+        if not deliver_package:
+            if "Unable" in (check := await device.examine_package(package)):
+                raise MemrixError(check)
 
         logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
 
@@ -698,7 +712,7 @@ class Memrix(object):
         except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
             raise MemrixError(e)
 
-        auto_dump_task = asyncio.create_task(self.dump_task_start(device))
+        auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
 
         player: "Player" = Player()
 
@@ -806,43 +820,43 @@ class Memrix(object):
                 db, os.path.join(self.group_dir, f"Report_{os.path.basename(self.group_dir)}")
             )
 
-        team_data = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
-        if not (memory_data_list := team_data["file"]):
-            raise MemrixError(f"No data scenario {memory_data_list} ...")
+            team_data = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
+            if not (memory_data_list := team_data["file"]):
+                raise MemrixError(f"No data scenario {memory_data_list} ...")
 
-        if not (report_list := await asyncio.gather(
-                *(analyzer.draw_memory(data_dir) for data_dir in memory_data_list)
-        )):
-            raise MemrixError(f"No data scenario {report_list} ...")
+            if not (report_list := await asyncio.gather(
+                    *(analyzer.draw_memory(data_dir) for data_dir in memory_data_list)
+            )):
+                raise MemrixError(f"No data scenario {report_list} ...")
 
-        avg_fg_max_values = [i["fg_max"] for i in report_list if "fg_max" in i]
-        avg_fg_max = round(sum(avg_fg_max_values) / len(avg_fg_max_values), 2) if avg_fg_max_values else None
-        avg_fg_avg_values = [i["fg_avg"] for i in report_list if "fg_avg" in i]
-        avg_fg_avg = round(sum(avg_fg_avg_values) / len(avg_fg_avg_values), 2) if avg_fg_avg_values else None
+            avg_fg_max_values = [float(i["fg_max"]) for i in report_list if "fg_max" in i]
+            avg_fg_max = round(sum(avg_fg_max_values) / len(avg_fg_max_values), 2) if avg_fg_max_values else None
+            avg_fg_avg_values = [float(i["fg_avg"]) for i in report_list if "fg_avg" in i]
+            avg_fg_avg = round(sum(avg_fg_avg_values) / len(avg_fg_avg_values), 2) if avg_fg_avg_values else None
 
-        avg_bg_max_values = [i["bg_max"] for i in report_list if "bg_max" in i]
-        avg_bg_max = round(sum(avg_bg_max_values) / len(avg_bg_max_values), 2) if avg_bg_max_values else None
-        avg_bg_avg_values = [i["bg_avg"] for i in report_list if "bg_avg" in i]
-        avg_bg_avg = round(sum(avg_bg_avg_values) / len(avg_bg_avg_values), 2) if avg_bg_avg_values else None
+            avg_bg_max_values = [float(i["bg_max"]) for i in report_list if "bg_max" in i]
+            avg_bg_max = round(sum(avg_bg_max_values) / len(avg_bg_max_values), 2) if avg_bg_max_values else None
+            avg_bg_avg_values = [float(i["bg_avg"]) for i in report_list if "bg_avg" in i]
+            avg_bg_avg = round(sum(avg_bg_avg_values) / len(avg_bg_avg_values), 2) if avg_bg_avg_values else None
 
-        rendering = {
-            "title": f"{const.APP_DESC} Information",
-            "major": {
-                "time": team_data["time"],
-                "headline": self.config.headline,
-                "criteria": self.config.criteria,
-            },
-            "level": {
-                "fg_max": self.config.fg_max, "fg_avg": self.config.fg_avg,
-                "bg_max": self.config.bg_max, "bg_avg": self.config.bg_avg,
-            },
-            "average": {
-                "avg_fg_max": avg_fg_max, "avg_fg_avg": avg_fg_avg,
-                "avg_bg_max": avg_bg_max, "avg_bg_avg": avg_bg_avg,
-            },
-            "report_list": report_list
-        }
-        return await analyzer.form_report(self.template, **rendering)
+            rendering = {
+                "title": f"{const.APP_DESC} Information",
+                "major": {
+                    "time": team_data["time"],
+                    "headline": self.config.headline,
+                    "criteria": self.config.criteria,
+                },
+                "level": {
+                    "fg_max": f"{self.config.fg_max:.2f}", "fg_avg": f"{self.config.fg_avg:.2f}",
+                    "bg_max": f"{self.config.bg_max:.2f}", "bg_avg": f"{self.config.bg_avg:.2f}",
+                },
+                "average": {
+                    "avg_fg_max": f"{avg_fg_max:.2f}", "avg_fg_avg": f"{avg_fg_avg:.2f}",
+                    "avg_bg_max": f"{avg_bg_max:.2f}", "avg_bg_avg": f"{avg_bg_avg:.2f}",
+                },
+                "report_list": report_list
+            }
+            return await analyzer.form_report(self.template, **rendering)
 
 
 async def main() -> typing.Optional[typing.Any]:
@@ -947,134 +961,92 @@ if __name__ == '__main__':
     # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
     #
 
-    """
-    Memrix 启动入口脚本。
-
-    根据操作系统平台、运行方式（打包/源码/安装），自动配置运行环境与依赖路径，加载命令行参数，初始化配置，并启动主逻辑。
-
-    启动流程包括：
-    1. 显示加载动画与界面信息
-    2. 判断平台（Windows / MacOS / IDE），设置工作路径与工具路径
-    3. 检查 HTML 模板与辅助工具是否完整
-    4. 设置报告目录与初始配置文件路径
-    5. 加载配置（YAML），打包关键字参数供主类使用
-    6. 解析命令行参数并调用主异步执行入口 `main()`
-
-    环境要求：
-    - Windows：支持可执行文件打包（`memrix.exe`）
-    - MacOS：支持通过 `sys.executable` 启动
-    - IDE：支持 `python memrix.py` 调试运行
-
-    错误处理：
-    - 若缺少必要文件或适配失败，将抛出 `MemrixError` 并以视觉提示退出
-    - 支持 `Ctrl+C` 中断操作，提供友好提示
-
-    示例启动方式：
-    ----------------
-    Windows 可执行文件：
-        memrix.exe --memory --target com.example.app
-
-    MacOS 可执行脚本：
-        ./memrix --report --target 20240405123000
-
-    源码调试：
-        python memrix.py --script --target example.json
-    """
-
-    # 显示加载动画
-    Display.show_animate()
-
-    # 获取当前操作系统平台和应用名称
-    _platform = sys.platform.strip().lower()
-    _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
-    _sys_symbol = os.sep
-    _env_symbol = os.path.pathsep
-
-    # 激活日志
-    Grapher.active("INFO")
-
-    # 根据应用名称确定工作目录和配置目录
-    if _software == f"{const.APP_NAME}.exe":
-        # Windows
-        _mx_work = os.path.dirname(os.path.abspath(sys.argv[0]))
-        _mx_feasible = os.path.dirname(_mx_work)
-    elif _software == f"{const.APP_NAME}":
-        # MacOS
-        _mx_work = os.path.dirname(sys.executable)
-        _mx_feasible = os.path.dirname(_mx_work)
-    elif _software == f"{const.APP_NAME}.py":
-        # IDE
-        _mx_work = os.path.dirname(os.path.abspath(__file__))
-        _mx_feasible = os.path.dirname(_mx_work)
-    else:
-        Grapher.view(
-            MemrixError(f"{const.APP_DESC} Adaptation Platform Windows or MacOS ...")
-        )
-        Display.show_fail()
-        sys.exit(1)
-
-    # 模板文件夹
-    _template = os.path.join(_mx_work, const.SCHEMATIC, "templates", "memory.html")
-    # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
-    if not os.path.isfile(_template) and os.path.basename(_template).endswith(".html"):
-        _tmp_name = os.path.basename(_template)
-        Grapher.view(
-            MemrixError(f"{const.APP_DESC}  missing files {_tmp_name} ...")
-        )
-        Display.show_fail()
-        sys.exit(1)
-
-    # 设置工具源路径
-    _turbo = os.path.join(_mx_work, const.SCHEMATIC, "supports").format()
-
-    # 根据平台设置工具路径
-    if _platform == "win32":
-        # Windows
-        _npp = os.path.join(_turbo, "Windows", "npp_portable_mini", "notepad++.exe")
-        # 将工具路径添加到系统 PATH 环境变量中
-        os.environ["PATH"] = os.path.dirname(_npp) + _env_symbol + os.environ.get("PATH", "")
-        # 检查工具是否存在，如果缺失则显示错误信息并退出程序
-        if not shutil.which((_tls_name := os.path.basename(_npp))):
-            Grapher.view(
-                MemrixError(f"{const.APP_DESC} missing files {_tls_name}")
-            )
-            Display.show_fail()
-            sys.exit(1)
-
-    # 设置初始路径
-    if not os.path.exists(
-            _initial_source := os.path.join(_mx_feasible, "Specially").format()
-    ):
-        os.makedirs(_initial_source, exist_ok=True)
-
-    # 设置报告路径
-    if not os.path.exists(
-            _src_total_place := os.path.join(_initial_source, "Memrix_Report").format()
-    ):
-        os.makedirs(_src_total_place, exist_ok=True)
-
-    # 设置初始配置文件路径
-    _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
-    # 加载初始配置
-    _config = Config(_config_file)
-
-    # 命令行解析器
-    _parser = Parser()
-    # 命令行
-    _cmd_lines = Parser().parse_cmd
-
-    # 打包关键字参数
-    _keywords = {
-        "src_total_place": _src_total_place, "template": _template, "config": _config
-    }
-
     try:
+        # 显示加载动画
+        Display.show_animate()
+
+        # 获取当前操作系统平台和应用名称
+        _platform = sys.platform.strip().lower()
+        _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
+        _sys_symbol = os.sep
+        _env_symbol = os.path.pathsep
+
+        # 激活日志
+        Grapher.active("INFO")
+
+        # 根据应用名称确定工作目录和配置目录
+        if _software == f"{const.APP_NAME}.exe":
+            # Windows
+            _mx_work = os.path.dirname(os.path.abspath(sys.argv[0]))
+            _mx_feasible = os.path.dirname(_mx_work)
+        elif _software == f"{const.APP_NAME}":
+            # MacOS
+            _mx_work = os.path.dirname(sys.executable)
+            _mx_feasible = os.path.dirname(_mx_work)
+        elif _software == f"{const.APP_NAME}.py":
+            # IDE
+            _mx_work = os.path.dirname(os.path.abspath(__file__))
+            _mx_feasible = os.path.dirname(_mx_work)
+        else:
+            raise MemrixError(f"{const.APP_DESC} Adaptation Platform Windows or MacOS")
+
+        # 模板文件夹
+        _template = os.path.join(_mx_work, const.SCHEMATIC, "templates", "memory.html")
+        # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
+        if not os.path.isfile(_template) and os.path.basename(_template).endswith(".html"):
+            _tmp_name = os.path.basename(_template)
+            raise MemrixError(f"{const.APP_DESC}  missing files {_tmp_name}")
+
+        # 设置工具源路径
+        _turbo = os.path.join(_mx_work, const.SCHEMATIC, "supports").format()
+
+        # 根据平台设置工具路径
+        if _platform == "win32":
+            # Windows
+            _npp = os.path.join(_turbo, "Windows", "npp_portable_mini", "notepad++.exe")
+            # 将工具路径添加到系统 PATH 环境变量中
+            os.environ["PATH"] = os.path.dirname(_npp) + _env_symbol + os.environ.get("PATH", "")
+            # 检查工具是否存在，如果缺失则显示错误信息并退出程序
+            if not shutil.which((_tls_name := os.path.basename(_npp))):
+                raise MemrixError(f"{const.APP_DESC} missing files {_tls_name}")
+
+        # 设置初始路径
+        if not os.path.exists(
+                _initial_source := os.path.join(_mx_feasible, "Specially").format()
+        ):
+            os.makedirs(_initial_source, exist_ok=True)
+
+        # 设置报告路径
+        if not os.path.exists(
+                _src_total_place := os.path.join(_initial_source, "Memrix_Report").format()
+        ):
+            os.makedirs(_src_total_place, exist_ok=True)
+
+        # 设置初始配置文件路径
+        _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
+        # 加载初始配置
+        _config = Config(_config_file)
+
+        # 命令行解析器
+        _parser = Parser()
+        # 命令行
+        _cmd_lines = Parser().parse_cmd
+
+        # 打包关键字参数
+        _keywords = {
+            "src_total_place": _src_total_place, "template": _template, "config": _config
+        }
+
         asyncio.run(main())
+
     except MemrixError as _error:
         Grapher.view(_error)
         Display.show_fail()
         sys.exit(1)
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    except KeyboardInterrupt:
+        Display.show_exit()
+        sys.exit(0)
+    except asyncio.CancelledError:
         Display.show_done()
         sys.exit(0)
     else:

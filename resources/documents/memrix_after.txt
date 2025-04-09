@@ -1,4 +1,4 @@
-恭喜！ Memrix(记忆星核) 已成功安装到您的计算机上。
+﻿恭喜！ Memrix(记忆星核) 已成功安装到您的计算机上。
 Congratulations! Memrix(记忆星核) has been successfully installed on your computer.
 
 在开始之前，您需要了解以下几点：

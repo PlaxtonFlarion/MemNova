@@ -1,4 +1,4 @@
-欢迎安装 Memrix(记忆星核)！
+﻿欢迎安装 Memrix(记忆星核)！
 Welcome to the installation of Memrix(记忆星核)!
 
 在继续安装之前，请阅读以下重要注意事项：

@@ -58,6 +58,12 @@ task_fail = fr"""[bold #FF4444]
 +----------------------------------------+
 """
 
+task_exit = fr"""[bold #FFEE55]
++----------------------------------------+
+|            {const.APP_DESC} Task Fail            |
++----------------------------------------+
+"""
+
 
 class Display(object):
     """
@@ -86,6 +92,11 @@ class Display(object):
     def show_done() -> None:
         """显示任务完成提示信息（使用 task_done 文案）。"""
         Grapher.console.print(task_done)
+
+    @staticmethod
+    def show_exit() -> None:
+        """显示任务退出提示信息（使用 task_exit 文案）。"""
+        Grapher.console.print(task_exit)
 
     @staticmethod
     def show_fail() -> None:

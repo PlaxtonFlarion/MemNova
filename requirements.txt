@@ -8,4 +8,4 @@ Nuitka~=2.6.9
 pygame~=2.6.1
 PyYAML~=6.0.2
 rich~=14.0.0
-uiautomator2~=3.2.9
+uiautomator2==3.2.9
