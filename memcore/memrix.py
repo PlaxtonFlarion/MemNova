@@ -271,7 +271,7 @@ class Memrix(object):
 
         self.memory, self.script, self.report = memory, script, report
 
-        self.target, *_ = args
+        self.target, self.folder, *_ = args
 
         self.src_total_place: str = kwargs["src_total_place"]
         self.template: str = kwargs["template"]
@@ -281,7 +281,9 @@ class Memrix(object):
             folder: str = self.target
         else:
             self.before_time = time.time()
-            folder: str = time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
+            folder: str = self.folder if self.folder else (
+                time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
+            )
 
         self.total_dir = os.path.join(self.src_total_place, f"Memory_Folder")
         self.other_dir = os.path.join(self.src_total_place, self.total_dir, f"Subset")
@@ -325,7 +327,6 @@ class Memrix(object):
         - 等待最后一次内存采样写入完成
         - 取消所有后台 asyncio 任务
         - 输出日志（采样次数、耗时等）
-        - 若存在有效数据，调用报告生成器 `create_report()`
 
         Returns
         -------
@@ -347,11 +348,17 @@ class Memrix(object):
         except asyncio.CancelledError:
             Grapher.view(f"[#00AFFF]任务已经退出 ...")
 
-        time_cost = round((time.time() - self.before_time) / 60, 2)
+        time_cost = (time.time() - self.before_time) / 60
         logger.info(
-            f"{self.config.label} -> {self.file_folder} -> 获取: {self.file_insert} -> 耗时: {time_cost} 分钟"
+            f"Mark={self.config.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f}"
         )
         logger.info(f"{self.group_dir}")
+
+        if self.file_insert:
+            Display.build_file_tree(self.group_dir)
+            Grapher.view(
+                f"Usage: [#00D787]{const.APP_NAME} --report --target [#FFAF87]{os.path.basename(self.group_dir)}[/]"
+            )
 
         logger.info(f"^===^ {const.APP_DESC} Engine Close ^===^")
 
@@ -915,6 +922,8 @@ async def main() -> typing.Optional[typing.Any]:
         Display.show_logo()
         Display.show_license()
 
+        Display.build_file_tree(_config_file)
+        Grapher.console.print("\n")
         Grapher.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 

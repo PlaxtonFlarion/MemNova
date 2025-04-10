@@ -132,6 +132,19 @@ class Parser(object):
 
             ''')
         )
+        minor_group.add_argument(
+            "--folder", type=str, default=None,
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*中枢节点*^\033[0m 
+                -------------------------
+                指定文件夹名称，作为任务的挂载目录或输出目录。数据的中转与聚合中心。
+                每次内存采集任务会将所有数据输出到一个对应的文件夹中，便于归档与后续生成报告。
+                你可以手动传入一个自定义名称，例如 `20250410223015`。
+                如果未传递 `--folder` 参数，将默认生成一个以当前时间戳命名的目录，例如 `20250410223232`。
+                所有输出文件（日志、HTML 报告等）都会保存在该目录下。
+            
+            ''')
+        )
 
     @property
     def parse_cmd(self) -> "argparse.Namespace":

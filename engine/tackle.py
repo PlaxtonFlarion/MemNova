@@ -619,7 +619,7 @@ class DataBase(object):
     """
 
     @staticmethod
-    async def create_table(db: "aiosqlite.Connection"):
+    async def create_table(db: "aiosqlite.Connection") -> None:
         """
         创建内存采样数据表 `memory_data`，如果表不存在则自动创建。
 
@@ -682,7 +682,7 @@ class DataBase(object):
             resume_map: dict,
             memory_map: dict,
             vmrss: dict
-    ):
+    ) -> None:
         """
         将一轮内存采样结果写入数据库。
 

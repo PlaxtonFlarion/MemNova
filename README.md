@@ -206,6 +206,20 @@ memrix --memory --target <variable>
 memrix --memory --target <com.example.application> --serial <device.serial>
 ```
 
+### ⚜️ 中枢节点 (`--folder`)
+#### 📔 功能描述:
+- 指定文件夹名称，作为任务的挂载目录或输出目录。数据的中转与聚合中心。
+- 每次内存采集任务会将所有数据输出到一个对应的文件夹中，便于归档与后续生成报告。
+- 你可以手动传入一个自定义名称，例如 `20250410223015`。
+- 如果未传递 `--folder` 参数，将默认生成一个以当前时间戳命名的目录，例如 `20250410223232`。
+- 所有输出文件（日志、HTML 报告等）都会保存在该目录下。
+#### 📔 参数说明: 
+- **字符串**
+#### 📔 实际应用: 
+```
+memrix --memory --target <com.example.application> --folder <file.name>
+```
+
 ---
 
 ## 🖥️ 使用示例

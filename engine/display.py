@@ -14,6 +14,7 @@
 
 import os
 import time
+from rich.tree import Tree
 from memnova import const
 from engine.tackle import Grapher
 
@@ -60,7 +61,7 @@ task_fail = fr"""[bold #FF4444]
 
 task_exit = fr"""[bold #FFEE55]
 +----------------------------------------+
-|            {const.APP_DESC} Task Fail            |
+|            {const.APP_DESC} Task Exit            |
 +----------------------------------------+
 """
 
@@ -68,9 +69,6 @@ task_exit = fr"""[bold #FFEE55]
 class Display(object):
     """
     终端视觉交互显示类，为 Memrix 提供界面标识、启动动画与状态提示输出。
-
-    使用 rich 控制台进行彩色渲染，封装常用的显示行为，包括启动 Logo、版权声明、
-    成功/失败提示、屏幕清理以及加载动画。
     """
 
     @staticmethod
@@ -127,6 +125,23 @@ class Display(object):
         Grapher.console.print(
             f"[bold #00FF87]{{ {const.APP_DESC} Core Initialized. }}\n"
         )
+
+    @staticmethod
+    def build_file_tree(file_path: str) -> None:
+        """显示树状图。"""
+        parts = os.path.abspath(file_path).split(os.sep)
+
+        tree = Tree(f"[bold #AFD7FF]{parts[0]}[/]", guide_style="bold")  # 根节点
+        current_path = parts[0]
+        current_node = tree
+
+        for part in parts[1:-1]:  # 处理中间的文件夹
+            current_path = os.path.join(current_path, part)
+            current_node = current_node.add(f"[bold #E4E4E4]{part}[/]", guide_style="bold #87D75F")
+
+        current_node.add(f"[bold #FFAF87]{parts[-1]}[/]")
+
+        Grapher.console.print(tree)
 
 
 if __name__ == "__main__":
