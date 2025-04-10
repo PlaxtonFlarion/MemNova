@@ -528,7 +528,7 @@ class Memrix(object):
 
             remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
             remark_map.update({"uid": uid, "adj": adj, "act": act})
-            remark_map.update({"frg": "前台" if self.target in act else "前台" if (int(adj)) <= 0 else "后台"})
+            remark_map.update({"frg": "前台" if self.target in act else "前台" if int(adj) <= 0 else "后台"})
 
             logger.info(f"{remark_map['tms']}")
             logger.info(f"UID: {remark_map['uid']}")
@@ -580,7 +580,10 @@ class Memrix(object):
                 self.dumped.set()
                 return logger.info(f"{memory_result}\n")
 
-            logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
+            try:
+                logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
+            except KeyError:
+                return self.dumped.set()
 
             ram = Ram({"remark_map": remark_map} | muster)
 
@@ -589,9 +592,9 @@ class Memrix(object):
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
                 self.file_insert += 1
-                logger.info(f"Article {self.file_insert} data insert success ...")
+                logger.info(f"Article {self.file_insert} data insert success")
             else:
-                logger.info(f"Data insert skipped ...")
+                logger.info(f"Data insert skipped")
 
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
