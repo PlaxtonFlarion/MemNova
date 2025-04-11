@@ -613,10 +613,11 @@ class Memrix(object):
         self.file_insert = 0
         self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
 
-        logger.info(f"{format_before_time}")
-        logger.info(f"{package}")
-        logger.info(f"{self.config.label}")
-        logger.info(f"{self.file_folder}\n")
+        logger.info(f"时间: {format_before_time}")
+        logger.info(f"应用: {package}")
+        logger.info(f"频率: {self.config.speed}")
+        logger.info(f"标签: {self.config.label}")
+        logger.info(f"文件: {self.file_folder}\n")
 
         if os.path.isfile(self.team_file):
             scene = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
