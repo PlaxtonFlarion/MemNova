@@ -67,115 +67,53 @@ class MemrixError(_MemrixBaseError):
 
 class Terminal(object):
     """
-    命令行执行工具类，封装异步子进程的标准调用方式。
+    异步命令行执行工具类，用于跨平台执行 shell 或子进程命令。
 
-    支持执行普通命令（无 shell 包装）与 shell 字符串命令两种形式，
-    并根据当前平台自动适配编码格式（Windows 使用 GBK，其他平台默认 UTF-8）。
-
-    用于异步执行 ADB、系统命令、工具链等指令，并可统一捕获标准输出与错误输出。
+    Terminal 类提供统一接口封装，支持字符串或参数列表形式的命令输入，
+    并可根据需求启用 shell 模式与超时控制，适用于脚本驱动的自动化任务执行。
     """
 
     @staticmethod
-    async def cmd_line(cmd: list[str], timeout: bool = True) -> typing.Optional[str]:
+    async def cmd_line(cmd: list[str] | str, timeout: bool = True, shell: bool = False) -> typing.Optional[str]:
         """
-        异步执行命令行指令，支持超时控制与跨平台编码适配。
-
-        使用 `asyncio.create_subprocess_exec()` 调用传入的命令参数，
-        并自动捕获标准输出或标准错误输出（优先返回 stdout）。
-        若启用超时限制，默认 3 秒后超时返回 None。
+        异步执行命令行指令，支持列表或字符串命令格式，可配置 shell 与超时行为。
 
         Parameters
         ----------
-        cmd : list[str]
-            要执行的命令及其参数列表，按顺序传入（非 shell 字符串形式）。
-            例如：["adb", "-s", "123456", "shell", "dumpsys", "meminfo"]
+        cmd : Union[list[str], str]
+            要执行的命令行指令，可以是命令字符串，也可以是参数列表。
 
-        timeout : bool, default=True
-            是否启用 3 秒的超时限制。若为 False，则等待命令自然执行完毕。
+        timeout : bool, optional
+            是否启用 3 秒超时机制，默认为 True，若为 False 则无限等待命令结束。
+
+        shell : bool, optional
+            是否以 shell 模式执行命令（如支持管道、重定向等），默认为 False。
 
         Returns
         -------
         Optional[str]
-            命令的输出结果（stdout > stderr），若超时则返回 None。
-
-        Notes
-        -----
-        - Windows 平台使用 GBK 编码，其它平台使用 UTF-8
-        - 返回内容会移除首尾空白字符
-        - 捕获异常为 asyncio.TimeoutError，内部不抛出错误
+            命令执行的标准输出或错误输出内容（首选 stdout），若超时或无输出则返回 None。
         """
 
         logger.debug(cmd)
-        transports = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
 
-        encode = "GBK" if sys.platform == "win32" else "UTF-8"
-        try:
-            if timeout:
-                stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
-            else:
-                stdout, stderr = await transports.communicate()
-        except asyncio.TimeoutError:
-            return None
-
-        if stdout:
-            return stdout.decode(encoding=encode, errors="ignore").strip()
-        if stderr:
-            return stderr.decode(encoding=encode, errors="ignore").strip()
-
-    @staticmethod
-    async def cmd_line_shell(cmd: str, timeout: bool = True) -> typing.Optional[str]:
-        """
-        异步执行单条 shell 命令字符串，支持超时控制与跨平台输出编码。
-
-        使用 `asyncio.create_subprocess_shell()` 执行完整 shell 指令，
-        适用于包含管道、重定向、逻辑运算符等复杂表达式的场景。
-        支持自定义是否启用 3 秒超时限制。
-
-        Parameters
-        ----------
-        cmd : str
-            要执行的 shell 命令字符串。
-            例如："adb shell dumpsys meminfo | grep TOTAL"
-
-        timeout : bool, default=True
-            是否启用 3 秒的超时限制。设为 False 时将等待命令自然结束。
-
-        Returns
-        -------
-        Optional[str]
-            命令输出结果（优先返回 stdout，若无则返回 stderr），
-            如果超时或异常则返回 None。
-
-        Notes
-        -----
-        - Windows 使用 GBK 编码，其它平台使用 UTF-8
-        - 输出内容默认自动 strip 去除首尾空白
-        - 不抛出异常，所有超时内部处理返回 None
-        - 推荐用于包含管道符（|）、重定向（>）等复杂结构的命令
-        """
-
-        logger.debug(cmd)
         transports = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        ) if shell else await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
 
-        encode = "GBK" if sys.platform == "win32" else "UTF-8"
         try:
-            if timeout:
-                stdout, stderr = await asyncio.wait_for(transports.communicate(), timeout=3)
-            else:
-                stdout, stderr = await transports.communicate()
+            stdout, stderr = await asyncio.wait_for(
+                transports.communicate(), timeout=3
+            ) if timeout else await transports.communicate()
         except asyncio.TimeoutError:
             return None
 
         if stdout:
-            return stdout.decode(encoding=encode, errors="ignore").strip()
+            return stdout.decode(encoding=const.ENCODING, errors="ignore").strip()
         if stderr:
-            return stderr.decode(encoding=encode, errors="ignore").strip()
+            return stderr.decode(encoding=const.ENCODING, errors="ignore").strip()
 
 
 class FileAssist(object):

@@ -839,15 +839,19 @@ class Memrix(object):
             )):
                 raise MemrixError(f"No data scenario {report_list} ...")
 
+            # 计算多组数据前台峰值
             avg_fg_max_values = [float(i["fg_max"]) for i in report_list if "fg_max" in i]
-            avg_fg_max = round(sum(avg_fg_max_values) / len(avg_fg_max_values), 2) if avg_fg_max_values else None
+            avg_fg_max = f"{sum(avg_fg_max_values) / len(avg_fg_max_values):.2f}" if avg_fg_max_values else None
+            # 计算多组数据前台均值
             avg_fg_avg_values = [float(i["fg_avg"]) for i in report_list if "fg_avg" in i]
-            avg_fg_avg = round(sum(avg_fg_avg_values) / len(avg_fg_avg_values), 2) if avg_fg_avg_values else None
+            avg_fg_avg = f"{sum(avg_fg_avg_values) / len(avg_fg_avg_values):.2f}" if avg_fg_avg_values else None
 
+            # 计算多组数据后台峰值
             avg_bg_max_values = [float(i["bg_max"]) for i in report_list if "bg_max" in i]
-            avg_bg_max = round(sum(avg_bg_max_values) / len(avg_bg_max_values), 2) if avg_bg_max_values else None
+            avg_bg_max = f"{sum(avg_bg_max_values) / len(avg_bg_max_values):.2f}" if avg_bg_max_values else None
+            # 计算多组数据后台均值
             avg_bg_avg_values = [float(i["bg_avg"]) for i in report_list if "bg_avg" in i]
-            avg_bg_avg = round(sum(avg_bg_avg_values) / len(avg_bg_avg_values), 2) if avg_bg_avg_values else None
+            avg_bg_avg = f"{sum(avg_bg_avg_values) / len(avg_bg_avg_values):.2f}" if avg_bg_avg_values else None
 
             rendering = {
                 "title": f"{const.APP_DESC} Information",
@@ -861,8 +865,8 @@ class Memrix(object):
                     "bg_max": f"{self.config.bg_max:.2f}", "bg_avg": f"{self.config.bg_avg:.2f}",
                 },
                 "average": {
-                    "avg_fg_max": f"{avg_fg_max:.2f}", "avg_fg_avg": f"{avg_fg_avg:.2f}",
-                    "avg_bg_max": f"{avg_bg_max:.2f}", "avg_bg_avg": f"{avg_bg_avg:.2f}",
+                    "avg_fg_max": avg_fg_max, "avg_fg_avg": avg_fg_avg,
+                    "avg_bg_max": avg_bg_max, "avg_bg_avg": avg_bg_avg,
                 },
                 "report_list": report_list
             }
@@ -938,7 +942,7 @@ async def main() -> typing.Optional[typing.Any]:
         Display.show_license()
 
         memrix = Memrix(
-            memory, script, report, target, **_keywords
+            memory, script, report, target, _cmd_lines.folder, **_keywords
         )
 
         if memory:

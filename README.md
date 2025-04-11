@@ -236,7 +236,7 @@ memrix --script --target <file.path>
 
 ### 💾 生成报告 (`--report --target`)
 ```
-memrix --report --syslora <file.name>
+memrix --report --target <file.name>
 ```
 
 ---

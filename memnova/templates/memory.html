@@ -354,14 +354,14 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
     <!--摘要信息显示2-->
     <div class="summary-container">
         <div id="test-display">
-            {% if average.avg_fg_max and  average.avg_fg_avg %}
+            {% if average.avg_fg_max and average.avg_fg_avg %}
             <div class="results-info">
                 <p class="fg-final">前台峰值: {{ average.avg_fg_max }} MB</p>
                 <p class="fg-final">前台均值: {{ average.avg_fg_avg }} MB</p>
                 <button id="fg-copy">Copy</button>
             </div>
             {% endif %}
-            {% if average.avg_bg_max and  average.avg_bg_avg %}
+            {% if average.avg_bg_max and average.avg_bg_avg %}
             <div class="results-info">
                 <p class="bg-final">后台峰值: {{ average.avg_bg_max }} MB</p>
                 <p class="bg-final">后台均值: {{ average.avg_bg_avg }} MB</p>
