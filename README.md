@@ -1,4 +1,4 @@
-# Memrix(记忆星核)
+# Memrix｜记忆星核
 
 ![LOGO](resources/images/illustration/Readme.png)
 
