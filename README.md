@@ -1,6 +1,6 @@
 # 🚀 Memrix｜记忆星核
 
-![LOGO](resources/images/illustration/Readme.png)
+![LOGO](/schematic/resources/images/illustration/Readme.png)
 
 ---
 
@@ -237,6 +237,118 @@ memrix --script --target <file.path>
 ### 💾 生成报告 (`--report --target`)
 ```
 memrix --report --target <file.name>
+```
+
+---
+
+## Memrix｜记忆星核 编译 / Compile
+
+![LOGO](/schematic/resources/images/illustration/Compile.png)
+
+---
+
+### 前提条件
+#### 在开始之前，请确保已完成以下操作:
+- 安装 **[Python](https://www.python.org/downloads/) 3.11** 或更高版本
+- 安装 **[Nuitka](https://nuitka.net/)**
+  - 导航到您的 **Python** 脚本所在的目录
+    ```
+    pip install nuitka
+    ```
+
+- 确保在项目根目录下有一个 `requirements.txt` 文件，其中列出了所有的依赖包
+> **MemNova**
+>> **requirements.txt**
+
+- 确保您的 **Python** 环境中安装了所有依赖包
+  - **海外** 导航到您的 **Python** 脚本所在的目录
+    ```
+    pip install -r requirements.txt
+    ```
+  - **大陆** 导航到您的 **Python** 脚本所在的目录
+    ```
+    pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+    ```
+
+- 在 **Python** 脚本所在的目录新建 `applications` 目录
+> **MemNova**
+>> **applications**
+
+---
+
+### 工具目录
+
+#### 新建 `supports` 目录以及子目录，拷贝可执行文件至对应目录
+- schematic
+  - resources
+  - supports
+    - MacOS
+    - Windows
+      - npp_portable_mini
+        - notepad++.exe
+        - ...
+  - templates
+    - ...
+
+---
+
+### Windows 操作系统
+#### 准备工作
+- 打开命令提示符 **Command Prompt** 或 **PowerShell**
+- 导航到您的 **Python** 脚本所在的目录
+
+#### 运行根目录下 `build.py` 文件
+> **MemNova**
+>> **build.py**
+
+#### 目录结构
+- **applications**
+  - **memrix.dist**
+    - **schematic**
+    - **...**
+  - **memrix.bat**
+
+---
+
+### MacOS 操作系统
+#### 准备工作
+- 打开终端 **Terminal** 
+- 导航到您的 **Python** 脚本所在的目录
+
+#### 运行根目录下 `build.py` 文件
+> **MemNova**
+>> **build.py**
+
+#### 目录结构
+- **applications**
+  - **memrix.app**
+    - **Contents**
+      - **_CodeSignature**
+      - **MacOS**
+        - **schematic**
+        - **memrix.sh**
+        - **...**
+      - **Resources**
+        - **memrix_macos_bg.png**
+        - ...
+      - **Info.plist**
+
+#### 修改 Info.plist 文件
+```
+<key>CFBundleExecutable</key>
+<string>Memrix.sh</string> <!-- 设置启动脚本 -->
+```
+
+#### 赋予执行权限
+
+- **memrix**
+```
+chmod +x /Applications/Memrix.app/Contents/MacOS/memrix
+```
+
+- **memrix.sh**
+```
+chmod +x /Applications/Memrix.app/Contents/MacOS/memrix.sh
 ```
 
 ---

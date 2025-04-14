@@ -23,8 +23,8 @@ import aiosqlite
 from loguru import logger
 from rich.console import Console
 from rich.logging import RichHandler
+from memcore.parser import Parser
 from memnova import const
-from engine.parser import Parser
 
 
 class _MemrixBaseError(BaseException):
@@ -114,6 +114,42 @@ class Terminal(object):
             return stdout.decode(encoding=const.ENCODING, errors="ignore").strip()
         if stderr:
             return stderr.decode(encoding=const.ENCODING, errors="ignore").strip()
+
+    @staticmethod
+    async def cmd_link(cmd: list[str]) -> "asyncio.subprocess.Process":
+        """
+        异步执行命令行指令，并返回子进程传输句柄。
+
+        该方法与 `cmd_line` 类似，但不等待命令执行结束，而是直接返回进程对象（用于流式或手动控制的场景）。
+
+        Parameters
+        ----------
+        cmd : list[str]
+            要执行的命令及其参数列表。
+
+        Returns
+        -------
+        asyncio.subprocess.Process
+            返回 asyncio 创建的子进程对象（transports），可手动调用 `.communicate()`、`.stdin.write()` 等方法继续交互。
+
+        Notes
+        -----
+        - 与 `cmd_line` 不同，该方法不自动处理输出，也不会解码。
+        - 适合用于需要长时间运行或交互式输入输出的子进程场景。
+
+        Workflow
+        --------
+        1. 异步启动子进程并打开 stdout/stderr 管道。
+        2. 返回子进程 transport 对象供外部使用。
+        """
+        logger.debug(cmd)
+
+        transports = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+
+        return transports
 
 
 class FileAssist(object):
