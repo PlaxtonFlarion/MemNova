@@ -34,6 +34,8 @@ async def packaging() -> tuple[
 
     operation_system, exe = sys.platform, sys.executable
 
+    app = f"applications"
+
     venv_base_path = Path(".venv") if Path(".venv").exists() else Path("venv")
 
     site_packages, target, rename = None, None, None
@@ -42,7 +44,7 @@ async def packaging() -> tuple[
 
     if operation_system == "win32":
         if (lib_path := venv_base_path / "Lib" / "site-packages").exists():
-            target = Path(f"applications/{const.APP_DESC}.dist")
+            target = Path(app).joinpath(f"{const.APP_DESC}.dist")
             site_packages, rename = lib_path.resolve(), Path(target.parent).joinpath(const.APP_DESC)
             compile_cmd += [
                 "--windows-icon-from-ico=schematic/resources/icons/memrix_icn_1.ico",
@@ -56,7 +58,7 @@ async def packaging() -> tuple[
                 elif "site-packages" in str(sub):
                     site_packages, rename = sub.resolve(), None
 
-                target = Path(f"applications/{const.APP_DESC}.app/Contents/MacOS")
+                target = Path(app).joinpath(f"{const.APP_DESC}.app", f"Contents", f"MacOS")
 
                 compile_cmd += [
                     "--macos-create-app-bundle",
@@ -72,7 +74,7 @@ async def packaging() -> tuple[
         "--nofollow-import-to=uiautomator2",
         "--include-module=deprecation",
         "--include-package=adbutils,pygments",
-        "--show-progress", "--show-memory", "--output-dir=applications", f"{const.APP_NAME}.py"
+        "--show-progress", "--show-memory", f"--output-dir={app}", f"{const.APP_NAME}.py"
     ]
 
     return site_packages, target, rename, compile_cmd
@@ -83,14 +85,12 @@ async def post_build() -> typing.Coroutine | None:
     async def input_stream() -> typing.Coroutine | None:
         """读取标准流"""
         async for line in transports.stdout:
-            line_fmt = line.decode(encoding=const.ENCODING, errors="ignore").strip()
-            Grapher.console.print(f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {line_fmt}")
+            compile_log(line.decode(encoding=const.ENCODING, errors="ignore").strip())
 
     async def error_stream() -> typing.Coroutine | None:
         """读取异常流"""
         async for line in transports.stderr:
-            line_fmt = line.decode(encoding=const.ENCODING, errors="ignore").strip()
-            Grapher.console.print(f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {line_fmt}")
+            compile_log(line.decode(encoding=const.ENCODING, errors="ignore").strip())
 
     async def examine_dependencies() -> typing.Coroutine | None:
         """自动查找虚拟环境中的 site-packages 路径，仅支持 Windows 与 macOS，兼容 .venv / venv。 """
@@ -103,15 +103,16 @@ async def post_build() -> typing.Coroutine | None:
                 done_list.append((src, dst))
             else:
                 fail_list.append(dep)
-                Grapher.console.print(f"[bold #FF6347][!] Dependency not found -> {dep}")
+                compile_log(f"[bold #FF6347][!] Dependency not found -> {dep}")
 
         if schematic.exists():
-            done_list.append(schematic.name)
+            src, dst = schematic, target / schematic.name
+            done_list.append((src, dst))
         else:
             fail_list.append(schematic.name)
-            Grapher.console.print(f"[bold #FF6347][!] Dependency not found -> {schematic.name}")
+            compile_log(f"[bold #FF6347][!] Dependency not found -> {schematic.name}")
 
-        if len(done_list) != len(dependencies + [schematic.name]):
+        if fail_list:
             raise FileNotFoundError(f"Incomplete dependencies required {fail_list}")
 
     async def forward_dependencies() -> typing.Coroutine | None:
@@ -134,23 +135,26 @@ async def post_build() -> typing.Coroutine | None:
                 expand=False
         ) as progress:
 
-            task = progress.add_task("Copy Dependencies", total=len(dependencies))
+            task = progress.add_task("Copy Dependencies", total=len(done_list))
 
             for src, dst in done_list:
                 shutil.copytree(src, dst, dirs_exist_ok=True)
                 progress.advance(task)
 
-            shutil.copytree(schematic, target.joinpath(const.SCHEMATIC), dirs_exist_ok=True)
-            progress.advance(task)
-
         # 文件夹重命名
         if rename:
             shutil.move(target, rename)
-            Grapher.console.print(f"[bold #00D787][✓] Rename completed {target.name} → {rename.name}")
+            compile_log(f"[bold #00D787][✓] Rename completed {target.name} → {rename.name}")
+
+    compile_log: typing.Any = lambda x: Grapher.console.print(
+        f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {x}"
+    )
+
+    current_folder = os.path.dirname(os.path.abspath(__file__))
 
     done_list, fail_list = [], []
 
-    schematic, dependencies = Path(os.path.dirname(__file__)).joinpath(const.SCHEMATIC), [
+    schematic, dependencies = Path(current_folder).joinpath(const.SCHEMATIC), [
         "uiautomator2"
     ]
 
