@@ -20,15 +20,21 @@ import aiosqlite
 import numpy as np
 from loguru import logger
 from datetime import datetime
-from bokeh.plotting import figure, save
-from bokeh.io import curdoc, output_file
+from bokeh.io import (
+    curdoc, output_file
+)
+from bokeh.plotting import (
+    save, figure
+)
 from bokeh.models import (
     ColumnDataSource, Span, HoverTool,
     DatetimeTickFormatter, BoxAnnotation, Range1d
 )
-from jinja2 import Environment, FileSystemLoader
-from memnova import const
+from jinja2 import (
+    Environment, FileSystemLoader
+)
 from engine.tackle import DataBase
+from memnova import const
 
 
 class Analyzer(object):
