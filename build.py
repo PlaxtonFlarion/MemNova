@@ -150,15 +150,17 @@ async def post_build() -> typing.Coroutine | None:
         f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {x}"
     )
 
-    current_folder = os.path.dirname(os.path.abspath(__file__))
+    site_packages, target, rename, compile_cmd = await packaging()
 
     done_list, fail_list = [], []
 
-    schematic, dependencies = Path(current_folder).joinpath(const.SCHEMATIC), [
-        "uiautomator2"
+    current_folder = os.path.dirname(os.path.abspath(__file__))
+
+    dependencies = [
+        "uiautomator2", "keras", "tensorflow", "tensorboard"
     ]
 
-    site_packages, target, rename, compile_cmd = await packaging()
+    schematic = Path(current_folder).joinpath(const.SCHEMATIC)
 
     await examine_dependencies()
 
