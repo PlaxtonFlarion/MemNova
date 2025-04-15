@@ -86,7 +86,7 @@ async def rename_so_files(root_dir: str) -> None:
 
     ### 如何处理？
 
-    Framix 在 macOS 构建完成后，会自动执行如下重命名操作
+    Memrix 在 macOS 构建完成后，会自动执行如下重命名操作
 
     ```bash
     # 原始文件
@@ -105,7 +105,7 @@ async def rename_so_files(root_dir: str) -> None:
 
     - 这是 `pip` 安装 `scikit-learn` 的正常行为。
     - 对于打包后部署、多平台适配、模型分发等场景，建议重命名。
-    - Framix 已内置自动处理机制，无需手动干预。
+    - Memrix 已内置自动处理机制，无需手动干预。
     - 本函数适用于 macOS 平台，用于修正动态链接库的命名。
     - 会打印出重命名的成功日志。
     """
@@ -122,7 +122,7 @@ async def packaging() -> tuple[
     typing.Union["Path"], typing.Union[tuple["Path", "Path"]], list[str], list[str]
 ]:
     """
-    构建 Framix 独立应用的打包编译命令与目录结构信息。
+    构建 Memrix 独立应用的打包编译命令与目录结构信息。
 
     Returns
     -------
@@ -232,7 +232,7 @@ async def packaging() -> tuple[
 
 async def post_build() -> typing.Coroutine | None:
     """
-    Framix 应用打包后的自动依赖检查与部署流程。
+    Memrix 应用打包后的自动依赖检查与部署流程。
 
     Returns
     -------
