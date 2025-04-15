@@ -28,6 +28,7 @@ LOG_FORMAT: str = f"{APP_DESC} {{time:YYYY-MM-DD HH:mm:ss}} | {{level}} | {{mess
 SUMMARY: str = f"Summary"
 
 SCHEMATIC: str = f"schematic"
+STRUCTURE: str = f"Structure"
 
 
 if __name__ == '__main__':

@@ -1029,7 +1029,7 @@ if __name__ == '__main__':
 
         # 设置初始路径
         if not os.path.exists(
-                _initial_source := os.path.join(_mx_feasible, "Specially").format()
+                _initial_source := os.path.join(_mx_feasible, const.STRUCTURE).format()
         ):
             os.makedirs(_initial_source, exist_ok=True)
 

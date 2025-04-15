@@ -303,7 +303,7 @@ memrix --report --target <file.name>
 
 #### 目录结构
 - **applications**
-  - **memrix.dist**
+  - **MemrixEngine**
     - **schematic**
     - **...**
   - **memrix.bat**
@@ -321,7 +321,7 @@ memrix --report --target <file.name>
 
 #### 目录结构
 - **applications**
-  - **memrix.app**
+  - **Memrix.app**
     - **Contents**
       - **_CodeSignature**
       - **MacOS**

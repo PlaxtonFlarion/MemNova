@@ -2,6 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Memrix"
+#define MyEngineName "MemrixEngine"
+#define MyAssetsName "MemrixStructure"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "AceKeppel"
 #define MyAppURL "https://github.com/PlaxtonFlarion/MemNova"
@@ -11,13 +13,14 @@
 #define MyAppAssocExt ".myp"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
+
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{4C6970DD-67E4-4FFA-88D1-01BD6E9CA1B8}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={#MyAppName} + " v" + {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -31,9 +34,9 @@ InfoBeforeFile=schematic\resources\documents\memrix_before.txt
 InfoAfterFile=schematic\resources\documents\memrix_after.txt
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputDir=D:\Users\Desktop
+OutputDir=.
 OutputBaseFilename={#MyAppName}-windows-v{#MyAppVersion}
-UninstallDisplayIcon={app}\{#MyAppName}\schematic\resources\icons\memrix_delete_1.ico
+UninstallDisplayIcon={app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico
 SetupIconFile=schematic\resources\icons\memrix_setup_1.ico
 WizardImageFile=schematic\resources\images\windows\memrix_192dpi_328_628.bmp
 Compression=lzma
@@ -51,18 +54,25 @@ begin
   WizardForm.WelcomeLabel2.Font.Style := [fsItalic];
 end;
 
+
+; NOTE: 语言设置
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
+
+; NOTE: 创建桌面图标
 [Tasks]
 ;Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+
+; NOTE: 需要压缩的目录
 [Files]
-;Source: "applications\{#MyAppName}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "schematic\resources\automation\{#MyAppBatName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "applications\{#MyAppName}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-;Source: "schematic\*"; DestDir: "{app}\{#MyAppName}\schematic"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "applications\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+;Source: "schematic\resources\automation\{#MyAppBatName}"; DestDir: "{app}"; Flags: ignoreversion
+;Source: "applications\{#MyEngineName}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+;Source: "schematic\*"; DestDir: "{app}\{#MyEngineName}\schematic"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+
 
 [Registry]
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocKey}"; ValueData: ""; Flags: uninsdeletevalue
@@ -71,10 +81,13 @@ Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\DefaultIcon"; ValueType: s
 Root: HKA; Subkey: "Software\Classes\{#MyAppAssocKey}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
 Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes"; ValueType: string; ValueName: ".myp"; ValueData: ""
 
-[Icons]
-;Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyAppName}\schematic\resources\icons\memrix_icn_1.ico"
-;Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-;Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#MyAppName}\schematic\resources\icons\memrix_delete_1.ico"
 
+[Icons]
+;Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_icn_1.ico"
+;Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+;Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico"
+
+
+; NOTE: 卸载时删除
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"; Check: IsAdmin;
