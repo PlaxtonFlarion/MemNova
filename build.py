@@ -22,7 +22,6 @@ from rich.progress import (
     BarColumn, TimeElapsedColumn,
     Progress, SpinnerColumn, TextColumn,
 )
-
 from engine.tackle import (
     Grapher, Terminal
 )
