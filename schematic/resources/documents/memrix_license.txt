@@ -1,4 +1,4 @@
-# 许可证 / LICENSES
+﻿# 许可证 / LICENSES
 
 ![LOGO](resources/images/illustration/License.png)
 
