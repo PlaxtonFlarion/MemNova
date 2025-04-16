@@ -35,14 +35,15 @@ from loguru import logger
 # ====[ from: 本地模块 ]====
 from engine.device import Device
 from engine.manage import Manage
-from memnova import const
-from memcore.parser import Parser
-from memcore.display import Display
-from engine.analyzer import Analyzer
 from engine.tackle import (
     Config, Grapher, DataBase,
     Ram, MemrixError, FileAssist
 )
+from memcore.parser import Parser
+from memcore.display import Display
+from memnova.analyzer import Analyzer
+from memnova import const
+
 
 try:
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
