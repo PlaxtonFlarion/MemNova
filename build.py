@@ -25,6 +25,7 @@ from rich.progress import (
 from engine.tackle import (
     Grapher, Terminal, MemrixError
 )
+from memcore.display import Display
 from memnova import const
 
 compile_log: typing.Any = lambda x: Grapher.console.print(
@@ -249,7 +250,7 @@ async def post_build() -> typing.Coroutine | None:
 
         await authorized_tools(
             ops, target / schematic.name / "supports",
-                 target / const.NAME, target / launch[0].name
+            target / const.APP_NAME, target / launch[0].name
         )
         await rename_so_files(ops, target)
         await rename_sensitive(*rename)
@@ -258,6 +259,8 @@ async def post_build() -> typing.Coroutine | None:
     build_start_time = time.time()
 
     Grapher.active("INFO")
+
+    Display.compile_animation()
 
     ops, app, site_packages, target, rename, compile_cmd, launch = await packaging()
 

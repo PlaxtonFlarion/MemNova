@@ -14,6 +14,7 @@
 
 import os
 import time
+from rich.text import Text
 from rich.tree import Tree
 from memnova import const
 from engine.tackle import Grapher
@@ -64,6 +65,39 @@ task_exit = fr"""[bold #FFEE55]
 |            {const.APP_DESC} Task Exit            |
 +----------------------------------------+
 """
+
+compile_frames = [
+    f"""\
+[bold #555555]
+     [ ]      [ ]      [ ]
+     [ ]      [ ]      [ ]
+     [ ]      [ ]      [ ]
+""",
+    f"""\
+[bold #00FF87]
+     [■]      [ ]      [ ]
+     [ ]      [■]      [ ]
+     [ ]      [ ]      [■]
+""",
+    f"""\
+[bold #00FFFF]
+     [■]      [■]      [ ]
+     [■]      [■]      [■]
+     [ ]      [■]      [■]
+""",
+    f"""\
+[bold #FFD700]
+     [■]      [■]      [■]
+     [■]   CORE LINK   [■]
+     [■]      [■]      [■]
+""",
+    f"""\
+[bold #FF6EFF]
+     [●]      [●]      [●]
+     [●]  {const.APP_DESC} BOOT  [●]
+     [●]      [●]      [●]
+"""
+]
 
 
 class Display(object):
@@ -125,6 +159,21 @@ class Display(object):
         Grapher.console.print(
             f"[bold #00FF87]{{ {const.APP_DESC} Core Initialized. }}\n"
         )
+
+    @staticmethod
+    def compile_animation() -> None:
+        """星核脉冲动画（MemCore Pulse）"""
+        Display.clear_screen()
+        for _ in range(6):
+            for frame in compile_frames[:-1]:
+                Display.clear_screen()
+                Grapher.console.print(Text.from_markup(frame))
+                time.sleep(0.3)
+
+        Display.clear_screen()
+        Grapher.console.print(Text.from_markup(compile_frames[-1]))
+        Display.show_logo()
+        Display.show_license()
 
     @staticmethod
     def build_file_tree(file_path: str) -> None:
