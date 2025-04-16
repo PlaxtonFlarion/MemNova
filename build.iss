@@ -5,6 +5,7 @@
 #define MyEngineName "MemrixEngine"
 #define MyAssetsName "MemrixStructure"
 #define MyAppVersion "1.0.0"
+#define MyAppVerName MyAppName + " v" + MyAppVersion
 #define MyAppPublisher "AceKeppel"
 #define MyAppURL "https://github.com/PlaxtonFlarion/MemNova"
 #define MyAppExeName "memrix.exe"
@@ -20,7 +21,7 @@
 AppId={{4C6970DD-67E4-4FFA-88D1-01BD6E9CA1B8}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} + " v" + {#MyAppVersion}
+AppVerName={#MyAppVerName}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
@@ -43,6 +44,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 
+
 [Code]
 procedure InitializeWizard();
 begin
@@ -55,17 +57,14 @@ begin
 end;
 
 
-; NOTE: 语言设置
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 
-; NOTE: 创建桌面图标
 [Tasks]
 ;Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 
-; NOTE: 需要压缩的目录
 [Files]
 Source: "applications\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ;Source: "schematic\resources\automation\{#MyAppBatName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -88,6 +87,5 @@ Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes
 ;Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico"
 
 
-; NOTE: 卸载时删除
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"; Check: IsAdmin;
