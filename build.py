@@ -313,3 +313,8 @@ if __name__ == "__main__":
         asyncio.run(post_build())
     except MemrixError as _e:
         compile_log(_e)
+        sys.exit(Display.show_fail())
+    except KeyboardInterrupt:
+        sys.exit(Display.show_exit())
+    else:
+        sys.exit(Display.show_done())

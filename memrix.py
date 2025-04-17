@@ -351,7 +351,7 @@ class Memrix(object):
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
-            f"Mark={self.config.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f}"
+            f"Mark={self.config.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
         logger.info(f"{self.group_dir}")
 
@@ -364,7 +364,7 @@ class Memrix(object):
         logger.info(f"^===^ {const.APP_DESC} Engine Close ^===^")
 
     # """记忆风暴"""
-    async def dump_task_start(self, device: "Device", deliver_package: typing.Optional[str] = None) -> None:
+    async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
         """
         启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
 
@@ -386,7 +386,7 @@ class Memrix(object):
         device : Device
             目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
 
-        deliver_package : typing.Optional[str]
+        post_pkg : typing.Optional[str]
             可以传入的应用包名。
 
         Returns
@@ -600,9 +600,9 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        package: typing.Optional[str] = self.target  # 传入的应用名称
+        package: typing.Optional[str] = post_pkg if post_pkg else self.target  # 传入的应用名称
 
-        if not deliver_package:
+        if not post_pkg:
             if "Unable" in (check := await device.examine_package(package)):
                 raise MemrixError(check)
 
@@ -1059,14 +1059,10 @@ if __name__ == '__main__':
 
     except MemrixError as _error:
         Grapher.view(_error)
-        Display.show_fail()
-        sys.exit(1)
+        sys.exit(Display.show_fail())
     except KeyboardInterrupt:
-        Display.show_exit()
-        sys.exit(0)
+        sys.exit(Display.show_exit())
     except asyncio.CancelledError:
-        Display.show_done()
-        sys.exit(0)
+        sys.exit(Display.show_done())
     else:
-        Display.show_done()
-        sys.exit(0)
+        sys.exit(Display.show_done())
