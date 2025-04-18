@@ -83,7 +83,7 @@
 - 适用于长时间稳定性监控、内存波动追踪、异常捕捉及前后台行为对比等复杂测试场景。
 - 手动中断（Ctrl+C）。
 #### 📔 参数说明: 
-- **布尔值**
+- **布尔值** 默认为 `False`
 #### 📔 实际应用: 
 ```
 memrix --memory --target <com.example.application>
@@ -97,7 +97,7 @@ memrix --memory --target <com.example.application>
 - 该命令适用于复杂场景模拟、自动化行为验证、压力场景下的内存异常捕捉等任务。
 - 手动中断（Ctrl+C）。
 #### 📔 参数说明: 
-- **布尔值**
+- **布尔值** 默认为 `False`
 #### 📔 实际应用: 
 ```
 memrix --script --target <file.path>
@@ -132,7 +132,7 @@ memrix --script --target <file.path>
 - 自动生成结构化、可视化的 **HTML** 格式报告，包含内存曲线图、异常区域标记、基本统计指标、测试元信息等。
 - 支持配合 `--target` 限定输出指定批次的数据报告。
 #### 📔 参数说明: 
-- **布尔值**
+- **布尔值** 默认为 `False`
 #### 📔 实际应用: 
 ```
 memrix --report --target <file.name>
@@ -145,7 +145,7 @@ memrix --report --target <file.name>
 - 完成编辑并保存后，**Memrix** 会在下次启动时自动加载该配置。
 - 配置文件是 **Memrix** 的“星核蓝图”，定义了程序的运行地图、参数注入与行为预设。
 #### 📔 参数说明: 
-- **布尔值**
+- **布尔值** 默认为 `False`
 #### 📔 实际应用: 
 ```
 memrix --config
