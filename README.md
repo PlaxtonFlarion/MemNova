@@ -153,7 +153,7 @@ memrix --config
 #### 📔 文件说明:
 - `Memory`
   - `speed` 速率
-  - `label` 应用程序名称
+  - `label` 应用名称
 - `Script`
   - `group` 自动化指令集名称
 - `Report`
@@ -161,13 +161,13 @@ memrix --config
   - `fg_avg` 前台均值标准
   - `bg_max` 后台峰值标准
   - `bg_avg` 后台均值标准
-  - `headline` 报告标题
-  - `criteria` 准出标准
+  - `headline` 标题
+  - `criteria` 标准
 #### 📔 文件示例:
 ```yaml
 Memory:
   speed: 1
-  label: 摘要标签
+  label: 应用名称
 Script:
   group: mission
 Report:
@@ -175,8 +175,8 @@ Report:
   fg_avg: 0.0
   bg_max: 0.0
   bg_avg: 0.0
-  headline: 报告标题
-  criteria: 准出标准
+  headline: 标题
+  criteria: 标准
 ```
 
 ---
