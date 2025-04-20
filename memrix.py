@@ -989,9 +989,6 @@ if __name__ == '__main__':
         _sys_symbol = os.sep
         _env_symbol = os.path.pathsep
 
-        # 激活日志
-        Grapher.active("INFO")
-
         # 根据应用名称确定工作目录和配置目录
         if _software == f"{const.APP_NAME}.exe":
             # Windows
@@ -1040,15 +1037,18 @@ if __name__ == '__main__':
         ):
             os.makedirs(_src_total_place, exist_ok=True)
 
-        # 设置初始配置文件路径
-        _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
-        # 加载初始配置
-        _config = Config(_config_file)
-
         # 命令行解析器
         _parser = Parser()
         # 命令行
         _cmd_lines = Parser().parse_cmd
+
+        # 激活日志
+        Grapher.active("INFO")
+
+        # 设置初始配置文件路径
+        _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
+        # 加载初始配置
+        _config = Config(_config_file)
 
         # 打包关键字参数
         _keywords = {
