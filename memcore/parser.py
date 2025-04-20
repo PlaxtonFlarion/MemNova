@@ -148,17 +148,23 @@ class Parser(object):
 
     @property
     def parse_cmd(self) -> "argparse.Namespace":
-        """解析后的命令行参数对象，可通过属性方式访问参数值。"""
+        """
+        解析后的命令行参数对象，可通过属性方式访问参数值。
+        """
         return self.__parse_engine.parse_args()
 
     @property
     def parse_engine(self) -> typing.Optional["argparse.ArgumentParser"]:
-        """内部的 argparse 实例，用于访问或打印 help 内容。"""
+        """
+        内部的 argparse 实例，用于访问或打印 help 内容。
+        """
         return self.__parse_engine
 
     @staticmethod
     def parse_integer(content: typing.Any) -> int:
-        """安全解析整数值，限制范围在 1~10，失败时返回默认值 1。"""
+        """
+        安全解析整数值，限制范围在 1~10，失败时返回默认值 1。
+        """
         try:
             return int(max(1, min(10, content)))
         except TypeError:
@@ -166,7 +172,9 @@ class Parser(object):
 
     @staticmethod
     def parse_decimal(content: typing.Any) -> float:
-        """安全解析浮点值，自动将负数归零，失败时返回默认值 0.0。"""
+        """
+        安全解析浮点值，自动将负数归零，失败时返回默认值 0.0。
+        """
         try:
             return float(max(0, content))
         except TypeError:

@@ -59,7 +59,9 @@ class MemrixError(_MemrixBaseError):
         self.msg = msg
 
     def __str__(self):
-        """返回带有 rich 渲染标记的异常信息，适配 Grapher.view() 等日志系统。"""
+        """
+        返回带有 rich 渲染标记的异常信息，适配 Grapher.view() 等日志系统。
+        """
         return f"[#FF4C4C]<{const.APP_DESC}Error> {self.msg}"
 
     __repr__ = __str__
@@ -358,7 +360,9 @@ class Pid(object):
 
     @property
     def member(self) -> typing.Optional[dict]:
-        """返回内部 PID 映射关系。"""
+        """返
+        回内部 PID 映射关系。
+        """
         return self.__member
 
 
@@ -384,22 +388,30 @@ class Ram(object):
 
     @property
     def remark_map(self) -> typing.Optional[dict]:
-        """应用运行状态数据。"""
+        """
+        应用运行状态数据。
+        """
         return self.__details.get("remark_map", None)
 
     @property
     def resume_map(self) -> typing.Optional[dict]:
-        """内存总览汇总信息。"""
+        """
+        内存总览汇总信息。
+        """
         return self.__details.get("resume_map", None)
 
     @property
     def memory_map(self) -> typing.Optional[dict]:
-        """内存组成明细结构。"""
+        """
+        内存组成明细结构。
+        """
         return self.__details.get("memory_map", None)
 
     @property
     def memory_vms(self) -> typing.Optional[dict]:
-        """虚拟内存估值信息。"""
+        """
+        虚拟内存估值信息。
+        """
         return self.__details.get("memory_vms", None)
 
 
@@ -452,47 +464,65 @@ class Config(object):
 
     @property
     def speed(self):
-        """采样间隔时间（秒），范围建议为 1~10。"""
+        """
+        采样间隔时间（秒），范围建议为 1~10。
+        """
         return self.configs["Memory"]["speed"]
 
     @property
     def label(self):
-        """当前测试任务的标签或名称，用于日志与报告标注。"""
+        """
+        当前测试任务的标签或名称，用于日志与报告标注。
+        """
         return self.configs["Memory"]["label"]
 
     @property
     def group(self):
-        """JSON 自动化脚本中任务组字段名。"""
+        """
+        JSON 自动化脚本中任务组字段名。
+        """
         return self.configs["Script"]["group"]
 
     @property
     def fg_max(self):
-        """报告中前台 PSS 峰值容忍阈。"""
+        """
+        报告中前台 PSS 峰值容忍阈。
+        """
         return self.configs["Report"]["fg_max"]
 
     @property
     def fg_avg(self):
-        """报告中前台 PSS 平均值容忍阈。"""
+        """
+        报告中前台 PSS 平均值容忍阈。
+        """
         return self.configs["Report"]["fg_avg"]
 
     @property
     def bg_max(self):
-        """报告中后台 PSS 峰值容忍阈。"""
+        """
+        报告中后台 PSS 峰值容忍阈。
+        """
         return self.configs["Report"]["bg_max"]
 
     @property
     def bg_avg(self):
-        """报告中后台 PSS 平均值容忍阈。"""
+        """
+        报告中后台 PSS 平均值容忍阈。
+        """
         return self.configs["Report"]["bg_avg"]
 
     @property
     def headline(self):
-        """报告页标题。"""
+        """
+        报告页标题。
+        """
         return self.configs["Report"]["headline"]
 
     @property
     def criteria(self):
-        """报告中的性能评估标准描述。"""
+        """
+        报告中的性能评估标准描述。
+        """
         return self.configs["Report"]["criteria"]
 
     @speed.setter
