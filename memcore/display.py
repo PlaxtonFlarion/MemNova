@@ -216,7 +216,7 @@ class Display(object):
 
         current_node.add(f"[bold #FFAF87]{parts[-1]}[/]")
 
-        Grapher.console.print(tree)
+        Grapher.console.print("\n", tree, "\n")
 
 
 if __name__ == "__main__":
