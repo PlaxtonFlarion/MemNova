@@ -262,7 +262,9 @@ class Display(object):
 
     @staticmethod
     async def flame_manifest() -> None:
-
+        """
+        启动动画。
+        """
         startup_banners = random.choice([
             "initializing memory scanner ...",
             "calibrating baseline thresholds ...",
