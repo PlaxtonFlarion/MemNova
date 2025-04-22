@@ -96,7 +96,6 @@ class Terminal(object):
         Optional[str]
             命令执行的标准输出或错误输出内容（首选 stdout），若超时或无输出则返回 None。
         """
-
         logger.debug(cmd)
 
         transports = await asyncio.create_subprocess_shell(
@@ -180,7 +179,6 @@ class FileAssist(object):
         Optional[str]
             执行结果的标准输出或错误输出；失败时返回 None。
         """
-
         if sys.platform == "win32":
             cmd = ["notepad++"] if shutil.which("notepad++") else ["Notepad"]
         else:
@@ -207,7 +205,6 @@ class FileAssist(object):
         yaml.YAMLError
             当 YAML 文件格式错误时抛出。
         """
-
         with open(file, "r", encoding=const.ENCODING) as f:
             return yaml.load(f.read(), Loader=yaml.FullLoader)
 
@@ -231,7 +228,6 @@ class FileAssist(object):
         json.JSONDecodeError
             当 JSON 文件格式无效时抛出。
         """
-
         with open(file, "r", encoding=const.ENCODING) as f:
             return json.loads(f.read())
 
@@ -253,8 +249,7 @@ class FileAssist(object):
         None
             无返回值。写入失败会抛出标准 IOError。
         """
-
-        with open(src, "w", encoding="utf-8") as f:
+        with open(src, "w", encoding=const.ENCODING) as f:
             yaml.dump(dst, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
     @staticmethod
@@ -275,7 +270,6 @@ class FileAssist(object):
          None
              无返回值。写入失败会抛出标准 IOError。
          """
-
         with open(src, "w", encoding=const.ENCODING) as f:
             json.dump(dst, f, indent=4, separators=(",", ":"), ensure_ascii=False)
 
@@ -312,7 +306,6 @@ class Grapher(object):
         None
             无返回值。调用后即开始日志输出。
         """
-
         logger.remove()
         logger.add(
             RichHandler(console=Grapher.console, show_level=False, show_path=False, show_time=False),
@@ -337,7 +330,6 @@ class Grapher(object):
         None
             无返回值。内容直接输出至终端。
         """
-
         Grapher.console.print(
             f"{const.APP_DESC} {time.strftime('%Y-%m-%d %H:%M:%S')} | [#00D787]VIEW[/] | {msg}"
         )
@@ -583,7 +575,6 @@ class Config(object):
         - 文件结构必须匹配默认结构中的模块与字段
         - 使用 setattr 动态写入各字段以触发 setter 类型转换（如 parse_integer / parse_decimal）
         """
-
         try:
             user_config = FileAssist.read_yaml(config_file)
             for key, value in self.configs.items():
@@ -609,7 +600,6 @@ class Config(object):
         None
             无返回值。写入失败将抛出标准 I/O 错误。
         """
-
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
         FileAssist.dump_yaml(config_file, self.configs)
 
@@ -720,7 +710,6 @@ class DataBase(object):
         -------
         None
         """
-
         await db.execute('''INSERT INTO memory_data (
             data_dir, 
             label, 
