@@ -161,22 +161,22 @@ class Parser(object):
         return self.__parse_engine
 
     @staticmethod
-    def parse_integer(content: typing.Any) -> int:
+    def parse_integer(value: typing.Any) -> int:
         """
-        安全解析整数值，限制范围在 1~10，失败时返回默认值 1。
+        安全解析整数值，失败时返回默认值 0。
         """
         try:
-            return int(max(1, min(10, content)))
+            return int(max(0, value))
         except TypeError:
-            return 1
+            return 0
 
     @staticmethod
-    def parse_decimal(content: typing.Any) -> float:
+    def parse_decimal(value: typing.Any) -> float:
         """
         安全解析浮点值，自动将负数归零，失败时返回默认值 0.0。
         """
         try:
-            return float(max(0, content))
+            return float(max(0.0, value))
         except TypeError:
             return 0.0
 

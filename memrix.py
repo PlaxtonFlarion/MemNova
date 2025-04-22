@@ -932,7 +932,6 @@ async def main() -> typing.Optional[typing.Any]:
         Display.show_license()
 
         Display.build_file_tree(_config_file)
-        Grapher.console.print("\n")
         Grapher.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 
@@ -946,6 +945,8 @@ async def main() -> typing.Optional[typing.Any]:
         memrix = Memrix(
             memory, script, report, target, _cmd_lines.folder, **_keywords
         )
+
+        await Display.flame_manifest()
 
         if memory:
             if not (device := await Manage.operate_device(_cmd_lines.serial)):

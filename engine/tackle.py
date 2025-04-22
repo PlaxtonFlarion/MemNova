@@ -527,7 +527,7 @@ class Config(object):
 
     @speed.setter
     def speed(self, value: typing.Any):
-        self.configs["Memory"]["speed"] = Parser.parse_integer(value)
+        self.configs["Memory"]["speed"] = Parser.parse_decimal(value)
 
     @label.setter
     def label(self, value: typing.Any):

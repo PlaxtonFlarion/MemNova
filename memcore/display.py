@@ -12,9 +12,10 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
-import os
 import time
 import random
+import asyncio
+from pathlib import Path
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
@@ -204,19 +205,195 @@ class Display(object):
         """
         显示树状图。
         """
-        parts = os.path.abspath(file_path).split(os.sep)
+        color_schemes = {
+            "Ocean Breeze": ["#AFD7FF", "#87D7FF", "#5FAFD7"],  # 根 / 中间 / 文件
+            "Forest Pulse": ["#A8FFB0", "#87D75F", "#5FAF5F"],
+            "Neon Sunset": ["#FFAF87", "#FF875F", "#D75F5F"],
+            "Midnight Ice": ["#C6D7FF", "#AFAFD7", "#8787AF"],
+            "Cyber Mint": ["#AFFFFF", "#87FFFF", "#5FD7D7"]
+        }
+        file_icons = {
+            "folder": "📁",
+            ".json": "📦",
+            ".yaml": "🧾",
+            ".yml": "🧾",
+            ".md": "📝",
+            ".log": "📄",
+            ".html": "🌐",
+            ".sh": "🔧",
+            ".bat": "🔧",
+            ".db": "🗃️",
+            ".sqlite": "🗃️",
+            ".zip": "📦",
+            ".tar": "📦",
+            "default": "📄"
+        }
+        text_color = random.choice([
+            "#8A8A8A", "#949494", "#9E9E9E", "#A8A8A8", "#B2B2B2"
+        ])
 
-        tree = Tree(f"[bold #AFD7FF]{parts[0]}[/]", guide_style="bold")  # 根节点
+        root_color, folder_color, file_color = random.choice(list(color_schemes.values()))
+
+        choice_icon: callable = lambda x: file_icons["folder"] if (y := Path(x)).is_dir() else (
+            file_icons[n] if (n := y.name.lower()) in file_icons else file_icons["default"]
+        )
+
+        parts = Path(file_path).parts
+
+        # 根节点
+        root = parts[0]
+        tree = Tree(
+            f"[bold {text_color}]{choice_icon(root)} {root}[/]", guide_style=f"bold {root_color}"
+        )
         current_path = parts[0]
         current_node = tree
 
-        for part in parts[1:-1]:  # 处理中间的文件夹
-            current_path = os.path.join(current_path, part)
-            current_node = current_node.add(f"[bold #E4E4E4]{part}[/]", guide_style="bold #87D75F")
+        # 处理中间的文件夹
+        for part in parts[1:-1]:
+            current_path = Path(current_path, part)
+            current_node = current_node.add(
+                f"[bold {text_color}]{choice_icon(current_path)} {part}[/]", guide_style=f"bold {folder_color}"
+            )
 
-        current_node.add(f"[bold #FFAF87]{parts[-1]}[/]")
+        ext = (file := Path(parts[-1])).suffix.lower()
+        current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
         Grapher.console.print("\n", tree, "\n")
+
+    @staticmethod
+    async def flame_manifest() -> None:
+
+        startup_banners = random.choice([
+            "initializing memory scanner ...",
+            "calibrating baseline thresholds ...",
+            "activating neural sweep engine ...",
+            "preparing core diagnostic grid ...",
+            "linking system memory streams ...",
+            "verifying test environment ...",
+            "scanning system layout ...",
+            "syncing memory sensors ...",
+            "establishing memory context ...",
+            "priming analytic subsystems ..."
+        ])
+
+        completion_banners = random.choice([
+            "memory baseline captured successfully.",
+            "all memory ranges verified.",
+            "scan complete — no anomalies detected.",
+            "test finished with optimal memory state.",
+            "system passed baseline integrity check.",
+            "memory sweep concluded without error.",
+            "core scan confirmed baseline signature.",
+            "no memory drift detected in target range.",
+            "test sequence completed successfully.",
+            "diagnostic grid returned stable metrics."
+        ])
+
+        Grapher.console.print(
+            f"\n[bold #5FD7FF][{const.APP_DESC}::Engine] {const.APP_DESC} {startup_banners}\n"
+        )
+
+        width, height = random.randint(30, 40), 5
+        frames, interval = random.randint(60, 80), random.choice([0.08, 0.10, 0.12])
+
+        particles = ["█", "▇", "▓", "▒", "░"]
+
+        flame_presets = {
+            "phoenix_ember": ["#FFE082", "#FFB300", "#FB8C00", "#E65100", "#BF360C"],
+            "glacier_soul": ["#B3E5FC", "#4FC3F7", "#0288D1", "#01579B", "#002F6C"],
+            "forest_will": ["#B9F6CA", "#69F0AE", "#00E676", "#00C853", "#1B5E20"],
+            "storm_core": ["#E1BEE7", "#BA68C8", "#9C27B0", "#6A1B9A", "#4A148C"],
+            "void_flare": ["#80D8FF", "#40C4FF", "#0091EA", "#263238", "#121212"],
+        }
+
+        flame_colors = flame_presets[random.choice(list(flame_presets.keys()))]
+
+        brand = list(const.APP_DESC)
+
+        state = [[None for _ in range(width)] for _ in range(height)]
+
+        positions = {ch: [random.randint(0, height - 1), random.randint(0, width - 1)] for ch in brand}
+        center_row, center_col = height // 2, width // 2 - len(brand) // 2
+        targets = {ch: [center_row, center_col + i] for i, ch in enumerate(brand)}
+
+        # 计算最大收束距离
+        max_distance = max(
+            abs(positions[ch][0] - targets[ch][0]) + abs(positions[ch][1] - targets[ch][1])
+            for ch in brand
+        )
+
+        converge_start = frames - max_distance - int(width * 0.2)
+
+        generate_fire_row: callable = lambda: [
+            0 if random.random() < 0.5 else None for _ in range(width)
+        ]
+
+        fade_particle: callable = lambda x: None if x is None else (
+            x + 1 if x + 1 < len(particles) else None
+        )
+
+        async def move_forward(src: list, dst: list) -> list:
+            sr, sc = src
+            dr, dc = dst
+
+            if sr < dr:
+                sr += 1
+            elif sr > dr:
+                sr -= 1
+
+            if sc < dc:
+                sc += 1
+            elif sc > dc:
+                sc -= 1
+
+            return [sr, sc]
+
+        async def render_frame() -> "Text":
+            for ch in brand:
+                if frame >= converge_start:
+                    positions[ch] = await move_forward(positions[ch], targets[ch])
+                else:
+                    r, c = positions[ch]
+                    r, c = r + random.choice([-1, 0, 1]), c + random.choice([-1, 0, 1])
+                    positions[ch] = [max(0, min(height - 1, r)), max(0, min(width - 1, c))]
+
+            letter_positions = {tuple(pos): ch for ch, pos in positions.items()}
+            colors = ["#FF00FF", "#FF3399", "#FF6600", "#FFCC00", "#66FF66", "#00FFFF"]
+            random.shuffle(colors)
+
+            padding, lines = " " * 8, []
+            for r in range(height):
+                line = ""
+                for c in range(width):
+                    if (r, c) in letter_positions:
+                        ch = letter_positions[(r, c)]
+                        line += f"[bold {colors.pop()}]{ch}[/]"
+                    else:
+                        idx = state[r][c]
+                        if idx is not None:
+                            char = particles[idx]
+                            color = flame_colors[idx]
+                            line += f"[{color}]{char}[/]"
+                        else:
+                            line += " "
+                lines.append(padding + line)
+
+            return Text.from_markup("\n".join(lines))
+
+        with Live(console=Grapher.console, refresh_per_second=int(1 / interval)) as live:
+            for frame in range(frames):
+                for i in range(height - 1, 0, -1):
+                    for j in range(width):
+                        state[i][j] = fade_particle(state[i - 1][j])
+                state[0] = generate_fire_row()
+                live.update(await render_frame())
+                await asyncio.sleep(interval)
+
+            await asyncio.sleep(0.2)
+
+        Grapher.console.print(
+            f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {completion_banners}\n"
+        )
 
 
 if __name__ == "__main__":
