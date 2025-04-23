@@ -13,7 +13,9 @@
 #
 
 import os
-import time
+import random
+import string
+import typing
 import asyncio
 import aiofiles
 import aiosqlite
@@ -34,6 +36,7 @@ from jinja2 import (
     Environment, FileSystemLoader
 )
 from engine.tackle import DataBase
+from memcore.display import Display
 from memnova import const
 
 
@@ -103,10 +106,16 @@ class Analyzer(object):
         template = environment.get_template(template_file)
         html = template.render(*args, **kwargs)
 
-        html_file = os.path.join(self.download, f"Inform_{time.strftime('%Y%m%d%H%M%S')}.html")
+        salt: "typing.Callable" = lambda: "".join(
+            random.choices(string.ascii_uppercase + string.digits, k=5)
+        )
+        html_file = os.path.join(self.download, f"{const.APP_DESC}_Inform_{salt()}.html")
+
         async with aiofiles.open(html_file, "w", encoding=const.ENCODING) as f:
             await f.write(html)
             logger.info(html_file)
+
+        Display.build_file_tree(html_file)
 
     async def draw_memory(self, data_dir: str) -> dict[str, str]:
         """

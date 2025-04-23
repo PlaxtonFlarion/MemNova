@@ -25,6 +25,10 @@ EMAIL: str = r"AceKeppel@outlook.com"
 ENCODING: str = f"UTF-8"
 LOG_FORMAT: str = f"{APP_DESC} {{time:YYYY-MM-DD HH:mm:ss}} | {{level}} | {{message}}"
 
+TOTAL_DIR: str = f"{APP_DESC}_Library"
+SUBSET_DIR: str = f"Tree"
+DB_FILE: str = f"{APP_NAME}_data.db"
+
 SUMMARY: str = f"Summary"
 
 SCHEMATIC: str = f"schematic"

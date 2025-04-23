@@ -295,8 +295,8 @@ class Display(object):
             f"\n[bold #5FD7FF][{const.APP_DESC}::Engine] {const.APP_DESC} {startup_banners}\n"
         )
 
-        width, height = random.randint(30, 40), 5
-        frames, interval = random.randint(60, 80), random.choice([0.08, 0.10, 0.12])
+        width, height = 30, 5
+        frames, interval = 60, 0.06
 
         particles = ["█", "▇", "▓", "▒", "░"]
 

@@ -286,13 +286,13 @@ class Memrix(object):
                 time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
             )
 
-        self.total_dir = os.path.join(self.src_total_place, f"Memory_Folder")
-        self.other_dir = os.path.join(self.src_total_place, self.total_dir, f"Subset")
+        self.total_dir = os.path.join(self.src_total_place, const.TOTAL_DIR)
+        self.other_dir = os.path.join(self.src_total_place, self.total_dir, const.SUBSET_DIR)
         self.group_dir = os.path.join(self.src_total_place, self.other_dir, folder)
 
-        self.db_file = os.path.join(self.src_total_place, self.total_dir, f"memory_data.db")
-        self.log_file = os.path.join(self.group_dir, f"log_{folder}.log")
-        self.team_file = os.path.join(self.group_dir, f"team_{folder}.yaml")
+        self.db_file = os.path.join(self.src_total_place, self.total_dir, const.DB_FILE)
+        self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{folder}.log")
+        self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{folder}.yaml")
 
     def clean_up(self, *_, **__) -> None:
         """
@@ -338,7 +338,7 @@ class Memrix(object):
         self.dump_close_event.set()
 
         if self.dumped:
-            Grapher.view(f"[#00AFFF]等待任务结束 ...")
+            Grapher.view(f"[#FFD75F]等待任务结束 ...")
             await self.dumped.wait()  # 等待本轮拉取完成
 
         try:
@@ -347,7 +347,7 @@ class Memrix(object):
                 *(asyncio.to_thread(task.cancel) for task in asyncio.all_tasks())
             )
         except asyncio.CancelledError:
-            Grapher.view(f"[#00AFFF]任务已经退出 ...")
+            Grapher.view(f"[#FFD75F]任务已经退出 ...")
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
