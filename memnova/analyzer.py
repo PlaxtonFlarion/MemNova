@@ -99,7 +99,6 @@ class Analyzer(object):
         - 输出文件编码遵循系统预设常量 `const.ENCODING`。
         - 模板与数据解耦，支持自定义报告样式与结构。
         """
-
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -185,7 +184,6 @@ class Analyzer(object):
             - 图表输出位置为：`{download}/summary/{data_dir}/FG_*.html 或 BG_*.html`
             - 若数据为空或结构异常将返回空字典，不影响报告主流程
             """
-
             if not data_list:
                 return {}
 
