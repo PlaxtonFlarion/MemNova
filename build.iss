@@ -3,7 +3,7 @@
 
 #define MyAppName "Memrix"
 #define MyEngineName "MemrixEngine"
-#define MyAssetsName "MemrixStructure"
+#define MyAssetsName "Structure"
 #define MyAppVersion "1.0.0"
 #define MyAppVerName MyAppName + " v" + MyAppVersion
 #define MyAppPublisher "AceKeppel"
