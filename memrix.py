@@ -1034,7 +1034,7 @@ if __name__ == '__main__':
 
         # 设置报告路径
         if not os.path.exists(
-                _src_total_place := os.path.join(_initial_source, "Memrix_Report").format()
+                _src_total_place := os.path.join(_initial_source, const.SRC_TOTAL_PLACE).format()
         ):
             os.makedirs(_src_total_place, exist_ok=True)
 
@@ -1047,7 +1047,7 @@ if __name__ == '__main__':
         Grapher.active("INFO")
 
         # 设置初始配置文件路径
-        _config_file = os.path.join(_initial_source, "Memrix_Mix", "config.yaml")
+        _config_file = os.path.join(_initial_source, const.SRC_OPERA_PLACE, "config.yaml")
         # 加载初始配置
         _config = Config(_config_file)
 

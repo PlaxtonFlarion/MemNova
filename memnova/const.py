@@ -34,6 +34,9 @@ SUMMARY: str = f"Summary"
 SCHEMATIC: str = f"schematic"
 STRUCTURE: str = f"Structure"
 
+SRC_OPERA_PLACE: str = f"{APP_DESC}_Mix"
+SRC_TOTAL_PLACE: str = f"{APP_DESC}_Report"
+
 
 if __name__ == '__main__':
     pass

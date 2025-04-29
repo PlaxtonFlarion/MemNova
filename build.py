@@ -131,7 +131,7 @@ async def authorized_tools(ops: str, *args: "Path", **__) -> typing.Coroutine | 
 
 async def packaging() -> tuple[
     str, "Path", "Path", typing.Union["Path"],
-    typing.Union[tuple["Path", "Path"]], list[str], tuple["Path", "Path"]
+    typing.Union[tuple["Path", "Path"]], list[str], tuple["Path", "Path"], str
 ]:
     """
     构建独立应用的打包编译命令与目录结构信息。
@@ -156,6 +156,8 @@ async def packaging() -> tuple[
 
         launch = launch / f"{const.APP_NAME}.bat", target.parent
 
+        support = "Windows"
+
     elif ops == "darwin":
         target = app / f"{const.APP_DESC}.app" / f"Contents" / f"MacOS"
         rename = target.parent.parent, app / f"{const.APP_DESC}.app"
@@ -168,6 +170,8 @@ async def packaging() -> tuple[
         ]
 
         launch = launch / f"{const.APP_NAME}.sh", target
+
+        support = "MacOS"
 
     else:
         raise MemrixError(f"Unsupported platforms {ops}")
@@ -196,7 +200,7 @@ async def packaging() -> tuple[
     except asyncio.TimeoutError as e:
         compile_log(f"writer={compile_cmd[2]} {e}")
 
-    return ops, app, site_packages, target, rename, compile_cmd, launch
+    return ops, app, site_packages, target, rename, compile_cmd, launch, support
 
 
 async def post_build() -> typing.Coroutine | None:
@@ -272,17 +276,23 @@ async def post_build() -> typing.Coroutine | None:
 
     Display.compile_animation()
 
-    ops, app, site_packages, target, rename, compile_cmd, launch = await packaging()
+    ops, app, site_packages, target, rename, compile_cmd, launch, support = await packaging()
 
     done_list, fail_list = [], []
 
     schematic = app.parent / const.SCHEMATIC
+    r, s, t = schematic / "resources", schematic / "supports" / support, schematic / "templates"
 
     local_pack, local_file = [
-        (schematic, target / schematic.name)
+        (r, target / schematic.name / r.name),
+        (s, target / schematic.name / s.name),
+        (t, target / schematic.name / t.name),
     ], [
         launch
     ]
+
+    for folder in [const.SRC_OPERA_PLACE, const.SRC_TOTAL_PLACE]:
+        (target.parent / const.STRUCTURE / folder).mkdir(exist_ok=True)
 
     dependencies = {
         "本地模块": local_pack,
