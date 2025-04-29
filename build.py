@@ -261,7 +261,7 @@ async def post_build() -> typing.Coroutine | None:
                 progress.advance(task)
 
         await authorized_tools(
-            ops, target / schematic.name / "supports", target / const.APP_NAME, target / launch[0].name
+            ops, target / schematic.name / kit, target / const.APP_NAME, target / launch[0].name
         )  # Note: macOS Only
 
         await rename_so_files(ops, target)  # Note: macOS Only
@@ -280,19 +280,20 @@ async def post_build() -> typing.Coroutine | None:
 
     done_list, fail_list = [], []
 
-    schematic = app.parent / const.SCHEMATIC
-    r, s, t = schematic / "resources", schematic / "supports" / support, schematic / "templates"
+    schematic, kit = app.parent / const.SCHEMATIC, "supports"
+    r, s, t = schematic / "resources", schematic / kit / support, schematic / "templates"
 
     local_pack, local_file = [
         (r, target / schematic.name / r.name),
-        (s, target / schematic.name / s.name),
+        (s, target / schematic.name / kit / s.name),
         (t, target / schematic.name / t.name),
     ], [
         launch
     ]
 
     for folder in [const.SRC_OPERA_PLACE, const.SRC_TOTAL_PLACE]:
-        (target.parent / const.STRUCTURE / folder).mkdir(exist_ok=True)
+        if not (child := target.parent / const.STRUCTURE / folder).exists():
+            await asyncio.to_thread(child.mkdir, parents=True, exist_ok=True)
 
     dependencies = {
         "本地模块": local_pack,
