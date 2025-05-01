@@ -275,6 +275,7 @@ async def packaging() -> tuple[
     if ver := re.search(r"(?<=Version:\s).*", writer):
         if ver.group().strip() != nuitka_version:
             raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
+        compile_log(f"writer={writer}")
 
     return ops, app, site_packages, target, rename, compile_cmd, launch, arch_info, support
 
