@@ -30,7 +30,7 @@ from memnova import const
 
 try:
     import nuitka
-    nuitka_version = "2.4.11"
+    nuitka_version = "2.7"
 except ImportError:
     raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
 
@@ -218,7 +218,7 @@ async def packaging() -> tuple[
 
     launch = app.parent / const.SCHEMATIC / "resources" / "automation"
 
-    compile_cmd = [exe := sys.executable, "-m", "nuitka", "--standalone"]
+    compile_cmd = [exe := sys.executable, "-m", "nuitka"]
 
     if (ops := sys.platform) == "win32":
         await check_architecture(ops)
@@ -228,6 +228,7 @@ async def packaging() -> tuple[
         rename = target, app / f"{const.APP_DESC}Engine"
 
         compile_cmd += [
+            f"--mode=standalone"
             f"--windows-icon-from-ico=schematic/resources/icons/memrix_icn_1.ico",
         ]
 
