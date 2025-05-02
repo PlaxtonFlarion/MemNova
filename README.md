@@ -307,6 +307,9 @@ memrix --report --target <file.name>
     - **schematic**
     - **...**
   - **memrix.bat**
+  - **Structure**
+    - **Memrix_Mix**
+    - **Memrix_Report**
 
 ---
 
@@ -327,29 +330,15 @@ memrix --report --target <file.name>
       - **MacOS**
         - **schematic**
         - **memrix.sh**
+        - **memrix**
         - **...**
       - **Resources**
         - **memrix_macos_bg.png**
         - ...
+      - **Structure**
+        - **Memrix_Mix**
+        - **Memrix_Report**
       - **Info.plist**
-
-#### 修改 Info.plist 文件
-```
-<key>CFBundleExecutable</key>
-<string>Memrix.sh</string> <!-- 设置启动脚本 -->
-```
-
-#### 赋予执行权限
-
-- **memrix**
-```
-chmod +x /Applications/Memrix.app/Contents/MacOS/memrix
-```
-
-- **memrix.sh**
-```
-chmod +x /Applications/Memrix.app/Contents/MacOS/memrix.sh
-```
 
 ---
 

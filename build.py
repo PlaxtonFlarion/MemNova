@@ -257,7 +257,7 @@ async def packaging() -> tuple[
         rename = target, app / f"{const.APP_DESC}Engine"
 
         compile_cmd += [
-            f"--mode=standalone"
+            f"--mode=standalone",
             f"--windows-icon-from-ico=schematic/resources/icons/memrix_icn_1.ico",
         ]
 
@@ -290,7 +290,8 @@ async def packaging() -> tuple[
     compile_cmd += [
         f"--nofollow-import-to=uiautomator2",
         f"--include-module=deprecation",
-        f"--include-package=adbutils,lxml.etree,pygments",
+        f"--include-package=pygments",
+        f"--include-package=adbutils,lxml.etree",
         f"--show-progress", f"--show-memory", f"--output-dir={app}", f"{const.APP_NAME}.py"
     ]
 
