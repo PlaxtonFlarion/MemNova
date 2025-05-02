@@ -253,7 +253,7 @@ memrix --report --target <file.name>
 - 安装 **[Nuitka](https://nuitka.net/)**
   - 导航到您的 **Python** 脚本所在的目录
     ```
-    pip install nuitka
+    pip install nuitka==2.7
     ```
 
 - 确保在项目根目录下有一个 `requirements.txt` 文件，其中列出了所有的依赖包
