@@ -290,7 +290,7 @@ async def packaging() -> tuple[
     compile_cmd += [
         f"--nofollow-import-to=uiautomator2",
         f"--include-module=deprecation",
-        f"--include-package=adbutils,pygments",
+        f"--include-package=adbutils,lxml.etree,pygments",
         f"--show-progress", f"--show-memory", f"--output-dir={app}", f"{const.APP_NAME}.py"
     ]
 

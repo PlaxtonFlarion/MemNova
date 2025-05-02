@@ -308,13 +308,7 @@ class Memrix(object):
 
         **__ :
             占位关键字参数，未使用。
-
-        Returns
-        -------
-        None
-            无返回值。调用后会异步调度关闭操作。
         """
-
         loop = asyncio.get_running_loop()
         loop.create_task(self.dump_task_close())
 
@@ -328,13 +322,7 @@ class Memrix(object):
         - 等待最后一次内存采样写入完成
         - 取消所有后台 asyncio 任务
         - 输出日志（采样次数、耗时等）
-
-        Returns
-        -------
-        None
-            无返回值，作为清理收尾动作。
         """
-
         self.dump_close_event.set()
 
         if self.dumped:
