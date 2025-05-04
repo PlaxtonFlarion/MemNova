@@ -907,7 +907,7 @@ if __name__ == '__main__':
 
     try:
         # 显示加载动画
-        Display.show_animate()
+        Display.startup_animate()
 
         # 获取当前操作系统平台和应用名称
         _platform = sys.platform.strip().lower()

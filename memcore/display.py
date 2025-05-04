@@ -137,7 +137,7 @@ class Display(object):
         Display.console.print(task_fail)
 
     @staticmethod
-    def show_animate() -> None:
+    def startup_animate() -> None:
         """
         播放项目加载启动动画。
         """
