@@ -428,6 +428,87 @@ class Display(object):
             f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {close_banners}\n"
         )
 
+    async def system_disintegrate(self) -> typing.Coroutine | None:
+        """
+        系统解体风格，收尾动画。
+        """
+        if self.display_level != const.DISPLAY_LEVEL:
+            return None
+
+        width, steps, delay = 42, 6, 0.04
+        fade_chars, cursor = list(" .:*%#@!?/▩▨░▒▓"), "▌"
+
+        base_line = f">>> {(text := const.APP_DESC)} | {const.APP_CN} <<<"
+        chars = list(base_line)
+        statuses = [0] * len(chars)  # 0: 原始, 1: 扰动中, 2: 熄灭
+
+        color = random.choice([
+            "#00CFFF",  # 霓光蓝
+            "#00FFD5",  # 星舰青
+            "#FF7A00",  # 烈焰橙
+            "#D66AFF",  # 粉电紫
+            "#AAAAAA",  # 远山灰
+            "#C9B458",  # 枯金
+            "#0066CC",  # 深空蓝
+            "#F0F0F0",  # 光子白
+            "#00FF88",  # 绿焰
+            "#FF3355",  # 赤焰红
+            "#FFFF66",  # 电子黄
+            "#5D3FD3",  # 黑曜紫
+        ])
+
+        def generate_frame() -> "Text":
+            line = ""
+            for index, char in enumerate(chars):
+                if statuses[index] == 2:
+                    line += " "
+                elif statuses[index] == 1:
+                    line += random.choice(fade_chars)
+                else:
+                    line += char
+            return Text(line, style=f"bold {color}")
+
+        with Live(console=self.console, refresh_per_second=30) as live:
+            # 打字机 + 光标效果
+            current = ""
+            for i, c in enumerate(base_line):
+                for _ in range(2):  # 光标闪两下
+                    blink = current + c + cursor
+                    live.update(Text(blink, style=f"bold {color}"))
+                    await asyncio.sleep(0.01)
+                    live.update(Text((current + c + " "), style=f"bold {color}"))
+                    await asyncio.sleep(0.01)
+                current += c
+
+            # 最后一个光标闪烁结束
+            for _ in range(2):
+                live.update(Text((current + cursor), style=f"bold {color}"))
+                await asyncio.sleep(0.01)
+                live.update(Text((current + " "), style=f"bold {color}"))
+                await asyncio.sleep(0.01)
+
+            # 分步熄灭
+            for _ in range(steps):
+                for i in range(len(chars)):
+                    if statuses[i] == 0 and random.random() < 0.3:
+                        statuses[i] = 1  # 开始扰动
+                    elif statuses[i] == 1 and random.random() < 0.5:
+                        statuses[i] = 2  # 熄灭
+                live.update(generate_frame())
+                await asyncio.sleep(delay)
+
+            # 灰影停顿
+            ghost_line = base_line.replace(text, "".join(text))  # 原样灰化
+            live.update(Text(ghost_line, style=f"dim {color}"))
+            await asyncio.sleep(0.1)
+
+            # 闪灭
+            for _ in range(2):
+                live.update(Text(" " * width))
+                await asyncio.sleep(0.01)
+                live.update(Text(ghost_line, style=f"dim {color}"))
+                await asyncio.sleep(0.01)
+
     async def memory_wave(self, memories: dict, dump_close_event: "asyncio.Event") -> typing.Coroutine | None:
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。

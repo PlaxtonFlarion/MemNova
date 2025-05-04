@@ -353,6 +353,8 @@ class Memrix(object):
             )
 
         logger.info(f"^------ {const.APP_DESC} Engine Close ------^")
+        Display.console.print()
+        await self.display.system_disintegrate()
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -786,9 +788,6 @@ async def main() -> typing.Optional[typing.Any]:
     if len(sys.argv) == 1:
         return _parser.parse_engine.print_help()
 
-    if not shutil.which("adb"):
-        raise MemrixError(f"ADB 环境变量未配置 ...")
-
     if _cmd_lines.config:
         Display.show_logo()
         Display.show_license()
@@ -800,6 +799,10 @@ async def main() -> typing.Optional[typing.Any]:
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
             raise MemrixError(f"--target 参数不能为空 ...")
+
+        if any((memory, script)):
+            if not shutil.which("adb"):
+                raise MemrixError(f"ADB 环境变量未配置 ...")
 
         Display.show_logo()
         Display.show_license()
