@@ -13,7 +13,6 @@
 
 import os
 import sys
-import time
 import yaml
 import json
 import shutil
@@ -21,8 +20,8 @@ import typing
 import asyncio
 import aiosqlite
 from loguru import logger
-from rich.console import Console
 from rich.logging import RichHandler
+from memcore.display import Display
 from memcore.parser import Parser
 from memnova import const
 
@@ -243,11 +242,6 @@ class FileAssist(object):
 
         dst : dict
             要写入的字典内容。
-
-        Returns
-        -------
-        None
-            无返回值。写入失败会抛出标准 IOError。
         """
         with open(src, "w", encoding=const.ENCODING) as f:
             yaml.dump(dst, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
@@ -264,11 +258,6 @@ class FileAssist(object):
 
          dst : dict
              要写入的字典内容。
-
-         Returns
-         -------
-         None
-             无返回值。写入失败会抛出标准 IOError。
          """
         with open(src, "w", encoding=const.ENCODING) as f:
             json.dump(dst, f, indent=4, separators=(",", ":"), ensure_ascii=False)
@@ -280,14 +269,7 @@ class Grapher(object):
 
     封装 `loguru` 日志系统与 `rich.console.Console`，用于配置日志格式、
     启用彩色输出、显示结构化信息，并提供格式化打印视图日志的便捷方法。
-
-    Attributes
-    ----------
-    console : Console
-        rich 的终端渲染器实例，用于支持彩色、高亮、结构化输出。
     """
-
-    console: typing.Optional["Console"] = Console()
 
     @staticmethod
     def active(log_level: str) -> None:
@@ -300,38 +282,11 @@ class Grapher(object):
         ----------
         log_level : str
             日志等级（如 "INFO", "DEBUG", "WARNING", "ERROR"）。
-
-        Returns
-        -------
-        None
-            无返回值。调用后即开始日志输出。
         """
         logger.remove()
         logger.add(
-            RichHandler(console=Grapher.console, show_level=False, show_path=False, show_time=False),
+            RichHandler(console=Display.console, show_level=False, show_path=False, show_time=False),
             level=log_level, format=const.LOG_FORMAT
-        )
-
-    @staticmethod
-    def view(msg: typing.Any) -> None:
-        """
-        输出一条结构化视图日志消息，格式为：[时间] | VIEW | 消息内容。
-
-        常用于关键提示信息、结果确认、用户交互回显等视觉日志展示，
-        通过 rich 格式美化输出，提升终端体验。
-
-        Parameters
-        ----------
-        msg : Any
-            要显示的日志内容（可为字符串、对象、异常等）。
-
-        Returns
-        -------
-        None
-            无返回值。内容直接输出至终端。
-        """
-        Grapher.console.print(
-            f"{const.APP_DESC} {time.strftime('%Y-%m-%d %H:%M:%S')} | [#00D787]VIEW[/] | {msg}"
         )
 
 
@@ -352,8 +307,8 @@ class Pid(object):
 
     @property
     def member(self) -> typing.Optional[dict]:
-        """返
-        回内部 PID 映射关系。
+        """
+        返回内部 PID 映射关系。
         """
         return self.__member
 
@@ -565,11 +520,6 @@ class Config(object):
         config_file : str or Path
             配置文件的路径，应为 YAML 格式。
 
-        Returns
-        -------
-        None
-            无返回值。将更新 self.configs 和相关属性。
-
         Notes
         -----
         - 文件结构必须匹配默认结构中的模块与字段
@@ -594,11 +544,6 @@ class Config(object):
         ----------
         config_file : str or Path
             要写入的配置文件路径。
-
-        Returns
-        -------
-        None
-            无返回值。写入失败将抛出标准 I/O 错误。
         """
         os.makedirs(os.path.dirname(config_file), exist_ok=True)
         FileAssist.dump_yaml(config_file, self.configs)
@@ -624,10 +569,6 @@ class DataBase(object):
         ----------
         db : aiosqlite.Connection
             异步 SQLite 数据库连接对象。
-
-        Returns
-        -------
-        None
         """
 
         await db.execute('''CREATE TABLE IF NOT EXISTS memory_data (
@@ -705,10 +646,6 @@ class DataBase(object):
 
         vmrss : dict
             虚拟内存估值，如 VmRSS。
-
-        Returns
-        -------
-        None
         """
         await db.execute('''INSERT INTO memory_data (
             data_dir, 

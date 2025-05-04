@@ -222,7 +222,6 @@ class Memrix(object):
     dumped : asyncio.Event
         内存采集任务单轮完成的标志，用于同步数据写入与下一轮调度。
     """
-
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
 
@@ -269,10 +268,9 @@ class Memrix(object):
             - config : Config
                 从配置文件中解析出的运行配置对象。
         """
-
         self.memory, self.script, self.report = memory, script, report
 
-        self.target, self.folder, *_ = args
+        self.target, self.folder, self.mirror, *_ = args
 
         self.src_total_place: str = kwargs["src_total_place"]
         self.template: str = kwargs["template"]
@@ -293,6 +291,11 @@ class Memrix(object):
         self.db_file = os.path.join(self.src_total_place, self.total_dir, const.DB_FILE)
         self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{folder}.log")
         self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{folder}.yaml")
+
+        self.memories: dict = {
+            "mode": "", "foreground": 0, "background": 0
+        }
+        self.display = Display(self.mirror)
 
     def clean_up(self, *_, **__) -> None:
         """
@@ -326,7 +329,7 @@ class Memrix(object):
         self.dump_close_event.set()
 
         if self.dumped:
-            Grapher.view(f"[#FFD75F]等待任务结束 ...")
+            logger.info(f"[#FFD75F]等待任务结束 ...")
             await self.dumped.wait()  # 等待本轮拉取完成
 
         try:
@@ -335,7 +338,7 @@ class Memrix(object):
                 *(asyncio.to_thread(task.cancel) for task in asyncio.all_tasks())
             )
         except asyncio.CancelledError:
-            Grapher.view(f"[#FFD75F]任务已经退出 ...")
+            logger.info(f"[#FFD75F]任务已经退出 ...")
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
@@ -345,11 +348,11 @@ class Memrix(object):
 
         if self.file_insert:
             Display.build_file_tree(self.group_dir)
-            Grapher.view(
+            Display.view(
                 f"Usage: [#00D787]{const.APP_NAME} --report --target [#FFAF87]{os.path.basename(self.group_dir)}[/]"
             )
 
-        logger.info(f"^===^ {const.APP_DESC} Engine Close ^===^")
+        logger.info(f"^------ {const.APP_DESC} Engine Close ------^")
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -377,11 +380,6 @@ class Memrix(object):
         post_pkg : typing.Optional[str]
             可以传入的应用包名。
 
-        Returns
-        -------
-        None
-            异步执行，无返回值。函数结束表示内存拉取流程被主动中断或关闭。
-
         Raises
         ------
         MemrixError
@@ -394,11 +392,6 @@ class Memrix(object):
         - 日志与数据目录按时间命名，支持场景标记（YAML）
         - 多进程结构通过 `defaultdict()` 聚合并转换为嵌套字典
         - 如果 YAML 场景文件已存在，当前轮次将追加入 file 列表中
-
-        Examples
-        --------
-        memrix = Memrix(memory=True, script=False, report=False, ..., config=...)
-        await memrix.dump_task_start(device)
         """
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
@@ -431,7 +424,6 @@ class Memrix(object):
             - 支持识别 "App Summary" 与 "TOTAL" 结构
             - 采集结果为标准化后的数值映射（单位为 MB，四舍五入）
             """
-
             if not (memory := await device.memory_info(package)):
                 return None
 
@@ -481,11 +473,6 @@ class Memrix(object):
 
             采集完成后自动触发 `self.dumped.set()`，用于通知主控制循环进入下一轮。
 
-            Returns
-            -------
-            None
-                无返回值，任务完成后直接更新数据记录与标志位。
-
             Notes
             -----
             - 使用 `asyncio.gather()` 并发拉取进程数据
@@ -493,7 +480,6 @@ class Memrix(object):
             - 使用 `Ram(...)` 对象包装采集结果用于入库
             - 若数据不完整，将跳过插入并记录日志
             """
-
             self.dumped.clear()
 
             dump_start_time = time.time()
@@ -531,30 +517,6 @@ class Memrix(object):
             if all(memory_result := await asyncio.gather(
                     *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
-                """
-                合并多个进程的 memory_result 结果，按 key 分类累加字段值。
-
-                适用于多进程采样场景：
-                - 每个 result 是结构为 {"resume_map": {...}, "memory_map": {...}} 的字典
-                - 对每一类 map 中的数值字段执行逐字段加和
-
-                使用双层 defaultdict(float) 结构自动初始化字段，避免 KeyError。
-
-                最终返回结构为：
-                {
-                    "resume_map": {
-                        "TOTAL PSS": float,
-                        "TOTAL RSS": float,
-                        ...
-                    },
-                    "memory_map": {
-                        "Native Heap": float,
-                        ...
-                    },
-                    ...
-                }
-                """
-
                 # 使用双层 defaultdict 构建合并容器
                 muster = defaultdict(lambda: defaultdict(float))
                 # 遍历所有进程的 memory_result（每项包含多个子映射：resume_map、memory_map 等）
@@ -577,6 +539,10 @@ class Memrix(object):
             ram = Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
+                state = "foreground" if ram.remark_map["frg"] == "前台" else "background"
+                self.memories["mode"] = state
+                self.memories[state] += 1
+
                 await DataBase.insert_data(
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
@@ -588,15 +554,17 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
+        # Notes: Start from here
         package: typing.Optional[str] = post_pkg if post_pkg else self.target  # 传入的应用名称
 
+        # todo 是否重复检查
         if not post_pkg:
             if "Unable" in (check := await device.examine_package(package)):
                 raise MemrixError(check)
 
         logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
 
-        logger.info(f"^===^ {const.APP_DESC} Engine Start ^===^")
+        logger.info(f"^------ {const.APP_DESC} Engine Start ------^")
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
         self.file_insert = 0
@@ -630,6 +598,11 @@ class Memrix(object):
             await DataBase.create_table(db)
             await dump_file_task
             self.exec_start_event.set()
+
+            asyncio.create_task(
+                self.display.memory_wave(self.memories, self.dump_close_event)
+            )
+
             while not self.dump_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.config.speed)
@@ -657,11 +630,6 @@ class Memrix(object):
         device : Device
             被测试设备对象，需支持 u2_active、examine_package、u2/sleep 等命令映射接口。
 
-        Returns
-        -------
-        None
-            异步执行，无返回值。执行完成后自动关闭内存采集任务。
-
         Raises
         ------
         MemrixError
@@ -675,23 +643,7 @@ class Memrix(object):
         - 所有指令通过 `getattr()` 动态调用：支持扩展其他命令类型
         - 使用 `Grapher.view()` 记录每一步执行命令和返回值
         - 主流程执行完毕后主动调用 `dump_task_close()` 清理资源
-
-        Examples
-        --------
-        config.group = "mission"
-        # 脚本结构：
-        # {
-        #   "loopers": 3,
-        #   "package": "com.example.app",
-        #   "mission": {
-        #       "step1": [{"cmds": "u2", "vals": [...], "args": [...], "kwds": {...}}],
-        #       ...
-        #   }
-        # }
-
-        await memrix.exec_task_start(device)
         """
-
         try:
             open_file = await asyncio.to_thread(FileAssist.read_json, self.target)
         except (FileNotFoundError, json.JSONDecodeError) as e:
@@ -704,6 +656,7 @@ class Memrix(object):
         except (AssertionError, KeyError, TypeError) as e:
             raise MemrixError(e)
 
+        # todo 是否重复检查
         if "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
 
@@ -716,30 +669,6 @@ class Memrix(object):
 
         player: "Player" = Player()
 
-        """
-        执行 JSON 自动化任务脚本中的所有命令。
-
-        每个任务循环 loopers 次，任务脚本结构为：
-        {
-            "loopers": 10,
-            "package": com.example.app,
-            "mission": {
-                "step1": [
-                    {"cmds": "u2", "vals": [...], "args": [...], "kwds": {...}},
-                    {"cmds": "audio", "vals": [...]},
-                    ...
-                ]
-            }
-        }
-
-        支持命令类型：
-        - u2    -> 通过 uiautomator2 执行 UI 控制命令
-        - sleep -> 延迟（异步等待）
-        - audio -> 播放音频片段
-
-        每条命令会根据类型选择目标对象（device 或 player），
-        并执行对应方法，打印带参数的运行结果日志。
-        """
         logger.info(f"^* Exec Start *^")
         # 外层循环，控制任务执行次数（loopers 次）
         for data in range(loopers):
@@ -755,8 +684,8 @@ class Memrix(object):
                         # 提取参数：位置参数 vals、额外 args、关键字参数 kwds
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
                         # 打印即将执行的函数与参数，并异步执行该方法
-                        Grapher.view(
-                            f"[#AFD7FF]{func.__name__} {vals} {args} {kwds} -> {await func(*vals, *args, **kwds)}"
+                        logger.info(
+                            f"{func.__name__} {vals} {args} {kwds} -> {await func(*vals, *args, **kwds)}"
                         )
 
         await self.dump_task_close()
@@ -785,11 +714,6 @@ class Memrix(object):
         - 总体统计：前台/后台峰值、均值
         - 数据详情列表（每轮一项）
 
-        Returns
-        -------
-        None
-            异步执行，无返回值。成功后将在报告目录中生成 HTML 文件。
-
         Raises
         ------
         MemrixError
@@ -803,12 +727,7 @@ class Memrix(object):
         - 最终报告文件路径为：`{group_dir}/Report_{group_dir_name}/index.html`
         - 使用配置对象中的 `template`, `criteria`, `headline` 等参数进行个性化渲染
         - 报告内容适用于浏览器查看，也可导出为 PDF
-
-        Examples
-        --------
-        await memrix.create_report()
         """
-
         for file in [self.db_file, self.log_file, self.team_file]:
             try:
                 assert os.path.isfile(file), f"文件无效 {file}"
@@ -864,51 +783,6 @@ class Memrix(object):
 
 
 async def main() -> typing.Optional[typing.Any]:
-    """
-    Memrix 命令行工具的主执行入口。
-
-    根据命令行参数解析执行不同的操作模式，包括：
-    - `--memory`：启动记忆风暴模式，持续拉取设备内存状态
-    - `--script`：启动巡航引擎模式，执行 UI 自动化测试脚本
-    - `--report`：生成 HTML 内存报告（真相快照）
-    - `--config`：打开配置文件编辑器，并显示当前配置
-
-    如果未指定参数，则显示帮助信息；如未检测到 ADB 环境，将抛出异常。
-
-    Returns
-    -------
-    Optional[Any]
-        根据所选模式返回不同结果（通常无返回值或为任务句柄）；如无参数则返回帮助输出。
-
-    Raises
-    ------
-    MemrixError
-        - 若未配置 ADB 环境变量
-        - 无连接设备
-        - 若未传入有效命令
-        - 若 `--target` 参数缺失但 memory/script/report 被调用
-
-    Notes
-    -----
-    - 在 `--memory` 与 `--script` 模式中，注册了 SIGINT (Ctrl+C) 信号监听以触发资源清理
-    - 内部通过 `Memrix` 类组合并调度各个子模块的异步操作
-    - 所有参数来自 `_cmd_lines`，配置来自 `_config.configs`
-
-    Examples
-    --------
-    # 打开配置编辑器
-    $ memrix --config
-
-    # 启动内存采集任务
-    $ memrix --memory --target com.example.app
-
-    # 执行自动化测试任务
-    $ memrix --script --target example.json
-
-    # 生成测试报告
-    $ memrix --report --target 20240405123000
-    """
-
     if len(sys.argv) == 1:
         return _parser.parse_engine.print_help()
 
@@ -920,7 +794,7 @@ async def main() -> typing.Optional[typing.Any]:
         Display.show_license()
 
         Display.build_file_tree(_config_file)
-        Grapher.console.print_json(data=_config.configs)
+        Display.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
@@ -931,7 +805,7 @@ async def main() -> typing.Optional[typing.Any]:
         Display.show_license()
 
         memrix = Memrix(
-            memory, script, report, target, _cmd_lines.folder, **_keywords
+            memory, script, report, target, _cmd_lines.folder, _mirror, **_keywords
         )
 
         await Display.flame_manifest()
@@ -1032,7 +906,9 @@ if __name__ == '__main__':
         _cmd_lines = Parser().parse_cmd
 
         # 激活日志
-        Grapher.active("INFO")
+        Grapher.active(
+            _mirror := "INFO" if _cmd_lines.mirror else "WARNING"
+        )
 
         # 设置初始配置文件路径
         _config_file = os.path.join(_initial_source, const.SRC_OPERA_PLACE, "config.yaml")
@@ -1047,7 +923,7 @@ if __name__ == '__main__':
         asyncio.run(main())
 
     except MemrixError as _error:
-        Grapher.view(_error)
+        Display.view(_error)
         Display.show_fail()
         sys.exit(1)
     except KeyboardInterrupt:

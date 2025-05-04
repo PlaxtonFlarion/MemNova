@@ -35,7 +35,7 @@ try:
 except ImportError:
     raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
 
-compile_log: typing.Any = lambda x: Grapher.console.print(
+compile_log: typing.Any = lambda x: Display.console.print(
     f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {x}"
 )
 
@@ -350,7 +350,7 @@ async def post_build() -> typing.Coroutine | None:
         """
         拷贝所有依赖文件与目录至编译产物路径，并执行重命名与缓存清理。
         """
-        bar_width = int(Grapher.console.width * 0.3)
+        bar_width = int(Display.console.width * 0.3)
 
         with Progress(
                 TextColumn(text_format=f"[bold #80C0FF]{const.APP_DESC} | {{task.description}}", justify="right"),

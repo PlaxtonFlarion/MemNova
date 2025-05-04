@@ -16,9 +16,8 @@ import typing
 import asyncio
 from rich.prompt import Prompt
 from engine.device import Device
-from engine.tackle import (
-    Terminal, Grapher
-)
+from engine.tackle import Terminal
+from memcore.display import Display
 
 
 class Manage(object):
@@ -58,7 +57,7 @@ class Manage(object):
         try_again, max_try_again = 0, 20
         while True:
             if try_again == max_try_again:
-                return Grapher.view(f"[#FF5F00]设备连接超时 ...")
+                return Display.view(f"[#FF5F00]设备连接超时 ...")
 
             device_dict = {}
             if result := await Terminal.cmd_line(["adb", "devices"]):
@@ -69,26 +68,26 @@ class Manage(object):
 
             if not device_dict:
                 try_again += 1
-                Grapher.view(f"[#FFAF00]检测连接设备 ... 剩余 {(max_try_again - try_again):02} 次 ...")
+                Display.view(f"[#FFAF00]检测连接设备 ... 剩余 {(max_try_again - try_again):02} 次 ...")
                 await asyncio.sleep(5)
                 continue
 
             if (loc := len(device_dict)) == 1:
-                Grapher.view(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
+                Display.view(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
                 return device_dict[f"{loc}"]
 
             device: typing.Optional["Device"] = None
             for k, v in device_dict.items():
-                Grapher.view(f"[#00FA9A]Connect ->[/] [{k}] {v}")
+                Display.view(f"[#00FA9A]Connect ->[/] [{k}] {v}")
                 if serial == v.serial:
                     device = v
 
             try:
                 return device if device else (
                     device_dict
-                )[Prompt.ask(f"请选择", console=Grapher.console)]
+                )[Prompt.ask(f"请选择", console=Display.console)]
             except KeyError:
-                Grapher.view(f"[#FF005F]没有该设备，请重新选择 ...\n")
+                Display.view(f"[#FF005F]没有该设备，请重新选择 ...\n")
             finally:
                 try_again = 0
 

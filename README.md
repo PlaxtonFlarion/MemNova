@@ -222,6 +222,21 @@ memrix --memory --target <com.example.application> --folder <file.name>
 
 ---
 
+## 🔰 观象引擎
+
+### ⚜️ 洞察之镜 (`--mirror`)
+#### 📔 功能描述:
+- 启动调试反射视角，用于观察系统运行轨迹与隐藏信息。
+- 展示最详细的调试输出，追踪函数调用与变量变化。
+#### 📔 参数说明:
+- **布尔值** 默认为 `False`
+#### 📔 实际应用: 
+```
+memrix --memory --target <variable> --mirror
+```
+
+---
+
 ## 🖥️ 使用示例
  
 ### 💾 持续监控 (`--memory --target`)

@@ -146,6 +146,23 @@ class Parser(object):
             ''')
         )
 
+        extra_group = self.__parse_engine.add_argument_group(
+            title="\033[1m^* 观象引擎 *^\033[0m",
+            description=textwrap.dedent(f'''\
+                \033[1;32m参数兼容\033[0m
+            '''),
+        )
+        extra_group.add_argument(
+            "--mirror", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*洞察之镜*^\033[0m
+                -------------------------
+                启动调试反射视角，用于观察系统运行轨迹与隐藏信息。
+                展示最详细的调试输出，追踪函数调用与变量变化。
+
+            ''')
+        )
+
     @property
     def parse_cmd(self) -> "argparse.Namespace":
         """

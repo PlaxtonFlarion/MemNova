@@ -37,6 +37,8 @@ STRUCTURE: str = f"Structure"
 SRC_OPERA_PLACE: str = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE: str = f"{APP_DESC}_Report"
 
+DISPLAY_LEVEL: str = f"WARNING"
+
 
 if __name__ == '__main__':
     pass

@@ -13,20 +13,43 @@
 #
 
 import time
+import typing
 import random
 import asyncio
+import textwrap
 from pathlib import Path
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
+from rich.console import Console
 from memnova import const
-from engine.tackle import Grapher
 
 
 class Display(object):
     """
-    终端视觉交互显示类，为 Memrix 提供界面标识、启动动画与状态提示输出。
+    终端视觉交互显示类，提供界面标识、启动动画与状态提示输出。
     """
+    console: typing.Optional["Console"] = Console()
+
+    def __init__(self, display_level: str):
+        self.display_level = display_level
+
+    @staticmethod
+    def view(msg: typing.Any) -> None:
+        """
+        输出一条结构化视图日志消息，格式为：[时间] | VIEW | 消息内容。
+
+        常用于关键提示信息、结果确认、用户交互回显等视觉日志展示，
+        通过 rich 格式美化输出，提升终端体验。
+
+        Parameters
+        ----------
+        msg : Any
+            要显示的日志内容（可为字符串、对象、异常等）。
+        """
+        Display.console.print(
+            f"{const.APP_DESC} {time.strftime('%Y-%m-%d %H:%M:%S')} | [#00D787]VIEW[/] | {msg}"
+        )
 
     @staticmethod
     def show_logo() -> None:
@@ -40,14 +63,14 @@ class Display(object):
 | |  | |  __/ | | | | | |  | |>  < 
 |_|  |_|\\___|_| |_| |_|_|  |_/_/\\_\\
         """
-        Grapher.console.print(f"[bold #00D7AF]{banner}")
+        Display.console.print(f"[bold #00D7AF]{banner}")
 
     @staticmethod
     def show_license() -> None:
         """
         显示授权声明或使用说明，内容来自 const.APP_DECLARE。
         """
-        Grapher.console.print(const.APP_DECLARE)
+        Display.console.print(const.APP_DECLARE)
 
     @staticmethod
     def show_done() -> None:
@@ -59,7 +82,7 @@ class Display(object):
 |            {const.APP_DESC} Task Done            |
 +----------------------------------------+
         """
-        Grapher.console.print(task_done)
+        Display.console.print(task_done)
 
     @staticmethod
     def show_exit() -> None:
@@ -71,7 +94,7 @@ class Display(object):
 |            {const.APP_DESC} Task Exit            |
 +----------------------------------------+
         """
-        Grapher.console.print(task_exit)
+        Display.console.print(task_exit)
 
     @staticmethod
     def show_fail() -> None:
@@ -83,7 +106,7 @@ class Display(object):
 |            {const.APP_DESC} Task Fail            |
 +----------------------------------------+
         """
-        Grapher.console.print(task_fail)
+        Display.console.print(task_fail)
 
     @staticmethod
     def show_animate() -> None:
@@ -131,7 +154,7 @@ class Display(object):
 
         palette = random.choice(color_palettes)
 
-        with Live(console=Grapher.console, refresh_per_second=30) as live:
+        with Live(console=Display.console, refresh_per_second=30) as live:
             for _ in range(5):
                 for index, i in enumerate(loading_frames):
                     live.update(
@@ -139,10 +162,10 @@ class Display(object):
                     )
                     time.sleep(0.2)
 
-        Grapher.console.print(
+        Display.console.print(
             f"[bold #00FF87]{{ {const.APP_DESC} Wave Linking... Aligning... Done. }}"
         )
-        Grapher.console.print(
+        Display.console.print(
             f"[bold #00FF87]{{ {const.APP_DESC} Core Initialized. }}\n"
         )
 
@@ -194,7 +217,7 @@ class Display(object):
         ]
         colors = random.choice(soft_palettes)
 
-        with Live(console=Grapher.console, refresh_per_second=30) as live:
+        with Live(console=Display.console, refresh_per_second=30) as live:
             for _ in range(6):
                 for index, i in enumerate(compile_frames[:-1]):
                     live.update(
@@ -266,14 +289,14 @@ class Display(object):
         ext = (file := Path(parts[-1])).suffix.lower()
         current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
-        Grapher.console.print("\n", tree, "\n")
+        Display.console.print("\n", tree, "\n")
 
     @staticmethod
-    async def flame_manifest() -> None:
+    async def flame_manifest() -> typing.Coroutine | None:
         """
-        启动动画。
+        模拟火焰动效，启动动画。
         """
-        startup_banners = random.choice([
+        start_banners = random.choice([
             "initializing memory scanner ...",
             "calibrating baseline thresholds ...",
             "activating neural sweep engine ...",
@@ -286,7 +309,7 @@ class Display(object):
             "priming analytic subsystems ..."
         ])
 
-        completion_banners = random.choice([
+        close_banners = random.choice([
             "memory baseline captured successfully.",
             "all memory ranges verified.",
             "scan complete — no anomalies detected.",
@@ -299,8 +322,8 @@ class Display(object):
             "diagnostic grid returned stable metrics."
         ])
 
-        Grapher.console.print(
-            f"\n[bold #5FD7FF][{const.APP_DESC}::Engine] {const.APP_DESC} {startup_banners}\n"
+        Display.console.print(
+            f"\n[bold #5FD7FF][{const.APP_DESC}::Engine] {const.APP_DESC} {start_banners}\n"
         )
 
         width, height = 30, 5
@@ -342,7 +365,7 @@ class Display(object):
             x + 1 if x + 1 < len(particles) else None
         )
 
-        async def move_forward(src: list, dst: list) -> list:
+        def move_forward(src: list, dst: list) -> list:
             sr, sc = src
             dr, dc = dst
 
@@ -358,10 +381,10 @@ class Display(object):
 
             return [sr, sc]
 
-        async def render_frame() -> "Text":
+        def render_frame() -> "Text":
             for ch in brand:
                 if frame >= converge_start:
-                    positions[ch] = await move_forward(positions[ch], targets[ch])
+                    positions[ch] = move_forward(positions[ch], targets[ch])
                 else:
                     r, c = positions[ch]
                     r, c = r + random.choice([-1, 0, 1]), c + random.choice([-1, 0, 1])
@@ -390,20 +413,208 @@ class Display(object):
 
             return Text.from_markup("\n".join(lines))
 
-        with Live(console=Grapher.console, refresh_per_second=int(1 / interval)) as live:
+        with Live(console=Display.console, refresh_per_second=int(1 / interval)) as live:
             for frame in range(frames):
                 for i in range(height - 1, 0, -1):
                     for j in range(width):
                         state[i][j] = fade_particle(state[i - 1][j])
                 state[0] = generate_fire_row()
-                live.update(await render_frame())
+                live.update(render_frame())
                 await asyncio.sleep(interval)
 
             await asyncio.sleep(0.2)
 
-        Grapher.console.print(
-            f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {completion_banners}\n"
+        Display.console.print(
+            f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {close_banners}\n"
         )
+
+    async def memory_wave(self, memories: dict, dump_close_event: "asyncio.Event") -> typing.Coroutine | None:
+        """
+        动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
+        """
+        if self.display_level != const.DISPLAY_LEVEL:
+            return None
+
+        start_banner = [
+            "Launching quantum sweep of address space.",
+            "Calibrating neural lanes for low-latency tracking.",
+            "Activating dimensional scan of memory substrata.",
+            "Deploying spectral probes into RAM topology.",
+            "Scanning volatile structures for temporal drift.",
+            "Engaging parallel memory channels with adaptive sync.",
+            "Spooling deep memory resonance patterns.",
+            "Establishing vector phase for signal propagation."
+        ]
+
+        close_banner = [
+            "Memory scan complete. No anomalies detected.",
+            "Has successfully charted volatile domains.",
+            "Pulse mapping concluded. All nodes synchronized.",
+            "Core resonance stabilized. Exiting scan mode.",
+            "Signal integrity confirmed across memory grid.",
+            "Temporal coherence locked. Diagnostic idle.",
+            "Dynamic memory matrix resolved successfully.",
+            "All probes disengaged. Standby mode initiated."
+        ]
+
+        self.console.print(
+            f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
+        )
+
+        center_r, center_c = (rows := 5) // 2, (cols := 17) // 2
+        symbol, highlight, padding, brand = "◌", "▣", " " * 4, const.APP_DESC
+
+        # 配色方案
+        palette = {
+            "foreground": [
+                "#00FFD1", "#00E6B8", "#00CCAA", "#00B299", "#009988", "#007F77", "#006666"
+            ],
+            "background": [
+                "#1A1A1A", "#2E2E3A", "#3F3F4F", "#4F4F5F", "#606070", "#757580", "#8A8A99"
+            ],
+            "logo": {
+                "foreground": ["#39FF14", "#00FFFF", "#FF00FF", "#FFFF33", "#87F9A7", "#33FFDD"],
+                "background": ["#888888", "#AAAAAA", "#CCCCCC", "#B0C4DE", "#D3D3D3", "#D8BFD8"]
+            },
+            "pulse": {
+                "foreground": ["#FFD700", "#FFE066", "#FFF799", "#FFE066"],
+                "background": ["#5F5F87", "#70708F", "#8A8AB0", "#70708F"]
+            }
+        }
+
+        # 初始化状态
+        previous_state = memories["mode"]
+        pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
+
+        # 分层（曼哈顿距离）
+        layers = [[] for _ in range(center_r + center_c + 1)]
+        for r_ in range(rows):
+            for c_ in range(cols):
+                d_ = abs(r_ - center_r) + abs(c_ - center_c)
+                layers[d_].append((r_, c_))
+
+        def make_header(current_mode: str) -> str:
+            sc = "#00FFAA" if memories["mode"].lower().startswith("f") else "#FF99CC"
+            return textwrap.dedent(f"""\
+                [bold #EEEEEE]Mode: [{sc}]{current_mode}[/]
+                Foreground Pulled: [#00FFAA]{memories['foreground']}[/]
+                Background Pulled: [#FF99CC]{memories['background']}[/]
+            """)
+
+        def render_grid() -> "Text":
+            colors = palette[memories["mode"]]
+            grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
+
+            # 当前活跃区域（除中心）
+            active_positions = []
+            for d in range(depth + 1):
+                active_positions.extend(layers[d])
+            active_positions = [p for p in active_positions if p != (center_r, center_c)]
+
+            embed_map = {}
+            if len(active_positions) >= len(brand) * 4:
+                letters = list(brand)
+                base_colors = palette["logo"][memories["mode"]]
+
+                # 淡入淡出处理
+                if logo_transition > 0:
+                    t = logo_transition / max_transition
+                    alpha = 1.0
+                    alpha = 2 * (1 - t) if t > 0.5 else 2 * t
+
+                    embed_colors = []
+                    for c in base_colors[:len(letters)]:
+                        r = int(int(c[1:3], 16) * alpha)
+                        g = int(int(c[3:5], 16) * alpha)
+                        b = int(int(c[5:7], 16) * alpha)
+                        embed_colors.append(f"#{r:02X}{g:02X}{b:02X}")
+                else:
+                    embed_colors = base_colors[:len(letters)]
+
+                random.shuffle(active_positions)
+                embed_targets = active_positions[:len(letters)]
+                embed_map = {
+                    pos: (ch, col) for pos, ch, col in zip(embed_targets, letters, embed_colors)
+                }
+
+            # 渲染图层
+            for d in range(depth + 1):
+                color = colors[min(d, len(colors) - 1)]
+                for r, c in layers[d]:
+                    if (r, c) == (center_r, center_c):
+                        continue
+                    if (r, c) in embed_map:
+                        ch, col = embed_map[(r, c)]
+                        grid[r][c] = f"[bold {col}]{ch}[/]"
+                    else:
+                        ch = symbol if not fade else "·"
+                        grid[r][c] = f"[bold {color}]{ch}[/]"
+
+            # 呼吸灯中心探针
+            pulse_colors = palette["pulse"][memories["mode"]]
+            pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
+            grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
+
+            lines = [padding + " ".join(row) for row in grid]
+            return Text.from_markup(make_header(memories["mode"].upper()) + "\n" + "\n".join(lines))
+
+        async def render_exit_sequence() -> typing.AsyncGenerator[None, str]:
+            final_text = f"{brand} Engine"
+            visual_center = (cols * 2 - 1) // 2
+            pad = " " * (visual_center - (len(final_text) // 2))
+            loc = make_header("[bold #FFAF87]END[/]") + "\n" + padding
+
+            cursor_frames = ["▍", "|", "▌", "▎"]
+            cursor = cursor_frames[frame_count % len(cursor_frames)]
+
+            for i in range(1, len(final_text) + 1):
+                typed = f"{pad}[bold #00D7FF]{final_text[:i]}[/][dim #444444]{cursor}[/]"
+                yield Text.from_markup(loc + typed)
+                await asyncio.sleep(0.02)
+
+            for _ in range(2):
+                yield Text.from_markup(loc + f"{pad}[bold #00D7FF]{final_text}[/]")
+                await asyncio.sleep(0.1)
+                yield Text.from_markup(loc + f"{pad}[bold #00D7FF]{final_text}[/][dim #00D7FF]▓[/]")
+                await asyncio.sleep(0.1)
+
+        live = Live(console=self.console, refresh_per_second=30)
+        live.start()
+
+        try:
+            depth, direction, depth_max = 0, 1, center_r + center_c
+
+            while not dump_close_event.is_set():
+                fade = direction == -1
+                live.update(render_grid())
+                await asyncio.sleep(0.04)
+
+                pulse_frame += 1
+                frame_count += 1
+                depth += direction
+
+                # 检测切换 → 启动 LOGO 渐隐/渐显
+                if (state := memories["mode"]) != previous_state:
+                    logo_transition = max_transition
+                    previous_state = state
+
+                if logo_transition > 0:
+                    logo_transition -= 1
+
+                if depth >= depth_max:
+                    direction = -1
+                elif depth <= 0:
+                    direction = 1
+
+        except asyncio.CancelledError:
+            async for frame in render_exit_sequence():
+                live.update(frame)
+            live.stop()
+
+        finally:
+            self.console.print(
+                f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
+            )
 
 
 if __name__ == "__main__":
