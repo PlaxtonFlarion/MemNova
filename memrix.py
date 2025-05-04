@@ -785,6 +785,34 @@ class Memrix(object):
 
 
 async def main() -> typing.Optional[typing.Any]:
+    """
+    Memrix 主控制入口，用于解析命令行参数并根据不同模式执行配置展示、
+    内存转储、脚本执行或报告生成等功能。
+
+    Returns
+    -------
+    Optional[Any]
+        根据执行模式返回对应的异步任务结果，或 None（例如仅展示帮助信息）。
+
+    Raises
+    ------
+    MemrixError
+        - 当 `--target` 参数为空；
+        - 当 ADB 未配置（仅限 memory 或 script 模式）；
+        - 当设备连接失败；
+        - 当未指定任何主命令时。
+
+    Notes
+    -----
+    - 当命令行为空时，自动打印帮助信息。
+    - 若传入 `--config` 参数，则展示配置树和 JSON 格式的配置信息。
+    - 若传入 `--memory`、`--script` 或 `--report`，则进入任务模式。
+        - `--target` 为必填参数，指定目标目录或路径。
+        - memory / script 模式下需依赖 ADB 环境。
+        - 自动连接设备并注册中断清理函数。
+    - 任务启动前均显示项目 Logo、License 和动态动画效果。
+    - 若参数不符合要求或未指定主命令，将抛出 MemrixError 异常。
+    """
     if len(sys.argv) == 1:
         return _parser.parse_engine.print_help()
 
