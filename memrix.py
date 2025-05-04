@@ -27,6 +27,7 @@ import aiosqlite
 import uiautomator2
 
 # ====[ from: 内置模块 ]====
+from pathlib import Path
 from collections import defaultdict
 
 # ====[ from: 第三方库 ]====
@@ -80,7 +81,6 @@ class ToolKit(object):
             返回值为输入数值除以 1024 后的结果，精确到小数点后两位。
             若转换失败，则返回 0.00。
         """
-
         try:
             return round(float(number) / 1024, 2)
         except TypeError:
@@ -102,7 +102,6 @@ class ToolKit(object):
             所有数值之和，四舍五入保留两位小数。
             若存在无法转换的值，则返回 0.00。
         """
-
         try:
             return round(sum([float(number) for number in numbers]), 2)
         except TypeError:
@@ -117,6 +116,7 @@ class ToolKit(object):
         ----------
         number_begin : Any
             被减数，需可转换为 float。
+
         number_final : Any
             减数，需可转换为 float。
 
@@ -126,7 +126,6 @@ class ToolKit(object):
             差值结果，四舍五入保留两位小数。
             若任一参数无法转换为 float，则返回 0.00。
         """
-
         try:
             return round(float(number_begin) - float(number_final), 2)
         except TypeError:
@@ -147,7 +146,6 @@ class ToolKit(object):
              若匹配成功，返回分组内容转换为 KB 后的浮点值；
              若匹配失败或分组无效，返回 0.00。
          """
-
         return self.transform(find.group(1)) if (
             find := re.search(pattern, self.text_content, re.S)
         ) else 0.00
@@ -171,17 +169,6 @@ class Player(object):
         audio_file : str
             音频文件的路径，支持 `.mp3`, `.wav`, `.ogg` 等格式。
 
-        *_ :
-            占位参数，未使用。
-
-        **__ :
-            占位关键字参数，未使用。
-
-        Returns
-        -------
-        None
-            无返回值。方法在音频播放完成后自动退出。
-
         Notes
         -----
         - 本方法需在支持 asyncio 的事件循环中运行。
@@ -189,6 +176,7 @@ class Player(object):
         - 音量默认设置为最大（1.0），可在必要时添加音量控制参数。
         - 若音频播放失败（如文件路径无效或格式不受支持），可能抛出 pygame 错误。
         """
+        logger.info(f"Player :: {Path(audio_file).name}")
 
         pygame.mixer.init()
         pygame.mixer.music.load(audio_file)
@@ -308,14 +296,6 @@ class Memrix(object):
 
         该方法可在外部逻辑（如 UI 自动化任务结束）中调用，用于通知内存拉取逻辑停止，
         并调度关闭流程 `dump_task_close()`。本方法本身不等待任务执行完成，仅注册关闭任务。
-
-        Parameters
-        ----------
-        *_ :
-            占位参数，未使用。
-
-        **__ :
-            占位关键字参数，未使用。
         """
         loop = asyncio.get_running_loop()
         loop.create_task(self.dump_task_close())
@@ -436,7 +416,7 @@ class Memrix(object):
             if not (memory := await device.memory_info(package)):
                 return None
 
-            logger.info(f"Dump memory [{pid}] - [{package}]")
+            logger.info(f"Dump memory :: [{pid}] - [{package}]")
             resume_map: dict = {}
             memory_map: dict = {}
             memory_vms: dict = {}
@@ -496,25 +476,25 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(package)):
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Process: {app_pid}[/]",
+                    f"state": f"[bold #FFAF87]Process :: {app_pid}[/]",
                     f"activity": "*",
                     f"pss": "*"
                 })
-                return logger.info(f"Process: {app_pid}\n")
+                return logger.info(f"Process :: {app_pid}\n")
 
             logger.info(device)
-            logger.info(f"Process: {app_pid.member}")
+            logger.info(f"Process :: {app_pid.member}")
 
             if not all(current_info_list := await asyncio.gather(
                     device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
             )):
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Info: {current_info_list}[/]",
+                    f"state": f"[bold #FFAF87]Info :: {current_info_list}[/]",
                     f"activity": "*",
                     f"pss": "*"
                 })
-                return logger.info(f"Info: {current_info_list}\n")
+                return logger.info(f"Info :: {current_info_list}\n")
 
             adj, act = current_info_list
 
@@ -558,11 +538,11 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Resp: {memory_result}[/]",
+                    f"state": f"[bold #FFAF87]Resp :: {memory_result}[/]",
                     f"activity": "*",
                     f"pss": "*"
                 })
-                return logger.info(f"Resp: {memory_result}\n")
+                return logger.info(f"Resp :: {memory_result}\n")
 
             try:
                 logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
@@ -613,11 +593,11 @@ class Memrix(object):
         self.file_insert = 0
         self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
 
-        logger.info(f"时间: {format_before_time}")
-        logger.info(f"应用: {package}")
-        logger.info(f"频率: {self.config.speed}")
-        logger.info(f"标签: {self.config.label}")
-        logger.info(f"文件: {self.file_folder}\n")
+        logger.info(f"时间 :: {format_before_time}")
+        logger.info(f"应用 :: {package}")
+        logger.info(f"频率 :: {self.config.speed}")
+        logger.info(f"标签 :: {self.config.label}")
+        logger.info(f"文件 :: {self.file_folder}\n")
 
         await self.display.summaries(
             format_before_time, package, self.config.speed, self.config.label, self.file_folder
@@ -644,11 +624,12 @@ class Memrix(object):
         async with aiosqlite.connect(self.db_file) as db:
             await DataBase.create_table(db)
             await dump_file_task
-            self.exec_start_event.set()
 
             asyncio.create_task(
                 self.display.memory_wave(self.memories, self.dump_close_event)
             )
+
+            self.exec_start_event.set()
 
             while not self.dump_close_event.is_set():
                 await flash_memory_launch()
@@ -712,6 +693,8 @@ class Memrix(object):
 
         player: "Player" = Player()
 
+        await self.exec_start_event.wait()
+
         logger.info(
             f"^*{self.padding} Exec Start {self.padding}*^"
         )
@@ -722,7 +705,8 @@ class Memrix(object):
                 # 遍历该任务组内的每条指令
                 for i in value:
                     # 提取命令类型（cmds），并检查是否在支持的类型列表中
-                    if not (cmds := i.get("cmds", None)) or cmds not in ["u2", "sleep", "audio"]:
+                    if not (cmds := i.get("cmds", None)):
+                        logger.info(f"cmds :: {cmds}")
                         continue
                     # 根据 cmds 类型选择对应执行对象（device 或 player），获取方法引用
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
@@ -732,6 +716,8 @@ class Memrix(object):
                         logger.info(
                             f"{func.__name__} {vals} {args} {kwds} -> {await func(*vals, *args, **kwds)}"
                         )
+                    else:
+                        logger.info(f"func :: {func}")
 
         await self.dump_task_close()
 
@@ -901,7 +887,8 @@ async def main() -> typing.Optional[typing.Any]:
         elif report:
             return await memrix.create_report()
 
-    raise MemrixError(f"主命令不能为空 ...")
+    else:
+        raise MemrixError(f"主命令不能为空 ...")
 
 
 if __name__ == '__main__':
