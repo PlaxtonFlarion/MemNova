@@ -292,8 +292,13 @@ class Memrix(object):
         self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{folder}.log")
         self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{folder}.yaml")
 
+        self.padding = "-" * 8
         self.memories: dict = {
-            "mode": "", "foreground": 0, "background": 0
+            "state": "[bold #FFAF87]scanning[/]",
+            "activity": "*",
+            "pss": "*",
+            "foreground": 0,
+            "background": 0
         }
         self.display = Display(self.mirror)
 
@@ -352,7 +357,9 @@ class Memrix(object):
                 f"Usage: [#00D787]{const.APP_NAME} --report --target [#FFAF87]{os.path.basename(self.group_dir)}[/]"
             )
 
-        logger.info(f"^------ {const.APP_DESC} Engine Close ------^")
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
+        )
         Display.console.print()
         await self.display.system_disintegrate()
 
@@ -488,24 +495,43 @@ class Memrix(object):
 
             if not (app_pid := await device.pid_value(package)):
                 self.dumped.set()
-                return logger.info(f"Process={app_pid}\n")
+                self.memories.update({
+                    f"state": f"[bold #FFAF87]Process: {app_pid}[/]",
+                    f"activity": "*",
+                    f"pss": "*"
+                })
+                return logger.info(f"Process: {app_pid}\n")
 
             logger.info(device)
-            logger.info(f"Process={app_pid.member}")
+            logger.info(f"Process: {app_pid.member}")
 
             if not all(current_info_list := await asyncio.gather(
                     device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
             )):
                 self.dumped.set()
-                return logger.info(f"{current_info_list}\n")
+                self.memories.update({
+                    f"state": f"[bold #FFAF87]Info: {current_info_list}[/]",
+                    f"activity": "*",
+                    f"pss": "*"
+                })
+                return logger.info(f"Info: {current_info_list}\n")
 
             adj, act = current_info_list
 
             uid = uid if (uid := await device.uid_value(package)) else 0
 
             remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
-            remark_map.update({"uid": uid, "adj": adj, "act": act})
-            remark_map.update({"frg": "前台" if self.target in act else "前台" if int(adj) <= 0 else "后台"})
+
+            remark_map.update({
+                "uid": uid, "adj": adj, "act": act
+            })
+            remark_map.update({
+                "frg": "前台" if self.target in act else "前台" if int(adj) <= 0 else "后台"
+            })
+
+            self.memories.update({
+                f"activity": act
+            })
 
             logger.info(f"{remark_map['tms']}")
             logger.info(f"UID: {remark_map['uid']}")
@@ -531,7 +557,12 @@ class Memrix(object):
                 muster = {k: dict(v) for k, v in muster.items()}
             else:
                 self.dumped.set()
-                return logger.info(f"{memory_result}\n")
+                self.memories.update({
+                    f"state": f"[bold #FFAF87]Resp: {memory_result}[/]",
+                    f"activity": "*",
+                    f"pss": "*"
+                })
+                return logger.info(f"Resp: {memory_result}\n")
 
             try:
                 logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
@@ -541,17 +572,27 @@ class Memrix(object):
             ram = Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
-                state = "foreground" if ram.remark_map["frg"] == "前台" else "background"
-                self.memories["mode"] = state
-                self.memories[state] += 1
-
                 await DataBase.insert_data(
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
+                state = "foreground" if ram.remark_map["frg"] == "前台" else "background"
+                self.memories[state] += 1
+                self.memories.update({
+                    "state": state,
+                    "pss": ram.resume_map["TOTAL PSS"]
+                })
+
                 self.file_insert += 1
                 logger.info(f"Article {self.file_insert} data insert success")
+
             else:
-                logger.info(f"Data insert skipped")
+                skip_tip = f"Data insert skipped"
+                self.memories.update({
+                    "state": f"[bold #FFAF87]{skip_tip}[/]",
+                    "activity": "*",
+                    "pss": "*"
+                })
+                logger.info(skip_tip)
 
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
@@ -559,14 +600,14 @@ class Memrix(object):
         # Notes: Start from here
         package: typing.Optional[str] = post_pkg if post_pkg else self.target  # 传入的应用名称
 
-        # todo 是否重复检查
-        if not post_pkg:
-            if "Unable" in (check := await device.examine_package(package)):
-                raise MemrixError(check)
+        if "Unable" in (check := await device.examine_package(package)):
+            raise MemrixError(check)
 
         logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
 
-        logger.info(f"^------ {const.APP_DESC} Engine Start ------^")
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
+        )
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
         self.file_insert = 0
@@ -577,6 +618,10 @@ class Memrix(object):
         logger.info(f"频率: {self.config.speed}")
         logger.info(f"标签: {self.config.label}")
         logger.info(f"文件: {self.file_folder}\n")
+
+        await self.display.summaries(
+            format_before_time, package, self.config.speed, self.config.label, self.file_folder
+        )
 
         if os.path.isfile(self.team_file):
             scene = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
@@ -658,10 +703,6 @@ class Memrix(object):
         except (AssertionError, KeyError, TypeError) as e:
             raise MemrixError(e)
 
-        # todo 是否重复检查
-        if "Unable" in (check := await device.examine_package(package)):
-            raise MemrixError(check)
-
         try:
             await device.u2_active()
         except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
@@ -671,13 +712,15 @@ class Memrix(object):
 
         player: "Player" = Player()
 
-        logger.info(f"^* Exec Start *^")
+        logger.info(
+            f"^*{self.padding} Exec Start {self.padding}*^"
+        )
         # 外层循环，控制任务执行次数（loopers 次）
         for data in range(loopers):
             # 遍历 JSON 脚本中每个任务组（如 click、input、swipe 等）
-            for key, values in mission.items():
+            for key, value in mission.items():
                 # 遍历该任务组内的每条指令
-                for i in values:
+                for i in value:
                     # 提取命令类型（cmds），并检查是否在支持的类型列表中
                     if not (cmds := i.get("cmds", None)) or cmds not in ["u2", "sleep", "audio"]:
                         continue
@@ -696,7 +739,9 @@ class Memrix(object):
         try:
             await auto_dump_task
         except asyncio.CancelledError:
-            logger.info(f"^* Exec Close *^")
+            logger.info(
+                f"^*{self.padding} Exec Close {self.padding}*^"
+            )
 
     # """真相快照"""
     async def create_report(self) -> None:

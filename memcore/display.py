@@ -21,6 +21,7 @@ from pathlib import Path
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
+from rich.table import Table
 from rich.console import Console
 from memnova import const
 
@@ -56,14 +57,38 @@ class Display(object):
         """
         显示 Memrix 的项目 LOGO（ASCII banner），使用 rich 渲染。
         """
-        banner = f"""\
- __  __                     _     
-|  \\/  | ___ _ __ ___  _ __(_)_  __
-| |\\/| |/ _ \\ '_ ` _ \\| '__| \\ \\/ /
-| |  | |  __/ | | | | | |  | |>  < 
-|_|  |_|\\___|_| |_| |_|_|  |_/_/\\_\\
-        """
-        Display.console.print(f"[bold #00D7AF]{banner}")
+        color = random.choice([
+            "#00D7AF",  # 原色：清爽青绿
+            "#00CFFF",  # 冷霓光蓝
+            "#00FFAA",  # 荧光薄荷绿
+            "#00BFFF",  # 冰感天蓝
+            "#00FF88",  # 青绿色高亮
+            "#14FFC2",  # 赛博青
+            "#1AE5D6",  # 湖蓝清新
+            "#FF66CC",  # 粉电紫，偏暖但高饱和
+            "#D66AFF",  # 明亮紫红，用于柔性强调
+            "#87FF5F",  # 荧光草绿，亮且轻盈
+            "#FFD75F",  # 琥珀金黄，明快点缀色
+            "#FF7A00",  # 亮橙色，对比补色用
+        ])
+
+        banner_standard = textwrap.dedent(f"""\
+             __  __                     _     
+            |  \\/  | ___ _ __ ___  _ __(_)_  __
+            | |\\/| |/ _ \\ '_ ` _ \\| '__| \\ \\/ /
+            | |  | |  __/ | | | | | |  | |>  < 
+            |_|  |_|\\___|_| |_| |_|_|  |_/_/\\_\\
+        """)
+        banner_speed = textwrap.dedent(f"""\
+            ______  ___                      _____        
+            ___   |/  /___________ _____________(_)___  __
+            __  /|_/ /_  _ \\_  __ `__ \\_  ___/_  /__  |/_/
+            _  /  / / /  __/  / / / / /  /   _  / __>  <  
+            /_/  /_/  \\___//_/ /_/ /_//_/    /_/  /_/|_|                                            
+        """)
+        banner = random.choice([banner_standard, banner_speed])
+
+        Display.console.print(f"[bold {color}]{banner}")
 
     @staticmethod
     def show_license() -> None:
@@ -77,11 +102,12 @@ class Display(object):
         """
         显示任务完成提示信息（使用 task_done 文案）。
         """
-        task_done = fr"""[bold #00FF88]
-+----------------------------------------+
-|            {const.APP_DESC} Task Done            |
-+----------------------------------------+
-        """
+        task_done = textwrap.dedent(f"""\
+            [bold #00FF88]
+            +----------------------------------------+
+            |            {const.APP_DESC} Task Done            |
+            +----------------------------------------+
+        """)
         Display.console.print(task_done)
 
     @staticmethod
@@ -89,11 +115,12 @@ class Display(object):
         """
         显示任务退出提示信息（使用 task_exit 文案）。
         """
-        task_exit = fr"""[bold #FFEE55]
-+----------------------------------------+
-|            {const.APP_DESC} Task Exit            |
-+----------------------------------------+
-        """
+        task_exit = textwrap.dedent(f"""\
+            [bold #FFEE55]
+            +----------------------------------------+
+            |            {const.APP_DESC} Task Exit            |
+            +----------------------------------------+
+        """)
         Display.console.print(task_exit)
 
     @staticmethod
@@ -101,11 +128,12 @@ class Display(object):
         """
         显示任务失败或异常提示（使用 task_fail 文案）。
         """
-        task_fail = fr"""[bold #FF4444]
-+----------------------------------------+
-|            {const.APP_DESC} Task Fail            |
-+----------------------------------------+
-        """
+        task_fail = textwrap.dedent(f"""\
+            [bold #FF4444]
+            +----------------------------------------+
+            |            {const.APP_DESC} Task Fail            |
+            +----------------------------------------+
+        """)
         Display.console.print(task_fail)
 
     @staticmethod
@@ -162,11 +190,12 @@ class Display(object):
                     )
                     time.sleep(0.2)
 
+        color = random.choice(palette)
         Display.console.print(
-            f"[bold #00FF87]{{ {const.APP_DESC} Wave Linking... Aligning... Done. }}"
+            f"[bold {color}]{{ {const.APP_DESC} Wave Linking... Aligning... Done. }}"
         )
         Display.console.print(
-            f"[bold #00FF87]{{ {const.APP_DESC} Core Initialized. }}\n"
+            f"[bold {color}]{{ {const.APP_DESC} Core Initialized. }}\n"
         )
 
     @staticmethod
@@ -428,6 +457,55 @@ class Display(object):
             f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {close_banners}\n"
         )
 
+    async def summaries(self, *args, **__) -> None:
+        """
+        摘要信息显示。
+        """
+        if self.display_level != const.DISPLAY_LEVEL:
+            return None
+
+        table_themes = {
+            "blue_ice": {
+                "title": "#00CFFF",
+                "header": "#00BFFF",
+                "arg": "#5FD7FF"
+            },
+            "deep_space": {
+                "title": "#5D3FD3",
+                "header": "#8F5FFF",
+                "arg": "#AF87FF"
+            },
+            "sunset_warm": {
+                "title": "#FF7A00",
+                "header": "#FFAF00",
+                "arg": "#FFD7AF"
+            },
+            "green_flux": {
+                "title": "#00FF88",
+                "header": "#5FFF87",
+                "arg": "#AAFFCC"
+            }
+        }
+
+        theme = table_themes[random.choice(list(table_themes.keys()))]
+
+        table_style = {
+            "title_justify": "center", "show_header": True, "show_lines": True
+        }
+
+        table = Table(
+            title=f"[bold {theme['title']}]{const.APP_DESC} Information",
+            header_style=f"bold {theme['header']}", **table_style
+        )
+        table.add_column("摘要", justify="left", width=4)
+        table.add_column("信息", justify="left", width=46, no_wrap=True)
+
+        sub_titles = ["时间", "应用", "频率", "标签", "文件"]
+        for sub, arg in zip(sub_titles, args[:len(sub_titles)]):
+            table.add_row(f"[bold #EEEEEE]{sub}", f"[bold {theme['arg']}]{arg}")
+
+        self.console.print(table)
+
     async def system_disintegrate(self) -> typing.Coroutine | None:
         """
         系统解体风格，收尾动画。
@@ -564,7 +642,7 @@ class Display(object):
         }
 
         # 初始化状态
-        previous_state = memories["mode"]
+        previous_state = memories["state"]
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
 
         # 分层（曼哈顿距离）
@@ -574,16 +652,22 @@ class Display(object):
                 d_ = abs(r_ - center_r) + abs(c_ - center_c)
                 layers[d_].append((r_, c_))
 
-        def make_header(current_mode: str) -> str:
-            sc = "#00FFAA" if memories["mode"].lower().startswith("f") else "#FF99CC"
+        def make_header(current_state: str) -> str:
+            if (n := current_state.lower()).startswith("f"):
+                sc = "#00FFAA"
+            elif n.startswith("b"):
+                sc = "#FF99CC"
+
             return textwrap.dedent(f"""\
-                [bold #EEEEEE]Mode: [{sc}]{current_mode}[/]
+                [bold #EEEEEE]State: [bold {sc}]{current_state}[/]
+                Activity: [bold #FFAFAF]{memories['activity']}[/]
+                PSS: [bold #00FFD7]{memories['pss']}[/]
                 Foreground Pulled: [#00FFAA]{memories['foreground']}[/]
                 Background Pulled: [#FF99CC]{memories['background']}[/]
             """)
 
         def render_grid() -> "Text":
-            colors = palette[memories["mode"]]
+            colors = palette[memories["state"]]
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
 
             # 当前活跃区域（除中心）
@@ -595,7 +679,7 @@ class Display(object):
             embed_map = {}
             if len(active_positions) >= len(brand) * 4:
                 letters = list(brand)
-                base_colors = palette["logo"][memories["mode"]]
+                base_colors = palette["logo"][memories["state"]]
 
                 # 淡入淡出处理
                 if logo_transition > 0:
@@ -632,12 +716,12 @@ class Display(object):
                         grid[r][c] = f"[bold {color}]{ch}[/]"
 
             # 呼吸灯中心探针
-            pulse_colors = palette["pulse"][memories["mode"]]
+            pulse_colors = palette["pulse"][memories["state"]]
             pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
             grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
-            return Text.from_markup(make_header(memories["mode"].upper()) + "\n" + "\n".join(lines))
+            return Text.from_markup(make_header(memories["state"]) + "\n" + "\n".join(lines))
 
         async def render_exit_sequence() -> typing.AsyncGenerator[None, str]:
             final_text = f"{brand} Engine"
@@ -675,7 +759,7 @@ class Display(object):
                 depth += direction
 
                 # 检测切换 → 启动 LOGO 渐隐/渐显
-                if (state := memories["mode"]) != previous_state:
+                if (state := memories["state"]) != previous_state:
                     logo_transition = max_transition
                     previous_state = state
 
