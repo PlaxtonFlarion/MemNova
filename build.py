@@ -292,7 +292,8 @@ async def packaging() -> tuple[
         f"--include-module=deprecation",
         f"--include-package=pygments",
         f"--include-package=adbutils,lxml.etree",
-        f"--show-progress", f"--show-memory", f"--output-dir={app}", f"{const.APP_NAME}.py"
+        f"--assume-yes-for-downloads", f"--show-progress", f"--show-memory",
+        f"--output-dir={app}", f"{const.APP_NAME}.py"
     ]
 
     compile_log(f"system={ops}")
