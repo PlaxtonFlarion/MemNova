@@ -515,7 +515,7 @@ class Display(object):
         if self.display_level != const.DISPLAY_LEVEL:
             return None
 
-        width, steps, delay = 42, 6, 0.04
+        width, steps = 42, 6
         fade_chars, cursor = list(" .:*%#@!?/▩▨░▒▓"), "▌"
 
         base_line = f">>> {(text := const.APP_DESC)} | {const.APP_CN} <<<"
@@ -575,7 +575,7 @@ class Display(object):
                     elif statuses[i] == 1 and random.random() < 0.5:
                         statuses[i] = 2  # 熄灭
                 live.update(generate_frame())
-                await asyncio.sleep(delay)
+                await asyncio.sleep(0.01)
 
             # 灰影停顿
             ghost_line = base_line.replace(text, "".join(text))  # 原样灰化
@@ -821,5 +821,5 @@ if __name__ == "__main__":
         "foreground": 0,
         "background": 0
     }
-    asyncio.run(Display().flame_manifest())
+    asyncio.run(Display().system_disintegrate())
     pass
