@@ -579,14 +579,14 @@ class Display(object):
 
             # 灰影停顿
             ghost_line = base_line.replace(text, "".join(text))  # 原样灰化
-            live.update(Text(ghost_line, style=f"dim {color}"))
+            live.update(Text(ghost_line, style=f"bold dim {color}"))
             await asyncio.sleep(0.1)
 
             # 闪灭
             for _ in range(2):
                 live.update(Text(" " * width))
                 await asyncio.sleep(0.01)
-                live.update(Text(ghost_line, style=f"dim {color}"))
+                live.update(Text(ghost_line, style=f"bold dim {color}"))
                 await asyncio.sleep(0.01)
 
     async def memory_wave(self, memories: dict, dump_close_event: "asyncio.Event") -> typing.Coroutine | None:
