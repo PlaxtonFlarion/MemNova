@@ -813,13 +813,4 @@ class Display(object):
 
 
 if __name__ == "__main__":
-    m = {
-        "msg": "scanning",
-        "stt": "*",
-        "act": "*",
-        "pss": "*",
-        "foreground": 0,
-        "background": 0
-    }
-    asyncio.run(Display().system_disintegrate())
     pass
