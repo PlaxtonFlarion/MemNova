@@ -88,11 +88,6 @@ class Analyzer(object):
         **kwargs :
             关键字参数，作为模板渲染上下文传入。
 
-        Returns
-        -------
-        None
-            异步执行，无返回值。成功后在输出目录生成 HTML 报告。
-
         Notes
         -----
         - 模板必须为合法 Jinja2 文件，包含可注入变量。
@@ -259,7 +254,7 @@ class Analyzer(object):
 
             # 悬浮提示
             tooltips = """
-                <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); padding: 5px 10px;">
+                <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); pad: 5px 10px;">
                     <div>
                         <span style="font-size: 17px;">PSS:</span>
                         <span style="font-size: 17px; font-weight: bold; color: #4B4B4B;">@y{0.00} MB</span>

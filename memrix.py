@@ -267,28 +267,29 @@ class Memrix(object):
         if self.report:
             folder: str = self.target
         else:
-            self.before_time = time.time()
+            self.before_time: float = time.time()
             folder: str = self.folder if self.folder else (
                 time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
             )
 
-        self.total_dir = os.path.join(self.src_total_place, const.TOTAL_DIR)
-        self.other_dir = os.path.join(self.src_total_place, self.total_dir, const.SUBSET_DIR)
-        self.group_dir = os.path.join(self.src_total_place, self.other_dir, folder)
+        self.total_dir: str = os.path.join(self.src_total_place, const.TOTAL_DIR)
+        self.other_dir: str = os.path.join(self.src_total_place, self.total_dir, const.SUBSET_DIR)
+        self.group_dir: str = os.path.join(self.src_total_place, self.other_dir, folder)
 
-        self.db_file = os.path.join(self.src_total_place, self.total_dir, const.DB_FILE)
-        self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{folder}.log")
-        self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{folder}.yaml")
+        self.db_file: str = os.path.join(self.src_total_place, self.total_dir, const.DB_FILE)
+        self.log_file: str = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{folder}.log")
+        self.team_file: str = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{folder}.yaml")
 
-        self.padding = "-" * 8
-        self.memories: dict = {
-            "state": "[bold #FFAF87]scanning[/]",
-            "activity": "*",
+        self.pad: str = "-" * 8
+        self.memories: dict[str, typing.Union[str, int]] = {
+            "msg": "*",
+            "stt": "*",
+            "act": "*",
             "pss": "*",
             "foreground": 0,
             "background": 0
         }
-        self.display = Display(self.mirror)
+        self.display: "Display" = Display(self.mirror)
 
     def clean_up(self, *_, **__) -> None:
         """
@@ -297,8 +298,7 @@ class Memrix(object):
         该方法可在外部逻辑（如 UI 自动化任务结束）中调用，用于通知内存拉取逻辑停止，
         并调度关闭流程 `dump_task_close()`。本方法本身不等待任务执行完成，仅注册关闭任务。
         """
-        loop = asyncio.get_running_loop()
-        loop.create_task(self.dump_task_close())
+        self.dump_close_event.set()
 
     async def dump_task_close(self) -> None:
         """
@@ -311,25 +311,17 @@ class Memrix(object):
         - 取消所有后台 asyncio 任务
         - 输出日志（采样次数、耗时等）
         """
-        self.dump_close_event.set()
-
-        if self.dumped:
+        if not self.dumped.is_set():
             logger.info(f"[#FFD75F]等待任务结束 ...")
-            await self.dumped.wait()  # 等待本轮拉取完成
-
-        try:
-            # 退出所有任务
-            await asyncio.gather(
-                *(asyncio.to_thread(task.cancel) for task in asyncio.all_tasks())
-            )
-        except asyncio.CancelledError:
-            logger.info(f"[#FFD75F]任务已经退出 ...")
+            await self.dumped.wait()
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
             f"Mark={self.config.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
         logger.info(f"{self.group_dir}")
+
+        await self.display.animate_stop_event.wait()
 
         if self.file_insert:
             Display.build_file_tree(self.group_dir)
@@ -338,8 +330,9 @@ class Memrix(object):
             )
 
         logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
+            f"^*{self.pad} {const.APP_DESC} Engine Close {self.pad}*^"
         )
+
         Display.console.print()
         await self.display.system_disintegrate()
 
@@ -416,7 +409,7 @@ class Memrix(object):
             if not (memory := await device.memory_info(package)):
                 return None
 
-            logger.info(f"Dump memory :: [{pid}] - [{package}]")
+            logger.info(f"Dump -> [{pid}] - [{package}]")
             resume_map: dict = {}
             memory_map: dict = {}
             memory_vms: dict = {}
@@ -476,25 +469,30 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(package)):
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Process :: {app_pid}[/]",
-                    f"activity": "*",
-                    f"pss": "*"
+                    "msg": (msg := f"Process -> {app_pid}"),
+                    "stt": "*",
+                    "act": "*",
+                    "pss": "*"
                 })
-                return logger.info(f"Process :: {app_pid}\n")
+                return logger.info(f"{msg}\n")
 
             logger.info(device)
-            logger.info(f"Process :: {app_pid.member}")
+            self.memories.update({
+                "msg": (msg := f"Process -> {app_pid.member}"),
+            })
+            logger.info(msg)
 
             if not all(current_info_list := await asyncio.gather(
                     device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
             )):
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Info :: {current_info_list}[/]",
-                    f"activity": "*",
-                    f"pss": "*"
+                    "msg": (msg := f"Info -> {current_info_list}"),
+                    "stt": "*",
+                    "act": "*",
+                    "pss": "*"
                 })
-                return logger.info(f"Info :: {current_info_list}\n")
+                return logger.info(f"{msg}\n")
 
             adj, act = current_info_list
 
@@ -509,8 +507,10 @@ class Memrix(object):
                 "frg": "前台" if self.target in act else "前台" if int(adj) <= 0 else "后台"
             })
 
+            state = "foreground" if remark_map["frg"] == "前台" else "background"
             self.memories.update({
-                f"activity": act
+                "stt": state,
+                "act": act
             })
 
             logger.info(f"{remark_map['tms']}")
@@ -538,11 +538,12 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    f"state": f"[bold #FFAF87]Resp :: {memory_result}[/]",
-                    f"activity": "*",
-                    f"pss": "*"
+                    "msg": (msg := f"Resp -> {memory_result}"),
+                    "stt": "*",
+                    "act": "*",
+                    "pss": "*"
                 })
-                return logger.info(f"Resp :: {memory_result}\n")
+                return logger.info(f"{msg}\n")
 
             try:
                 logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
@@ -555,24 +556,26 @@ class Memrix(object):
                 await DataBase.insert_data(
                     db, self.file_folder, self.config.label, *maps, ram.memory_vms
                 )
-                state = "foreground" if ram.remark_map["frg"] == "前台" else "background"
+                self.file_insert += 1
+                msg = f"Article {self.file_insert} data insert success"
+
                 self.memories[state] += 1
                 self.memories.update({
-                    "state": state,
-                    "pss": ram.resume_map["TOTAL PSS"]
+                    "pss": f"{ram.resume_map['TOTAL PSS']:.2f} MB"
                 })
-
-                self.file_insert += 1
-                logger.info(f"Article {self.file_insert} data insert success")
 
             else:
-                skip_tip = f"Data insert skipped"
+                msg = f"Data insert skipped"
                 self.memories.update({
-                    "state": f"[bold #FFAF87]{skip_tip}[/]",
-                    "activity": "*",
+                    "stt": "*",
+                    "act": "*",
                     "pss": "*"
                 })
-                logger.info(skip_tip)
+
+            self.memories.update({
+                "msg": msg
+            })
+            logger.info(msg)
 
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
@@ -580,24 +583,24 @@ class Memrix(object):
         # Notes: Start from here
         package: typing.Optional[str] = post_pkg if post_pkg else self.target  # 传入的应用名称
 
-        if "Unable" in (check := await device.examine_package(package)):
+        if not post_pkg and "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
 
         logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
 
         logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
+            f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
         )
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
         self.file_insert = 0
         self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
 
-        logger.info(f"时间 :: {format_before_time}")
-        logger.info(f"应用 :: {package}")
-        logger.info(f"频率 :: {self.config.speed}")
-        logger.info(f"标签 :: {self.config.label}")
-        logger.info(f"文件 :: {self.file_folder}\n")
+        logger.info(f"时间 -> {format_before_time}")
+        logger.info(f"应用 -> {package}")
+        logger.info(f"频率 -> {self.config.speed}")
+        logger.info(f"标签 -> {self.config.label}")
+        logger.info(f"文件 -> {self.file_folder}\n")
 
         await self.display.summaries(
             format_before_time, package, self.config.speed, self.config.label, self.file_folder
@@ -684,6 +687,9 @@ class Memrix(object):
         except (AssertionError, KeyError, TypeError) as e:
             raise MemrixError(e)
 
+        if "Unable" in (check := await device.examine_package(package)):
+            raise MemrixError(check)
+
         try:
             await device.u2_active()
         except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
@@ -695,9 +701,8 @@ class Memrix(object):
 
         await self.exec_start_event.wait()
 
-        logger.info(
-            f"^*{self.padding} Exec Start {self.padding}*^"
-        )
+        logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
+
         # 外层循环，控制任务执行次数（loopers 次）
         for data in range(loopers):
             # 遍历 JSON 脚本中每个任务组（如 click、input、swipe 等）
@@ -712,22 +717,33 @@ class Memrix(object):
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
                         # 提取参数：位置参数 vals、额外 args、关键字参数 kwds
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
-                        # 打印即将执行的函数与参数，并异步执行该方法
-                        logger.info(
-                            f"{func.__name__} {vals} {args} {kwds} -> {await func(*vals, *args, **kwds)}"
+
+                        start_task, close_task = asyncio.create_task(
+                            func(*vals, *args, **kwds)
+                        ), asyncio.create_task(self.dump_close_event.wait())
+
+                        done, pending = asyncio.wait(
+                            {start_task, close_task}, return_when=asyncio.FIRST_COMPLETED
                         )
+
+                        if close_task in done:
+                            start_task.cancel()
+                            try:
+                                await start_task
+                            except asyncio.CancelledError:
+                                return logger.info(f"Task terminated")
+
+                        for task in done:
+                            logger.info(f"{func.__name__} {vals} {args} {kwds} -> {task.result()}")
+
                     else:
                         logger.info(f"func :: {func}")
 
-        await self.dump_task_close()
+        self.dump_close_event.set()
+        self.dumped.set()
+        await auto_dump_task
 
-        auto_dump_task.cancel()
-        try:
-            await auto_dump_task
-        except asyncio.CancelledError:
-            logger.info(
-                f"^*{self.padding} Exec Close {self.padding}*^"
-            )
+        logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
 
     # """真相快照"""
     async def create_report(self) -> None:
@@ -859,10 +875,6 @@ async def main() -> typing.Optional[typing.Any]:
         if not (target := _cmd_lines.target):
             raise MemrixError(f"--target 参数不能为空 ...")
 
-        if any((memory, script)):
-            if not shutil.which("adb"):
-                raise MemrixError(f"ADB 环境变量未配置 ...")
-
         Display.show_logo()
         Display.show_license()
 
@@ -872,17 +884,22 @@ async def main() -> typing.Optional[typing.Any]:
 
         await Display.flame_manifest()
 
-        if memory:
-            if not (device := await Manage.operate_device(_cmd_lines.serial)):
-                raise MemrixError(f"没有连接设备 ...")
-            signal.signal(signal.SIGINT, memrix.clean_up)
-            return await memrix.dump_task_start(device)
+        if memory or script:
+            if not shutil.which("adb"):
+                raise MemrixError(f"ADB 环境变量未配置 ...")
 
-        elif script:
             if not (device := await Manage.operate_device(_cmd_lines.serial)):
                 raise MemrixError(f"没有连接设备 ...")
+
             signal.signal(signal.SIGINT, memrix.clean_up)
-            return await memrix.exec_task_start(device)
+
+            dump_task = asyncio.create_task(
+                getattr(memrix, "dump_task_start" if memory else "exec_task_start")(device)
+            )
+
+            await memrix.dump_close_event.wait()
+            await memrix.dump_task_close()
+            return await dump_task
 
         elif report:
             return await memrix.create_report()

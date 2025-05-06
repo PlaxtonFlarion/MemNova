@@ -12,6 +12,7 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
+import math
 import time
 import typing
 import random
@@ -32,8 +33,9 @@ class Display(object):
     """
     console: typing.Optional["Console"] = Console()
 
-    def __init__(self, display_level: str):
+    def __init__(self, display_level: str = "WARNING"):
         self.display_level = display_level
+        self.animate_stop_event = asyncio.Event()
 
     @staticmethod
     def view(msg: typing.Any) -> None:
@@ -73,18 +75,18 @@ class Display(object):
         ])
 
         banner_standard = textwrap.dedent(f"""\
-             __  __                     _     
+             __  __                     _
             |  \\/  | ___ _ __ ___  _ __(_)_  __
             | |\\/| |/ _ \\ '_ ` _ \\| '__| \\ \\/ /
-            | |  | |  __/ | | | | | |  | |>  < 
+            | |  | |  __/ | | | | | |  | |>  <
             |_|  |_|\\___|_| |_| |_|_|  |_/_/\\_\\
         """)
         banner_speed = textwrap.dedent(f"""\
-            ______  ___                      _____        
+            ______  ___                      _____
             ___   |/  /___________ _____________(_)___  __
             __  /|_/ /_  _ \\_  __ `__ \\_  ___/_  /__  |/_/
-            _  /  / / /  __/  / / / / /  /   _  / __>  <  
-            /_/  /_/  \\___//_/ /_/ /_//_/    /_/  /_/|_|                                            
+            _  /  / / /  __/  / / / / /  /   _  / __>  <
+            /_/  /_/  \\___//_/ /_/ /_//_/    /_/  /_/|_|
         """)
         banner = random.choice([banner_standard, banner_speed])
 
@@ -143,7 +145,7 @@ class Display(object):
         """
         loading_frames = [
             f"""\
-            
+
      ~~~         ~~~        ~~~        ~~~
    /     \\     /     \\    /     \\    /     \\
   | (• •) |---| (• •) |--| (• •) |--| (• •) |
@@ -151,7 +153,7 @@ class Display(object):
      |||         |||        |||        |||
      ===         ===        ===        ===    """,
             f"""\
-            
+
      ~~~        ~~~         ~~~        ~~~
   /     \\    /     \\     /     \\    /     \\
  | (• •) |--| (• •) |---| (• •) |--| (• •) |
@@ -159,7 +161,7 @@ class Display(object):
      |||         |||        |||        |||
      ===         ===        ===        ===    """,
             f"""\
-            
+
      ~~~        ~~~        ~~~         ~~~
   /     \\    /     \\    /     \\     /     \\
  | (• •) |--| (• •) |--| (• •) |---| (• •) |
@@ -205,31 +207,31 @@ class Display(object):
         """
         compile_frames = [
             f"""\
-            
+
     [ ]      [ ]      [ ]
     [ ]      [ ]      [ ]
     [ ]      [ ]      [ ]
         """,
             f"""\
-            
+
     [■]      [ ]      [ ]
     [ ]      [■]      [ ]
     [ ]      [ ]      [■]
         """,
             f"""\
-            
+
     [■]      [■]      [ ]
     [■]      [■]      [■]
     [ ]      [■]      [■]
         """,
             f"""\
-            
+
     [■]      [■]      [■]
     [■]   CORE LINK   [■]
     [■]      [■]      [■]
         """,
             f"""\
-            
+
     [●]      [●]      [●]
     [●]  {const.APP_DESC} BOOT  [●]
     [●]      [●]      [●]
@@ -626,23 +628,40 @@ class Display(object):
         # 配色方案
         palette = {
             "foreground": [
-                "#00FFD1", "#00E6B8", "#00CCAA", "#00B299", "#009988", "#007F77", "#006666"
+                "#00FFD1", "#00E6B8", "#00CCAA", "#00B299", "#009988", "#007F77", "#005F66"
             ],
             "background": [
-                "#1A1A1A", "#2E2E3A", "#3F3F4F", "#4F4F5F", "#606070", "#757580", "#8A8A99"
+                "#FF69B4", "#FF4DA6", "#FF3399", "#FF1A8C", "#FF007F", "#D4006A", "#AA0055"
             ],
-            "logo": {
-                "foreground": ["#39FF14", "#00FFFF", "#FF00FF", "#FFFF33", "#87F9A7", "#33FFDD"],
-                "background": ["#888888", "#AAAAAA", "#CCCCCC", "#B0C4DE", "#D3D3D3", "#D8BFD8"]
+            "*": [
+                "#A0AEC0", "#94A3B8", "#7B8CA0", "#6C7A89", "#5B6773", "#4E5966", "#3C4755"
+            ],
+            "brand": {
+                "foreground": [
+                    "#00FFAA", "#33FFDD", "#00FFFF", "#87F9A7", "#5FFFE0", "#33FFA5"
+                ],
+                "background": [
+                    "#FF6EC7", "#FF66B2", "#FF99CC", "#FFB6C1", "#FF88AA", "#FFAACD"
+                ],
+                "*": [
+                    "#B0BEC5", "#D3D3D3", "#C0C0C0", "#A8B0B8", "#999999", "#AAAAAA"
+                ]
             },
             "pulse": {
-                "foreground": ["#FFD700", "#FFE066", "#FFF799", "#FFE066"],
-                "background": ["#5F5F87", "#70708F", "#8A8AB0", "#70708F"]
+                "foreground": [
+                    "#FFD700", "#FFE066", "#FFF799", "#FFE066"
+                ],
+                "background": [
+                    "#FF1493", "#FF3399", "#FF66CC", "#FF3399"
+                ],
+                "*": [
+                    "#888888", "#AAAAAA", "#CCCCCC", "#AAAAAA"
+                ]
             }
         }
 
         # 初始化状态
-        previous_state = memories["state"]
+        previous_state = memories["stt"]
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
 
         # 分层（曼哈顿距离）
@@ -652,22 +671,40 @@ class Display(object):
                 d_ = abs(r_ - center_r) + abs(c_ - center_c)
                 layers[d_].append((r_, c_))
 
-        def make_header(current_state: str) -> str:
-            if (n := current_state.lower()).startswith("f"):
+        def make_header() -> str:
+            if state.lower().startswith("foreground"):
                 sc = "#00FFAA"
-            elif n.startswith("b"):
+            elif state.startswith("background"):
                 sc = "#FF99CC"
+            else:
+                sc = "#AF87FF"
 
             return textwrap.dedent(f"""\
-                [bold #EEEEEE]State: [bold {sc}]{current_state}[/]
-                Activity: [bold #FFAFAF]{memories['activity']}[/]
-                PSS: [bold #00FFD7]{memories['pss']}[/]
-                Foreground Pulled: [#00FFAA]{memories['foreground']}[/]
-                Background Pulled: [#FF99CC]{memories['background']}[/]
+                [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
+                [{brand}::STT] [bold {sc}]{state.upper()}[/]
+                [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
+                [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
+                [Foreground::Pulled] [#00FFAA]{memories['foreground']}[/]
+                [Background::Pulled] [#FF99CC]{memories['background']}[/]
             """)
 
+        def smoothstep(t: float) -> float:
+            """
+            平滑过渡函数：0 -> 1 的余弦曲线。
+            """
+            return 0.5 * (1 - math.cos(math.pi * t))
+
+        def fade_color(hex_color: str, alpha: float) -> str:
+            """
+            将颜色根据透明度淡入淡出。
+            """
+            r = int(int(hex_color[1:3], 16) * alpha)
+            g = int(int(hex_color[3:5], 16) * alpha)
+            b = int(int(hex_color[5:7], 16) * alpha)
+            return f"#{r:02X}{g:02X}{b:02X}"
+
         def render_grid() -> "Text":
-            colors = palette[memories["state"]]
+            colors = palette.get(state, "*")
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
 
             # 当前活跃区域（除中心）
@@ -679,22 +716,14 @@ class Display(object):
             embed_map = {}
             if len(active_positions) >= len(brand) * 4:
                 letters = list(brand)
-                base_colors = palette["logo"][memories["state"]]
+                brand_colors = palette["brand"].get(state, "*")
 
-                # 淡入淡出处理
-                if logo_transition > 0:
+                if logo_transition > 0 and max_transition > 0:
                     t = logo_transition / max_transition
-                    alpha = 1.0
-                    alpha = 2 * (1 - t) if t > 0.5 else 2 * t
-
-                    embed_colors = []
-                    for c in base_colors[:len(letters)]:
-                        r = int(int(c[1:3], 16) * alpha)
-                        g = int(int(c[3:5], 16) * alpha)
-                        b = int(int(c[5:7], 16) * alpha)
-                        embed_colors.append(f"#{r:02X}{g:02X}{b:02X}")
+                    alpha = smoothstep(t)
+                    embed_colors = [fade_color(c, alpha) for c in brand_colors[:len(letters)]]
                 else:
-                    embed_colors = base_colors[:len(letters)]
+                    embed_colors = brand_colors[:len(letters)]
 
                 random.shuffle(active_positions)
                 embed_targets = active_positions[:len(letters)]
@@ -715,19 +744,25 @@ class Display(object):
                         ch = symbol if not fade else "·"
                         grid[r][c] = f"[bold {color}]{ch}[/]"
 
-            # 呼吸灯中心探针
-            pulse_colors = palette["pulse"][memories["state"]]
+            # 中心呼吸灯
+            pulse_colors = palette["pulse"].get(state, "*")
             pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
             grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
-            return Text.from_markup(make_header(memories["state"]) + "\n" + "\n".join(lines))
+            return Text.from_markup(make_header() + "\n" + "\n".join(lines))
 
         async def render_exit_sequence() -> typing.AsyncGenerator[None, str]:
             final_text = f"{brand} Engine"
             visual_center = (cols * 2 - 1) // 2
             pad = " " * (visual_center - (len(final_text) // 2))
-            loc = make_header("[bold #FFAF87]END[/]") + "\n" + padding
+            memories.update({
+                "msg": f"Memory Data {(memories['foreground'] + memories['background'])}",
+                "stt": "*",
+                "act": "*",
+                "pss": "*"
+            })
+            loc = make_header() + "\n" + padding
 
             cursor_frames = ["▍", "|", "▌", "▎"]
             cursor = cursor_frames[frame_count % len(cursor_frames)]
@@ -743,13 +778,15 @@ class Display(object):
                 yield Text.from_markup(loc + f"{pad}[bold #00D7FF]{final_text}[/][dim #00D7FF]▓[/]")
                 await asyncio.sleep(0.1)
 
-        live = Live(console=self.console, refresh_per_second=30)
-        live.start()
+        # 状态轮换列表
+        state_cycle = ["foreground", "background", "*"]
+        state_index = 0
+        switch_interval = 60  # 每60帧切换一次状态
 
-        try:
+        with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
-
             while not dump_close_event.is_set():
+                state: str = memories["stt"]
                 fade = direction == -1
                 live.update(render_grid())
                 await asyncio.sleep(0.04)
@@ -758,8 +795,13 @@ class Display(object):
                 frame_count += 1
                 depth += direction
 
+                # 每隔一定帧数切换状态（模拟）
+                if frame_count % switch_interval == 0:
+                    state_index = (state_index + 1) % len(state_cycle)
+                    memories["stt"] = state_cycle[state_index]
+
                 # 检测切换 → 启动 LOGO 渐隐/渐显
-                if (state := memories["state"]) != previous_state:
+                if state != previous_state:
                     logo_transition = max_transition
                     previous_state = state
 
@@ -771,16 +813,23 @@ class Display(object):
                 elif depth <= 0:
                     direction = 1
 
-        except asyncio.CancelledError:
             async for frame in render_exit_sequence():
                 live.update(frame)
-            live.stop()
 
-        finally:
-            self.console.print(
-                f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
-            )
+        self.console.print(
+            f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
+        )
+        self.animate_stop_event.set()
 
 
 if __name__ == "__main__":
+    m = {
+        "msg": "scanning",
+        "stt": "*",
+        "act": "*",
+        "pss": "*",
+        "foreground": 0,
+        "background": 0
+    }
+    asyncio.run(Display().memory_wave(m, asyncio.Event()))
     pass
