@@ -358,7 +358,7 @@ class Display(object):
         )
 
         width, height = 30, 5
-        frames, interval = 60, 0.06
+        frames, interval = 40, 0.04
 
         particles = ["█", "▇", "▓", "▒", "░"]
 
@@ -453,7 +453,7 @@ class Display(object):
                 live.update(render_frame())
                 await asyncio.sleep(interval)
 
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.1)
 
         Display.console.print(
             f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {close_banners}\n"
@@ -778,27 +778,17 @@ class Display(object):
                 yield Text.from_markup(loc + f"{pad}[bold #00D7FF]{final_text}[/][dim #00D7FF]▓[/]")
                 await asyncio.sleep(0.1)
 
-        # 状态轮换列表
-        state_cycle = ["foreground", "background", "*"]
-        state_index = 0
-        switch_interval = 60  # 每60帧切换一次状态
-
         with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
             while not dump_close_event.is_set():
                 state: str = memories["stt"]
                 fade = direction == -1
                 live.update(render_grid())
-                await asyncio.sleep(0.04)
+                await asyncio.sleep(0.12)
 
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
-
-                # 每隔一定帧数切换状态（模拟）
-                if frame_count % switch_interval == 0:
-                    state_index = (state_index + 1) % len(state_cycle)
-                    memories["stt"] = state_cycle[state_index]
 
                 # 检测切换 → 启动 LOGO 渐隐/渐显
                 if state != previous_state:
@@ -831,5 +821,5 @@ if __name__ == "__main__":
         "foreground": 0,
         "background": 0
     }
-    asyncio.run(Display().memory_wave(m, asyncio.Event()))
+    asyncio.run(Display().flame_manifest())
     pass
