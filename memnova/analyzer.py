@@ -254,7 +254,7 @@ class Analyzer(object):
 
             # 悬浮提示
             tooltips = """
-                <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); pad: 5px 10px;">
+                <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); padding: 5px 10px;">
                     <div>
                         <span style="font-size: 17px;">PSS:</span>
                         <span style="font-size: 17px; font-weight: bold; color: #4B4B4B;">@y{0.00} MB</span>
