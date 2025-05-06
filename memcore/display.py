@@ -139,7 +139,7 @@ class Display(object):
         Display.console.print(task_fail)
 
     @staticmethod
-    def startup_animate() -> None:
+    def doll_animation() -> None:
         """
         播放项目加载启动动画。
         """
@@ -263,7 +263,7 @@ class Display(object):
         Display.show_license()
 
     @staticmethod
-    def build_file_tree(file_path: str) -> None:
+    def build_file_tree(file_path: str) -> str:
         """
         显示树状图。
         """
@@ -321,6 +321,7 @@ class Display(object):
         current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
         Display.console.print("\n", tree, "\n")
+        return file_color
 
     @staticmethod
     async def flame_manifest() -> typing.Coroutine | None:

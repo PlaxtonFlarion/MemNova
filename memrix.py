@@ -176,7 +176,7 @@ class Player(object):
         - 音量默认设置为最大（1.0），可在必要时添加音量控制参数。
         - 若音频播放失败（如文件路径无效或格式不受支持），可能抛出 pygame 错误。
         """
-        logger.info(f"Player :: {Path(audio_file).name}")
+        logger.info(f"Player -> {Path(audio_file).name}")
 
         pygame.mixer.init()
         pygame.mixer.music.load(audio_file)
@@ -324,9 +324,9 @@ class Memrix(object):
         await self.display.animate_stop_event.wait()
 
         if self.file_insert:
-            Display.build_file_tree(self.group_dir)
+            fc = Display.build_file_tree(self.group_dir)
             Display.view(
-                f"Usage: [#00D787]{const.APP_NAME} --report --target [#FFAF87]{os.path.basename(self.group_dir)}[/]"
+                f"Usage: [#00D787]{const.APP_NAME} --report --target [{fc}]{Path(self.group_dir).name}[/]"
             )
 
         logger.info(
@@ -711,7 +711,7 @@ class Memrix(object):
                 for i in value:
                     # 提取命令类型（cmds），并检查是否在支持的类型列表中
                     if not (cmds := i.get("cmds", None)):
-                        logger.info(f"cmds :: {cmds}")
+                        logger.info(f"cmds -> {cmds}")
                         continue
                     # 根据 cmds 类型选择对应执行对象（device 或 player），获取方法引用
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
@@ -737,7 +737,7 @@ class Memrix(object):
                             logger.info(f"{func.__name__} {vals} {args} {kwds} -> {task.result()}")
 
                     else:
-                        logger.info(f"func :: {func}")
+                        logger.info(f"func -> {func}")
 
         self.dump_close_event.set()
         self.dumped.set()
@@ -864,9 +864,6 @@ async def main() -> typing.Optional[typing.Any]:
         return _parser.parse_engine.print_help()
 
     if _cmd_lines.config:
-        Display.show_logo()
-        Display.show_license()
-
         Display.build_file_tree(_config_file)
         Display.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
@@ -875,14 +872,9 @@ async def main() -> typing.Optional[typing.Any]:
         if not (target := _cmd_lines.target):
             raise MemrixError(f"--target 参数不能为空 ...")
 
-        Display.show_logo()
-        Display.show_license()
-
         memrix = Memrix(
             memory, script, report, target, _cmd_lines.folder, _mirror, **_keywords
         )
-
-        await Display.flame_manifest()
 
         if memory or script:
             if not shutil.which("adb"):
@@ -893,6 +885,8 @@ async def main() -> typing.Optional[typing.Any]:
 
             signal.signal(signal.SIGINT, memrix.clean_up)
 
+            await Display.flame_manifest()
+
             dump_task = asyncio.create_task(
                 getattr(memrix, "dump_task_start" if memory else "exec_task_start")(device)
             )
@@ -902,6 +896,7 @@ async def main() -> typing.Optional[typing.Any]:
             return await dump_task
 
         elif report:
+            Display.doll_animation()
             return await memrix.create_report()
 
     else:
@@ -923,8 +918,8 @@ if __name__ == '__main__':
     #
 
     try:
-        # 显示加载动画
-        Display.startup_animate()
+        Display.show_logo()
+        Display.show_license()
 
         # 获取当前操作系统平台和应用名称
         _platform = sys.platform.strip().lower()
