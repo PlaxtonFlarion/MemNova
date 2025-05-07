@@ -35,7 +35,6 @@ class Display(object):
 
     def __init__(self, display_level: str = "WARNING"):
         self.display_level = display_level
-        self.animate_stop_event = asyncio.Event()
 
     @staticmethod
     def view(msg: typing.Any) -> None:
@@ -673,16 +672,16 @@ class Display(object):
                 layers[d_].append((r_, c_))
 
         def make_header() -> str:
-            if state.lower().startswith("foreground"):
+            if memories["stt"].lower().startswith("foreground"):
                 sc = "#00FFAA"
-            elif state.startswith("background"):
+            elif memories["stt"].lower().startswith("background"):
                 sc = "#FF99CC"
             else:
                 sc = "#AF87FF"
 
             return textwrap.dedent(f"""\
                 [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
-                [{brand}::STT] [bold {sc}]{state.upper()}[/]
+                [{brand}::STT] [bold {sc}]{memories['stt'].upper()}[/]
                 [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
                 [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
                 [Foreground::Pulled] [#00FFAA]{memories['foreground']}[/]
@@ -705,7 +704,7 @@ class Display(object):
             return f"#{r:02X}{g:02X}{b:02X}"
 
         def render_grid() -> "Text":
-            colors = palette.get(state, "*")
+            colors = palette.get(memories["stt"], "*")
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
 
             # 当前活跃区域（除中心）
@@ -717,7 +716,7 @@ class Display(object):
             embed_map = {}
             if len(active_positions) >= len(brand) * 4:
                 letters = list(brand)
-                brand_colors = palette["brand"].get(state, "*")
+                brand_colors = palette["brand"].get(memories["stt"], "*")
 
                 if logo_transition > 0 and max_transition > 0:
                     t = logo_transition / max_transition
@@ -746,7 +745,7 @@ class Display(object):
                         grid[r][c] = f"[bold {color}]{ch}[/]"
 
             # 中心呼吸灯
-            pulse_colors = palette["pulse"].get(state, "*")
+            pulse_colors = palette["pulse"].get(memories["stt"], "*")
             pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
             grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
 
@@ -782,19 +781,18 @@ class Display(object):
         with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
             while not dump_close_event.is_set():
-                state: str = memories["stt"]
                 fade = direction == -1
                 live.update(render_grid())
-                await asyncio.sleep(0.12)
+                await asyncio.sleep(0.04)
 
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
 
                 # 检测切换 → 启动 LOGO 渐隐/渐显
-                if state != previous_state:
+                if memories["stt"] != previous_state:
                     logo_transition = max_transition
-                    previous_state = state
+                    previous_state = memories["stt"]
 
                 if logo_transition > 0:
                     logo_transition -= 1
@@ -810,7 +808,6 @@ class Display(object):
         self.console.print(
             f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
         )
-        self.animate_stop_event.set()
 
 
 if __name__ == "__main__":

@@ -200,24 +200,9 @@ class Memrix(object):
 
     file_folder : Optional[str]
         当前采集数据所属的文件夹名称，用于组织日志与中间输出。
-
-    exec_start_event : asyncio.Event
-        自动化任务开始的事件标记，供其他协程判断任务是否已启动。
-
-    dump_close_event : asyncio.Event
-        控制内存采集任务是否退出的同步事件。
-
-    dumped : asyncio.Event
-        内存采集任务单轮完成的标志，用于同步数据写入与下一轮调度。
     """
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
-
-    exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-
-    dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-
-    dumped: typing.Optional["asyncio.Event"] = None
 
     def __init__(
             self,
@@ -291,6 +276,14 @@ class Memrix(object):
         }
         self.display: "Display" = Display(self.mirror)
 
+        self.animation_task: typing.Optional["asyncio.Task"] = None
+
+        self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+        self.closed: typing.Optional["asyncio.Event"] = None
+
+        self.dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+        self.dumped: typing.Optional["asyncio.Event"] = None
+
     def clean_up(self, *_, **__) -> None:
         """
         异步触发内存采集任务的收尾流程。
@@ -311,17 +304,21 @@ class Memrix(object):
         - 取消所有后台 asyncio 任务
         - 输出日志（采样次数、耗时等）
         """
-        if not self.dumped.is_set():
-            logger.info(f"[#FFD75F]等待任务结束 ...")
+        if self.dumped and not self.dumped.is_set():
+            logger.info(f"等待任务结束 ...")
             await self.dumped.wait()
+
+        if self.closed and not self.closed.is_set():
+            logger.info(f"等待流程结束 ...")
+            await self.closed.wait()
+
+        await self.animation_task
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
             f"Mark={self.config.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
         logger.info(f"{self.group_dir}")
-
-        await self.display.animate_stop_event.wait()
 
         if self.file_insert:
             fc = Display.build_file_tree(self.group_dir)
@@ -628,7 +625,7 @@ class Memrix(object):
             await DataBase.create_table(db)
             await dump_file_task
 
-            asyncio.create_task(
+            self.animation_task = asyncio.create_task(
                 self.display.memory_wave(self.memories, self.dump_close_event)
             )
 
@@ -701,6 +698,8 @@ class Memrix(object):
 
         await self.exec_start_event.wait()
 
+        self.closed = asyncio.Event()
+
         logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
 
         # 外层循环，控制任务执行次数（loopers 次）
@@ -713,34 +712,21 @@ class Memrix(object):
                     if not (cmds := i.get("cmds", None)):
                         logger.info(f"cmds -> {cmds}")
                         continue
+
+                    self.closed.clear()
                     # 根据 cmds 类型选择对应执行对象（device 或 player），获取方法引用
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
                         # 提取参数：位置参数 vals、额外 args、关键字参数 kwds
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
 
-                        start_task, close_task = asyncio.create_task(
-                            func(*vals, *args, **kwds)
-                        ), asyncio.create_task(self.dump_close_event.wait())
-
-                        done, pending = asyncio.wait(
-                            {start_task, close_task}, return_when=asyncio.FIRST_COMPLETED
-                        )
-
-                        if close_task in done:
-                            start_task.cancel()
-                            try:
-                                await start_task
-                            except asyncio.CancelledError:
-                                return logger.info(f"Task terminated")
-
-                        for task in done:
-                            logger.info(f"{func.__name__} {vals} {args} {kwds} -> {task.result()}")
+                        logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
+                        logger.info(f"{func.__name__} Returns -> {await func(*vals, *args, **kwds)}")
 
                     else:
                         logger.info(f"func -> {func}")
+                    self.closed.set()
 
         self.dump_close_event.set()
-        self.dumped.set()
         await auto_dump_task
 
         logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
@@ -887,13 +873,14 @@ async def main() -> typing.Optional[typing.Any]:
 
             await Display.flame_manifest()
 
-            dump_task = asyncio.create_task(
+            main_task = asyncio.create_task(
                 getattr(memrix, "dump_task_start" if memory else "exec_task_start")(device)
             )
 
             await memrix.dump_close_event.wait()
             await memrix.dump_task_close()
-            return await dump_task
+            main_task.cancel()
+            await main_task
 
         elif report:
             Display.doll_animation()
