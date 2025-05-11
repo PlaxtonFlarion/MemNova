@@ -29,9 +29,10 @@ from engine.tackle import (
 from memcore.display import Display
 from memnova import const
 
+nuitka_version = "2.7"  # 编译器版本
+
 try:
     import nuitka
-    nuitka_version = "2.7"
 except ImportError:
     raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
 
