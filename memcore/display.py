@@ -433,7 +433,7 @@ class Display(object):
                         ch = letter_positions[(r, c)]
                         line += f"[bold {colors.pop()}]{ch}[/]"
                     else:
-                        idx = state[r][c]
+                        idx: int | None = state[r][c]
                         if idx is not None:
                             char = particles[idx]
                             color = flame_colors[idx]
@@ -752,7 +752,7 @@ class Display(object):
             lines = [padding + " ".join(row) for row in grid]
             return Text.from_markup(make_header() + "\n" + "\n".join(lines))
 
-        async def render_exit_sequence() -> typing.AsyncGenerator[None, str]:
+        async def render_exit_sequence() -> typing.AsyncGenerator["Text", None]:
             final_text = f"{brand} Engine"
             visual_center = (cols * 2 - 1) // 2
             pad = " " * (visual_center - (len(final_text) // 2))

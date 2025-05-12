@@ -11,12 +11,12 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
-APP_NAME: str = f"memrix"
-APP_DESC: str = f"Memrix"
-APP_CN: str = f"记忆星核"
-APP_VERSION: str = f"1.0.0"
+APP_NAME: str = r"memrix"
+APP_DESC: str = r"Memrix"
+APP_CN: str = r"记忆星核"
+APP_VERSION: str = r"1.0.0"
 APP_LICENSE: str = r"MIT"
-APP_URL: str = f"https://github.com/PlaxtonFlarion/MemNova"
+APP_URL: str = r"https://github.com/PlaxtonFlarion/MemNova"
 APP_DECLARE: str = f"""\
 [bold][bold #FF8787](c)[/] [bold #FFAA33]2024[/] [bold #00D7AF]{APP_DESC} :: {APP_CN}[/]
 Licensed under the Starbound Intelligence Charter.
