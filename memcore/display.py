@@ -54,7 +54,7 @@ class Display(object):
         )
 
     @staticmethod
-    def show_logo() -> None:
+    def startup_logo() -> None:
         """
         显示 Memrix 的项目 LOGO（ASCII banner），使用 rich 渲染。
         """
@@ -90,6 +90,7 @@ class Display(object):
         banner = random.choice([banner_standard, banner_speed])
 
         Display.console.print(f"[bold {color}]{banner}")
+        Display.show_license()
 
     @staticmethod
     def show_license() -> None:
@@ -257,9 +258,6 @@ class Display(object):
             live.update(
                 Text.from_markup(f"[bold {colors[-1]}]{compile_frames[-1]}")
             )
-
-        Display.show_logo()
-        Display.show_license()
 
     @staticmethod
     def build_file_tree(file_path: str) -> str:

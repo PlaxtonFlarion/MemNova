@@ -176,7 +176,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         .parse {
             background: rgb(236, 213, 6);
         }
-        
+
         /* 复制标签 */
         #fg-copy, #bg-copy {
             border-radius: 5px;
@@ -247,7 +247,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         }
 
         /* 圆形标签 */
-        .seal {           
+        .seal {
             border: 5px solid transparent;
             border-radius: 50%;
             width: 30px;
@@ -260,7 +260,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
             box-shadow: 0px 0px 10px rgb(118 179 33);
         }
         .seal-fail-item {
-            border: 5px solid rgb(203, 80, 42);           
+            border: 5px solid rgb(203, 80, 42);
             box-shadow: 0px 0px 10px rgb(203, 80, 42);
         }
 
@@ -369,7 +369,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                 <button id="bg-copy">Copy</button>
             </div>
             {% endif %}
-        </div>       
+        </div>
     </div>
 
     <!--主要信息显示-->
@@ -397,10 +397,10 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         </div>
     </div>
     {% endfor %}
-    
+
     <!--提示标签-->
     <div id="notification"></div>
-    
+
     <!--页面加载-->
     <div id="page-loading">
         <div class="bar"></div>
@@ -420,7 +420,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         var fgAvgTotal = document.querySelectorAll('.results-info > p:nth-child(2)')[0];
         var bgMaxTotal = document.querySelectorAll('.results-info > p:nth-child(1)')[1];
         var bgAvgTotal = document.querySelectorAll('.results-info > p:nth-child(2)')[1];
-        
+
         var fgMaxGroup = document.querySelectorAll('.test-reference .refer')[0]
         var fgAvgGroup = document.querySelectorAll('.test-reference .refer')[1]
         var bgMaxGroup = document.querySelectorAll('.test-reference .refer')[2]
@@ -436,10 +436,10 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         if (fgCopyButton) {
             fgCopyButton.addEventListener('click', function(e) {
             copied({
-                detailSelector: '.fg-detail', 
-                maxSelector: '.fg-max', 
-                avgSelector: '.fg-avg', 
-                maxRegex: fgMaxRegex, 
+                detailSelector: '.fg-detail',
+                maxSelector: '.fg-max',
+                avgSelector: '.fg-avg',
+                maxRegex: fgMaxRegex,
                 avgRegex: fgAvgRegex
             });
         });
@@ -450,15 +450,15 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
         if (bgCopyButton) {
             bgCopyButton.addEventListener('click', function(e) {
             copied({
-                detailSelector: '.bg-detail', 
-                maxSelector: '.bg-max', 
-                avgSelector: '.bg-avg', 
-                maxRegex: bgMaxRegex, 
+                detailSelector: '.bg-detail',
+                maxSelector: '.bg-max',
+                avgSelector: '.bg-avg',
+                maxRegex: bgMaxRegex,
                 avgRegex: bgAvgRegex
             });
         });
         }
-        
+
         // 前台数据链接
         var fgLink = document.querySelectorAll('.fg-link');
         if (fgLink) {
@@ -517,7 +517,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                 console.error('复制失败', err);
             });
         }
-        
+
         // 监听加载事件
         document.addEventListener("DOMContentLoaded", function() {
             showLoadingAnimation();
@@ -567,13 +567,13 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
             }
 
             if (fgMaxVision <= 0 || fgAvgVision <= 0) {
-                if (fgCopyButton) fgCopyButton.style.pointerEvents = 'none';               
+                if (fgCopyButton) fgCopyButton.style.pointerEvents = 'none';
             }
 
             if (bgMaxVision <= 0 || bgAvgVision <= 0) {
                 if (bgCopyButton) bgCopyButton.style.pointerEvents = 'none';
             }
-            
+
             // 绘制圆形标签
             let checkMemoryInfo = document.querySelectorAll('.meminfo');
             checkMemoryInfo.forEach((memoryInfo, idx) => {
@@ -583,7 +583,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                 let fgPass = Array.from(memoryInfo.querySelectorAll('.fg-detail p[class*="pass"]'));
                 let bgPass = Array.from(memoryInfo.querySelectorAll('.bg-detail p[class*="pass"]'));
                 let totalPass = fgPass.length + bgPass.length;
-                
+
                 let memorySeal = memoryInfo.querySelector('.seal');
                 if (totalPass === totalSerial) {
                     memorySeal.classList.add('seal-pass-item');
@@ -591,20 +591,20 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                     memorySeal.classList.add('seal-fail-item');
                 }
             });
-            
+
             // 测试结论标签
-            let testPass = Array.from(document.querySelectorAll('.results-info p[class*="pass"]'));           
+            let testPass = Array.from(document.querySelectorAll('.results-info p[class*="pass"]'));
             let fgFinalList = Array.from(document.querySelectorAll('.fg-final'));
             let bgFinalList = Array.from(document.querySelectorAll('.bg-final'));
             let resultFinal = fgFinalList.length + bgFinalList.length
-            
+
             let testMessage = document.querySelector('.test-message p:last-child');
             if (testPass.length === resultFinal) {
                 testMessage.textContent = 'Pass';
-                testMessage.classList.add('test-pass-tag');           
+                testMessage.classList.add('test-pass-tag');
             } else {
                 testMessage.textContent = 'Fail';
-                testMessage.classList.add('test-fail-tag');            
+                testMessage.classList.add('test-fail-tag');
             }
 
             // 测试结论标签详情
@@ -615,7 +615,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                     resultPart.style.padding = '3px 5px';
                     resultPart.style.borderRadius = '5px';
                     resultPart.style.backgroundColor = '#ffe000';
-                    resultPart.style.fontWeight = 'bold';                   
+                    resultPart.style.fontWeight = 'bold';
                     resultPart.textContent += result + ' ';
                     testMessage.parentElement.append(resultPart);
                 });
@@ -628,7 +628,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
             foreList.forEach((f, idx) => {
                 let value = f.textContent.match(foreReg)[1];
                 if (f.textContent.includes('FG-MAX') && parseFloat(value) <= fgMaxStandard) {
-                    f.classList.add('pass');                   
+                    f.classList.add('pass');
                 }
 
                 if (f.textContent.includes('FG-AVG') && parseFloat(value) <= fgAvgStandard){
@@ -646,7 +646,7 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
                 valueArray.push(value);
 
                 f.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('parse')) { 
+                    if (e.target.classList.contains('parse')) {
                         e.target.classList.remove('parse');
                     } else {
                         e.target.classList.add('parse');
@@ -666,12 +666,12 @@ This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md
 
         // 加载动画
         function showLoadingAnimation() {
-                const loadingElement = document.getElementById('page-loading');
-                loadingElement.style.display = 'flex';
-                setTimeout(() => {
-                    loadingElement.style.display = 'none';
-                }, 1000);
-            }
+            const loadingElement = document.getElementById('page-loading');
+            loadingElement.style.display = 'flex';
+            setTimeout(() => {
+                loadingElement.style.display = 'none';
+            }, 1000);
+        }
     </script>
 </body>
 </html>

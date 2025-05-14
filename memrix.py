@@ -41,6 +41,7 @@ from engine.tackle import (
     Ram, MemrixError, FileAssist
 )
 from memcore.parser import Parser
+from memcore.authorize import verify_license
 from memcore.display import Display
 from memnova.analyzer import Analyzer
 from memnova import const
@@ -854,6 +855,9 @@ async def main() -> typing.Optional[typing.Any]:
         Display.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 
+    # 应用授权
+    verify_license(Path(_src_opera_place) / const.LIC_FILE)
+
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
             raise MemrixError(f"--target 参数不能为空 ...")
@@ -891,22 +895,20 @@ async def main() -> typing.Optional[typing.Any]:
 
 
 if __name__ == '__main__':
-    #   __  __                     _        ____  _             _
-    #  |  \/  | ___ _ __ ___  _ __(_)_  __ / ___|| |_ __ _ _ __| |_ ___ _ __
-    #  | |\/| |/ _ \ '_ ` _ \| '__| \ \/ / \___ \| __/ _` | '__| __/ _ \ '__|
-    #  | |  | |  __/ | | | | | |  | |>  <   ___) | || (_| | |  | ||  __/ |
-    #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\ |____/ \__\__,_|_|   \__\___|_|
-    #
-    # 版权所有 (c) 2024  Memrix(记忆星核)
-    # 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
-    #
-    # Copyright (c) 2024  Memrix(记忆星核)
-    # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
+    #   __  __                     _
+    #  |  \/  | ___ _ __ ___  _ __(_)_  __
+    #  | |\/| |/ _ \ '_ ` _ \| '__| \ \/ /
+    #  | |  | |  __/ | | | | | |  | |>  <
+    #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
     #
 
     try:
-        Display.show_logo()
-        Display.show_license()
+        # 启动
+        Display.startup_logo()
+
+        # 解析命令行参数，此代码块必须在 `__main__` 块下调用
+        _parser = Parser()
+        _cmd_lines = Parser().parse_cmd
 
         # 获取当前操作系统平台和应用名称
         _platform = sys.platform.strip().lower()
@@ -950,22 +952,23 @@ if __name__ == '__main__':
             if not shutil.which((_tls_name := os.path.basename(_npp))):
                 raise MemrixError(f"{const.APP_DESC} missing files {_tls_name}")
 
-        # 设置初始路径
+        # 初始文件夹路径
         if not os.path.exists(
                 _initial_source := os.path.join(_mx_feasible, const.STRUCTURE).format()
         ):
             os.makedirs(_initial_source, exist_ok=True)
 
-        # 设置报告路径
+        # 配置文件夹路径
+        if not os.path.exists(
+                _src_opera_place := os.path.join(_initial_source, const.SRC_OPERA_PLACE).format()
+        ):
+            os.makedirs(_src_opera_place, exist_ok=True)
+
+        # 报告文件夹路径
         if not os.path.exists(
                 _src_total_place := os.path.join(_initial_source, const.SRC_TOTAL_PLACE).format()
         ):
             os.makedirs(_src_total_place, exist_ok=True)
-
-        # 命令行解析器
-        _parser = Parser()
-        # 命令行
-        _cmd_lines = Parser().parse_cmd
 
         # 激活日志
         Grapher.active(
@@ -973,7 +976,7 @@ if __name__ == '__main__':
         )
 
         # 设置初始配置文件路径
-        _config_file = os.path.join(_initial_source, const.SRC_OPERA_PLACE, "config.yaml")
+        _config_file = os.path.join(_initial_source, const.SRC_OPERA_PLACE, const.CONFIG)
         # 加载初始配置
         _config = Config(_config_file)
 

@@ -40,6 +40,8 @@ STRUCTURE: str = f"Structure"
 
 SRC_OPERA_PLACE: str = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE: str = f"{APP_DESC}_Report"
+CONFIG: str = f"{APP_NAME}_config.yaml"
+LIC_FILE: str = f"{APP_NAME}_signature.lic"
 
 DISPLAY_LEVEL: str = f"WARNING"
 
