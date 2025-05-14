@@ -60,7 +60,7 @@ def __network_time() -> typing.Optional["datetime"]:
         "time.apple.com",  # macOS授时服务器
         "time.asia.apple.com",  # macOS授时服务器
         "time1.cloud.tencent.com",  # 腾讯云授时服务器
-        "time1.baidu.com",  # 百度授时服务器
+        "edu.ntp.org.cn",  # 中国 NTP 快速授时服务
         "time.google.com",  # Google授时服务器
         "ntp.nict.jp"  # 日本信息通信研究机构授时服务器
     ]
