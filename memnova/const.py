@@ -11,6 +11,7 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
+APP_ITEM: str = r"MemNova"
 APP_NAME: str = r"memrix"
 APP_DESC: str = r"Memrix"
 APP_CN: str = r"记忆星核"
