@@ -19,6 +19,7 @@ import typing
 import asyncio
 import plistlib
 from pathlib import Path
+from rich.text import Text
 from rich.progress import (
     BarColumn, TimeElapsedColumn,
     Progress, SpinnerColumn, TextColumn,
@@ -37,7 +38,7 @@ except ImportError:
     raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
 
 compile_log: typing.Any = lambda x: Display.console.print(
-    f"[bold]{const.APP_DESC} | [bold #FFAF5F]Compiler[/] | {x}"
+    const.PRINT_HEAD, Text(x, style="bold #ADD8E6")
 )
 
 
@@ -46,7 +47,7 @@ async def is_virtual_env() -> typing.Coroutine | None:
     检查当前 Python 运行环境是否为虚拟环境。
     """
     if sys.prefix != sys.base_prefix:
-        return compile_log("[bold #00D787][✓] 当前运行在虚拟环境中")
+        return compile_log("[✓] 当前运行在虚拟环境中")
 
     raise MemrixError("[!] 当前不是虚拟环境")
 
@@ -141,12 +142,12 @@ async def rename_sensitive(src: "Path", dst: "Path") -> typing.Coroutine | None:
     执行双重重命名操作以避免系统锁定或覆盖冲突。
     """
     temporary = src.with_name(f"__temp_{time.strftime('%Y%m%d%H%M%S')}__")
-    compile_log(f"[bold #00D787][✓] 生成临时目录 {temporary.name}")
+    compile_log(f"[✓] 生成临时目录 {temporary.name}")
 
     src.rename(temporary)
-    compile_log(f"[bold #00D787][✓] Rename completed {src.name} → {temporary.name}")
+    compile_log(f"[✓] Rename completed {src.name} → {temporary.name}")
     temporary.rename(dst)
-    compile_log(f"[bold #00D787][✓] Rename completed {temporary.name} → {dst.name}")
+    compile_log(f"[✓] Rename completed {temporary.name} → {dst.name}")
 
 
 async def sweep_cache_tree(target: "Path") -> typing.Coroutine | None:
@@ -162,11 +163,11 @@ async def sweep_cache_tree(target: "Path") -> typing.Coroutine | None:
                     shutil.rmtree, cache, ignore_errors=True) for cache in caches), return_exceptions=True
         ):
             if isinstance(cache, Exception):
-                compile_log(f"[bold #FF6347][✗] 无法清理 {cache}")
+                compile_log(f"[✗] 无法清理 {cache}")
             else:
-                compile_log(f"[bold #00D787][✓] 构建缓存已清理 {cache}")
+                compile_log(f"[✓] 构建缓存已清理 {cache}")
     else:
-        compile_log("[!] 未发现 *.build 跳过清理")
+        compile_log(f"[!] 未发现 *.build 跳过清理")
 
 
 async def rename_so_files(ops: str, target: "Path") -> typing.Coroutine | None:
@@ -183,7 +184,7 @@ async def rename_so_files(ops: str, target: "Path") -> typing.Coroutine | None:
     for file in target.rglob("*.so"):
         if match := pattern.match(file.name):
             file.rename(file.with_name(new_name := f"{match.group(1)}.so"))
-            compile_log(f"[bold #00D787][✓] Renamed {file.name} → {new_name}")
+            compile_log(f"[✓] Renamed {file.name} → {new_name}")
 
 
 async def authorized_tools(ops: str, *args: "Path", **__) -> typing.Coroutine | None:
@@ -230,7 +231,7 @@ async def edit_plist_fields(ops: str, app: str, updates: dict[str, str]) -> typi
     with plist.open("wb") as f:
         plistlib.dump(plist_data, f)
 
-    compile_log("修改完成，已写入 Info.plist。")
+    compile_log(f"修改完成，已写入 Info.plist")
 
 
 async def packaging() -> tuple[
@@ -340,10 +341,10 @@ async def post_build() -> typing.Coroutine | None:
             for src, dst in value:
                 if src.exists():
                     done_list.append((src, dst))
-                    compile_log(f"[bold #00D787][✓] Read {key} -> {src.name}")
+                    compile_log(f"[✓] Read {key} -> {src.name}")
                 else:
                     fail_list.append(f"{key}: {src.name}")
-                    compile_log(f"[bold #FF6347][!] Dependency not found -> {src.name}")
+                    compile_log(f"[!] Dependency not found -> {src.name}")
 
         if fail_list:
             raise MemrixError(f"[!] Incomplete dependencies required {fail_list}")
@@ -389,11 +390,12 @@ async def post_build() -> typing.Coroutine | None:
         await edit_plist_fields(ops, rename[-1], {"CFBundleExecutable": launch[0].name})
 
     # ==== Note: Start from here ====
+    Display.startup_logo()
+    await Display.compile_animation()
+
     build_start_time = time.time()
 
     Grapher.active("INFO")
-
-    Display.compile_animation()
 
     compiles = await packaging()
     ops, app, site_packages, target, rename, *_ = compiles

@@ -286,7 +286,7 @@ class Grapher(object):
         logger.remove()
         logger.add(
             RichHandler(console=Display.console, show_level=False, show_path=False, show_time=False),
-            level=log_level, format=const.LOG_FORMAT
+            level=log_level, format=const.PRINT_FORMAT
         )
 
 
@@ -648,36 +648,36 @@ class DataBase(object):
             虚拟内存估值，如 VmRSS。
         """
         await db.execute('''INSERT INTO memory_data (
-            data_dir, 
-            label, 
-            timestamp, 
-            pid, 
-            uid, 
-            adj, 
-            activity, 
-            foreground, 
-            graphics, 
-            rss, 
-            pss, 
-            uss, 
-            swap, 
-            opss, 
-            native_heap, 
-            dalvik_heap, 
-            dalvik_other, 
-            stack, 
-            ashmem, 
-            other_dev, 
-            so_mmap, 
-            jar_mmap, 
-            apk_mmap, 
-            ttf_mmap, 
-            dex_mmap, 
-            oat_mmap, 
-            art_mmap, 
-            other_mmap, 
-            gl_mtrack, 
-            unknown, 
+            data_dir,
+            label,
+            timestamp,
+            pid,
+            uid,
+            adj,
+            activity,
+            foreground,
+            graphics,
+            rss,
+            pss,
+            uss,
+            swap,
+            opss,
+            native_heap,
+            dalvik_heap,
+            dalvik_other,
+            stack,
+            ashmem,
+            other_dev,
+            so_mmap,
+            jar_mmap,
+            apk_mmap,
+            ttf_mmap,
+            dex_mmap,
+            oat_mmap,
+            art_mmap,
+            other_mmap,
+            gl_mtrack,
+            unknown,
             vmrss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
@@ -745,10 +745,10 @@ class DataBase(object):
             async with db.execute(sql) as cursor:
                 return await cursor.fetchall()
 
-        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data 
-        WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''       
+        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
+        WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
         """
-        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data 
+        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
         WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
         """
 

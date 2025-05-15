@@ -82,7 +82,7 @@ def __network_time() -> typing.Optional["datetime"]:
                     t -= ntp_epoch
                     return datetime.fromtimestamp(t, timezone.utc)
         except Exception as e:
-            Display.console.print(f"[bold #FF8787]{e}[/]")
+            Display.Doc.wrn(e)
             continue
 
     return None
@@ -116,10 +116,7 @@ def verify_license(lic_path: typing.Union[str, "Path"]) -> typing.Any:
         - 若授权格式错误、验签失败、文件读取异常；
         - 或当前时间已超过授权有效期。
     """
-    Display.console.print(
-        f"[bold #87D7FF][{const.APP_DESC}::Authorize][/]"
-        f"[bold #FFAF5F]Online check authorization ...[/]"
-    )
+    Display.Doc.log(f"[bold #FFAF5F]Online check authorization ...")
 
     try:
         # 加载公钥
@@ -145,10 +142,7 @@ def verify_license(lic_path: typing.Union[str, "Path"]) -> typing.Any:
     if now > expire:
         raise MemrixError(f"⚠️ 授权已过期 -> {exp}")
 
-    Display.console.print(
-        f"[bold #87D7FF][{const.APP_DESC}::Authorize][/]"
-        f"[bold #87FF87]Authorization verification passed. Valid until {exp}\n"
-    )
+    Display.Doc.log(f"[bold #87FF87]Authorization verification passed. Valid until {exp}\n")
     return auth_info
 
 

@@ -36,22 +36,58 @@ class Display(object):
     def __init__(self, display_level: str = "WARNING"):
         self.display_level = display_level
 
-    @staticmethod
-    def view(msg: typing.Any) -> None:
+    class Doc(object):
         """
-        输出一条结构化视图日志消息，格式为：[时间] | VIEW | 消息内容。
-
-        常用于关键提示信息、结果确认、用户交互回显等视觉日志展示，
-        通过 rich 格式美化输出，提升终端体验。
-
-        Parameters
-        ----------
-        msg : Any
-            要显示的日志内容（可为字符串、对象、异常等）。
+        Doc 类用于统一控制台日志输出格式，封装标准化的日志样式与内容前缀。
         """
-        Display.console.print(
-            f"{const.APP_DESC} {time.strftime('%Y-%m-%d %H:%M:%S')} | [#00D787]VIEW[/] | {msg}"
-        )
+
+        @classmethod
+        def log(cls, text: typing.Any) -> None:
+            """
+            输出普通日志消息。
+
+            Parameters
+            ----------
+            text : Any
+                要输出的日志内容，可以为任意对象，最终将被格式化为字符串。
+            """
+            Display.console.print(const.PRINT_HEAD, f"[bold]{text}")
+
+        @classmethod
+        def suc(cls, text: typing.Any) -> None:
+            """
+            输出成功日志消息，带绿色或指定样式的成功提示前缀。
+
+            Parameters
+            ----------
+            text : Any
+                要输出的日志内容，通常用于表示成功信息。
+            """
+            Display.console.print(const.PRINT_HEAD, f"{const.SUC}{text}")
+
+        @classmethod
+        def wrn(cls, text: typing.Any) -> None:
+            """
+            输出警告日志消息，带黄色或指定样式的警告前缀。
+
+            Parameters
+            ----------
+            text : Any
+                要输出的日志内容，通常用于提示潜在问题或风险。
+            """
+            Display.console.print(const.PRINT_HEAD, f"{const.WRN}{text}")
+
+        @classmethod
+        def err(cls, text: typing.Any) -> None:
+            """
+            输出错误日志消息，带红色或指定样式的错误提示前缀。
+
+            Parameters
+            ----------
+            text : Any
+                要输出的日志内容，通常用于表示异常或错误信息。
+            """
+            Display.console.print(const.PRINT_HEAD, f"{const.ERR}{text}")
 
     @staticmethod
     def startup_logo() -> None:
@@ -139,7 +175,68 @@ class Display(object):
         Display.console.print(task_fail)
 
     @staticmethod
-    def doll_animation() -> None:
+    def build_file_tree(file_path: str) -> str:
+        """
+        显示树状图。
+        """
+        color_schemes = {
+            "Ocean Breeze": ["#AFD7FF", "#87D7FF", "#5FAFD7"],  # 根 / 中间 / 文件
+            "Forest Pulse": ["#A8FFB0", "#87D75F", "#5FAF5F"],
+            "Neon Sunset": ["#FFAF87", "#FF875F", "#D75F5F"],
+            "Midnight Ice": ["#C6D7FF", "#AFAFD7", "#8787AF"],
+            "Cyber Mint": ["#AFFFFF", "#87FFFF", "#5FD7D7"]
+        }
+        file_icons = {
+            "folder": "📁",
+            ".json": "📦",
+            ".yaml": "🧾",
+            ".yml": "🧾",
+            ".md": "📝",
+            ".log": "📄",
+            ".html": "🌐",
+            ".sh": "🔧",
+            ".bat": "🔧",
+            ".db": "🗃️",
+            ".sqlite": "🗃️",
+            ".zip": "📦",
+            ".tar": "📦",
+            "default": "📄"
+        }
+        text_color = random.choice([
+            "#8A8A8A", "#949494", "#9E9E9E", "#A8A8A8", "#B2B2B2"
+        ])
+
+        root_color, folder_color, file_color = random.choice(list(color_schemes.values()))
+
+        choice_icon: callable = lambda x: file_icons["folder"] if (y := Path(x)).is_dir() else (
+            file_icons[n] if (n := y.name.lower()) in file_icons else file_icons["default"]
+        )
+
+        parts = Path(file_path).parts
+
+        # 根节点
+        root = parts[0]
+        tree = Tree(
+            f"[bold {text_color}]{choice_icon(root)} {root}[/]", guide_style=f"bold {root_color}"
+        )
+        current_path = parts[0]
+        current_node = tree
+
+        # 处理中间的文件夹
+        for part in parts[1:-1]:
+            current_path = Path(current_path, part)
+            current_node = current_node.add(
+                f"[bold {text_color}]{choice_icon(current_path)} {part}[/]", guide_style=f"bold {folder_color}"
+            )
+
+        ext = (file := Path(parts[-1])).suffix.lower()
+        current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
+
+        Display.console.print("\n", tree, "\n")
+        return file_color
+
+    @staticmethod
+    async def doll_animation() -> None:
         """
         播放项目加载启动动画。
         """
@@ -201,7 +298,7 @@ class Display(object):
         )
 
     @staticmethod
-    def compile_animation() -> None:
+    async def compile_animation() -> None:
         """
         星核脉冲动画（MemCore Pulse）。
         """
@@ -258,67 +355,6 @@ class Display(object):
             live.update(
                 Text.from_markup(f"[bold {colors[-1]}]{compile_frames[-1]}")
             )
-
-    @staticmethod
-    def build_file_tree(file_path: str) -> str:
-        """
-        显示树状图。
-        """
-        color_schemes = {
-            "Ocean Breeze": ["#AFD7FF", "#87D7FF", "#5FAFD7"],  # 根 / 中间 / 文件
-            "Forest Pulse": ["#A8FFB0", "#87D75F", "#5FAF5F"],
-            "Neon Sunset": ["#FFAF87", "#FF875F", "#D75F5F"],
-            "Midnight Ice": ["#C6D7FF", "#AFAFD7", "#8787AF"],
-            "Cyber Mint": ["#AFFFFF", "#87FFFF", "#5FD7D7"]
-        }
-        file_icons = {
-            "folder": "📁",
-            ".json": "📦",
-            ".yaml": "🧾",
-            ".yml": "🧾",
-            ".md": "📝",
-            ".log": "📄",
-            ".html": "🌐",
-            ".sh": "🔧",
-            ".bat": "🔧",
-            ".db": "🗃️",
-            ".sqlite": "🗃️",
-            ".zip": "📦",
-            ".tar": "📦",
-            "default": "📄"
-        }
-        text_color = random.choice([
-            "#8A8A8A", "#949494", "#9E9E9E", "#A8A8A8", "#B2B2B2"
-        ])
-
-        root_color, folder_color, file_color = random.choice(list(color_schemes.values()))
-
-        choice_icon: callable = lambda x: file_icons["folder"] if (y := Path(x)).is_dir() else (
-            file_icons[n] if (n := y.name.lower()) in file_icons else file_icons["default"]
-        )
-
-        parts = Path(file_path).parts
-
-        # 根节点
-        root = parts[0]
-        tree = Tree(
-            f"[bold {text_color}]{choice_icon(root)} {root}[/]", guide_style=f"bold {root_color}"
-        )
-        current_path = parts[0]
-        current_node = tree
-
-        # 处理中间的文件夹
-        for part in parts[1:-1]:
-            current_path = Path(current_path, part)
-            current_node = current_node.add(
-                f"[bold {text_color}]{choice_icon(current_path)} {part}[/]", guide_style=f"bold {folder_color}"
-            )
-
-        ext = (file := Path(parts[-1])).suffix.lower()
-        current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
-
-        Display.console.print("\n", tree, "\n")
-        return file_color
 
     @staticmethod
     async def flame_manifest() -> typing.Coroutine | None:

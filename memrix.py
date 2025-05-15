@@ -323,7 +323,7 @@ class Memrix(object):
 
         if self.file_insert:
             fc = Display.build_file_tree(self.group_dir)
-            Display.view(
+            Display.Doc.log(
                 f"Usage: [#00D787]{const.APP_NAME} --report --target [{fc}]{Path(self.group_dir).name}[/]"
             )
 
@@ -584,7 +584,7 @@ class Memrix(object):
         if not post_pkg and "Unable" in (check := await device.examine_package(package)):
             raise MemrixError(check)
 
-        logger.add(self.log_file, level="INFO", format=const.LOG_FORMAT)
+        logger.add(self.log_file, level="INFO", format=const.WHILE_FORMAT)
 
         logger.info(
             f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
@@ -887,7 +887,7 @@ async def main() -> typing.Optional[typing.Any]:
             await main_task
 
         elif report:
-            Display.doll_animation()
+            await Display.doll_animation()
             return await memrix.create_report()
 
     else:
@@ -988,7 +988,7 @@ if __name__ == '__main__':
         asyncio.run(main())
 
     except MemrixError as _error:
-        Display.view(_error)
+        Display.Doc.err(_error)
         Display.show_fail()
         sys.exit(1)
     except KeyboardInterrupt:

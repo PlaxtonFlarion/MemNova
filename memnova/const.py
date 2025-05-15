@@ -27,7 +27,10 @@ AUTHOR: str = r"AceKeppel"
 EMAIL: str = r"AceKeppel@outlook.com"
 
 ENCODING: str = f"UTF-8"
-LOG_FORMAT: str = f"{APP_DESC} {{time:YYYY-MM-DD HH:mm:ss}} | {{level}} | {{message}}"
+
+SUC = f"[bold #FFFFFF on #32CD32]"
+WRN = f"[bold #000000 on #FFFF00]"
+ERR = f"[bold #FFFFFF on #FF6347]"
 
 TOTAL_DIR: str = f"{APP_DESC}_Library"
 SUBSET_DIR: str = f"Tree"
@@ -44,6 +47,14 @@ CONFIG: str = f"{APP_NAME}_config.yaml"
 LIC_FILE: str = f"{APP_NAME}_signature.lic"
 
 DISPLAY_LEVEL: str = f"WARNING"
+
+PRINT_HEAD = f"[bold #EEEEEE]{APP_DESC} ::[/]"
+OTHER_HEAD = f"{APP_DESC} ::"
+ADAPT_HEAD = f"{APP_DESC} :"
+
+PRINT_FORMAT = f"<level>{{level: <8}}</level> | <level>{{message}}</level>"
+WRITE_FORMAT = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <level>{{message}}</level>"
+WHILE_FORMAT = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | {{name}}:{{function}}:{{line}} - <level>{{message}}</level>"
 
 
 if __name__ == '__main__':
