@@ -27,7 +27,7 @@ Redistribute freely :: let memory echo through every fork.[/]
 AUTHOR = r"AceKeppel"
 EMAIL = r"AceKeppel@outlook.com"
 
-ENCODING = f"UTF-8"
+ENCODING = r"UTF-8"
 
 SUC = f"[bold #FFFFFF on #32CD32]"
 WRN = f"[bold #000000 on #FFFF00]"
