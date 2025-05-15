@@ -13,7 +13,6 @@ from cryptography.hazmat.primitives import (
 from cryptography.hazmat.primitives.asymmetric import padding
 from engine.tackle import MemrixError
 from memcore.display import Display
-from memnova import const
 
 PUBLIC_KEY = b'''
 -----BEGIN PUBLIC KEY-----
