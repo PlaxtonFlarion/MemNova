@@ -20,8 +20,6 @@ jobs:
         run: |
           echo "REPO_NAME=Memrix" >> $GITHUB_OUTPUT        
           echo "TARGET_DIR=SoftwareCenter/Memrix" >> $GITHUB_ENV
-          echo "RESOURCE_SRC=schematic/resources/images/illustration" >> $GITHUB_ENV
-          echo "RESOURCE_DST=SoftwareCenter/Memrix/schematic/resources/images/illustration" >> $GITHUB_ENV
 
       - name: Download release assets
         env:
@@ -55,8 +53,8 @@ jobs:
           cp README.md $TARGET_DIR/ || true
           cp LICENSE.md $TARGET_DIR/ || true
           cp release_assets/* $TARGET_DIR/ || true
-          mkdir -p $RESOURCE_DST
-          [ -d "$RESOURCE_SRC" ] && cp -r $RESOURCE_SRC/* $RESOURCE_DST/ || true
+          mkdir -p SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}/schematic/resources/images/
+          cp -r schematic/resources/images/illustration SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}/schematic/resources/images/
 
       - name: Push to SoftwareCenter
         run: |
