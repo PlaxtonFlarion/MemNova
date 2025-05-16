@@ -11,20 +11,23 @@
 # This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
 #
 
-APP_ITEM = r"MemNova"
-APP_NAME = r"memrix"
-APP_DESC = r"Memrix"
-APP_YEAR = r"2024"
-APP_CN = r"记忆星核"
-APP_VERSION = r"1.0.0"
-APP_LICENSE = r"Proprietary License"
-APP_URL = r"https://github.com/PlaxtonFlarion/MemNova"
-AUTHOR = r"AceKeppel"
-EMAIL = r"AceKeppel@outlook.com"
+# ========【应用基础信息】========
+APP_ITEM         = r"MemNova"
+APP_NAME         = r"memrix"
+APP_DESC         = r"Memrix"
+APP_CN           = r"记忆星核"
+APP_VERSION      = r"1.0.0"
+APP_YEAR         = r"2024"
+APP_LICENSE      = r"Proprietary License"
+ENCODING         = r"UTF-8"
 
+AUTHOR           = r"AceKeppel"
+EMAIL            = r"AceKeppel@outlook.com"
+APP_URL          = r"https://github.com/PlaxtonFlarion/MemNova"
+
+PUBLISHER        = f"{APP_DESC} Technologies Inc."
+COPYRIGHT        = f"Copyright (C) {APP_YEAR} {APP_DESC}. All rights reserved."
 WIN_FILE_VERSION = r"1.0.0.0"
-PUBLISHER = f"{APP_DESC} Technologies Inc."
-COPYRIGHT = f"Copyright (C) {APP_YEAR} {APP_DESC}. All rights reserved."
 
 DECLARE = f"""\
 [bold][bold #00D7AF]>>> {APP_DESC} :: {APP_CN} <<<[/]
@@ -33,35 +36,33 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 {'-' * 59}
 """
 
-ENCODING = r"UTF-8"
+# ========【路径与资源配置】========
+TOTAL_DIR       = f"{APP_DESC}_Library"
+SUBSET_DIR      = r"Tree"
+SUMMARY         = r"Summary"
+DB_FILE         = f"{APP_NAME}_data.db"
+CONFIG          = f"{APP_NAME}_config.yaml"
+LIC_FILE        = f"{APP_NAME}_signature.lic"
 
-SUC = f"[bold #FFFFFF on #32CD32]"
-WRN = f"[bold #000000 on #FFFF00]"
-ERR = f"[bold #FFFFFF on #FF6347]"
-
-TOTAL_DIR = f"{APP_DESC}_Library"
-SUBSET_DIR = f"Tree"
-DB_FILE = f"{APP_NAME}_data.db"
-
-SUMMARY = f"Summary"
-
-SCHEMATIC = f"schematic"
-STRUCTURE = f"Structure"
-
+SCHEMATIC       = r"schematic"
+STRUCTURE       = r"Structure"
 SRC_OPERA_PLACE = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE = f"{APP_DESC}_Report"
-CONFIG = f"{APP_NAME}_config.yaml"
-LIC_FILE = f"{APP_NAME}_signature.lic"
 
-DISPLAY_LEVEL = f"WARNING"
+# ========【日志与显示设置】========
+DISPLAY_LEVEL = r"WARNING"
 
-PRINT_HEAD = f"[bold #EEEEEE]{APP_DESC} ::[/]"
-OTHER_HEAD = f"{APP_DESC} ::"
-ADAPT_HEAD = f"{APP_DESC} :"
+SUC           = f"[bold #FFFFFF on #32CD32]"
+WRN           = f"[bold #000000 on #FFFF00]"
+ERR           = f"[bold #FFFFFF on #FF6347]"
 
-PRINT_FORMAT = f"<level>{{level: <8}}</level> | <level>{{message}}</level>"
-WRITE_FORMAT = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <level>{{message}}</level>"
-WHILE_FORMAT = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | {{name}}:{{function}}:{{line}} - <level>{{message}}</level>"
+PRINT_HEAD    = f"[bold #EEEEEE]{APP_DESC} ::[/]"
+OTHER_HEAD    = f"{APP_DESC} ::"
+ADAPT_HEAD    = f"{APP_DESC} :"
+
+PRINT_FORMAT  = f"<level>{{level: <8}}</level> | <level>{{message}}</level>"
+WRITE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <level>{{message}}</level>"
+WHILE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | {{name}}:{{function}}:{{line}} - <level>{{message}}</level>"
 
 
 if __name__ == '__main__':
