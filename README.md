@@ -1,10 +1,10 @@
-# 🚀 Memrix｜记忆星核
+# 🚀 Memrix :: 记忆星核
 
 ![LOGO](https://raw.githubusercontent.com/PlaxtonFlarion/SoftwareCenter/main/assets/MemrixSource/app_readme.png)
 
 ---
 
-## 🏆 项目简介 · Memrix｜记忆星核
+## 🏆 项目简介 · Memrix :: 记忆星核
 
 ### ⭐️ 前沿技术
 - **Memrix** 是一款跨平台的内存测试工具，专为硬件测试人员、开发者、售后工程师和技术爱好者设计。
