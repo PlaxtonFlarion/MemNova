@@ -8,6 +8,9 @@ jobs:
   sync:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,7 +22,7 @@ jobs:
 
       - name: Download release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p release_assets
           gh release download "$GITHUB_REF_NAME" \
@@ -27,18 +30,22 @@ jobs:
 
       - name: Clone SoftwareCenter
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "action@github.com"
-          git clone https://x-access-token:${GH_TOKEN}@github.com/PlaxtonFlarion/SoftwareCenter.git software-center
-                
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/PlaxtonFlarion/SoftwareCenter.git software-center
+
+      - name: Clean target directory
+        run: |
+          rm -rf software-center/${{ steps.vars.outputs.REPO_NAME }}
+          mkdir -p software-center/${{ steps.vars.outputs.REPO_NAME }}
+
       - name: Copy files
         run: |
-          mkdir -p software-center/${{ steps.vars.outputs.REPO_NAME }}
-          cp README.md software-center/${{ steps.vars.outputs.REPO_NAME }}/
-          cp LICENSE.md software-center/${{ steps.vars.outputs.REPO_NAME }}/
-          cp release_assets/* software-center/${{ steps.vars.outputs.REPO_NAME }}/ 
+          cp README.md software-center/${{ steps.vars.outputs.REPO_NAME }}/ || true
+          cp LICENSE.md software-center/${{ steps.vars.outputs.REPO_NAME }}/ || true
+          cp release_assets/* software-center/${{ steps.vars.outputs.REPO_NAME }}/ || true
 
       - name: Push to SoftwareCenter
         run: |
