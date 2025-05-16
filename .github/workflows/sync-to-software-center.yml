@@ -22,7 +22,7 @@ jobs:
 
       - name: Download release assets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SECRET_PAT }}
         run: |
           mkdir -p release_assets
           gh release download "$GITHUB_REF_NAME" \
@@ -30,7 +30,7 @@ jobs:
 
       - name: Clone SoftwareCenter
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.SECRET_PAT }}
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "action@github.com"
