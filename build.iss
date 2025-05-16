@@ -6,8 +6,9 @@
 #define MyAssetsName "Structure"
 #define MyAppVersion "1.0.0"
 #define MyAppVerName MyAppName + " v" + MyAppVersion
-#define MyAppPublisher "AceKeppel"
-#define MyAppURL "https://github.com/PlaxtonFlarion/MemNova"
+#define MyAppPublisher MyAppName +" Technologies Inc."
+#define MyAppCopyright "Copyright (C) 2024 " + MyAppName + ". All rights reserved."
+#define MyAppURL "https://github.com/PlaxtonFlarion/SoftwareCenter"
 #define MyAppExeName "memrix.exe"
 #define MyAppBatName "memrix.bat"
 #define MyAppAssocName MyAppName + " File"
@@ -25,6 +26,7 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppVerName}
 AppPublisher={#MyAppPublisher}
+AppCopyright={#MyAppCopyright}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
