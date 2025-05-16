@@ -31,7 +31,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "action@github.com"
-          git clone https://$GH_TOKEN@github.com/AceKeppel/SoftwareCenter.git software-center
+          git clone https://x-access-token:${GH_TOKEN}@github.com/AceKeppel/SoftwareCenter.git software-center
                 
       - name: Copy files
         run: |
