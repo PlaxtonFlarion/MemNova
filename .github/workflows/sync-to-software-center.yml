@@ -18,7 +18,10 @@ jobs:
       - name: Set up variables
         id: vars
         run: |
-          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
+          echo "REPO_NAME=Memrix" >> $GITHUB_OUTPUT        
+          echo "TARGET_DIR=SoftwareCenter/Memrix" >> $GITHUB_ENV
+          echo "RESOURCE_SRC=schematic/resources/images/illustration" >> $GITHUB_ENV
+          echo "RESOURCE_DST=SoftwareCenter/Memrix/schematic/resources/images/illustration" >> $GITHUB_ENV
 
       - name: Download release assets
         env:
@@ -36,11 +39,6 @@ jobs:
           git config --global user.email "action@github.com"
           git clone https://x-access-token:${GH_TOKEN}@github.com/PlaxtonFlarion/SoftwareCenter.git SoftwareCenter
 
-      - name: Clean target directory
-        run: |
-          rm -rf SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}
-          mkdir -p SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}
-
       - name: Generate individual SHA256 files
         run: |
           cd release_assets
@@ -53,13 +51,16 @@ jobs:
 
       - name: Copy files
         run: |
-          cp README.md SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}/ || true
-          cp LICENSE.md SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}/ || true
-          cp release_assets/* SoftwareCenter/${{ steps.vars.outputs.REPO_NAME }}/ || true
+          mkdir -p $TARGET_DIR
+          cp README.md $TARGET_DIR/ || true
+          cp LICENSE.md $TARGET_DIR/ || true
+          cp release_assets/* $TARGET_DIR/ || true
+          mkdir -p $RESOURCE_DST
+          [ -d "$RESOURCE_SRC" ] && cp -r $RESOURCE_SRC/* $RESOURCE_DST/ || true
 
       - name: Push to SoftwareCenter
         run: |
           cd SoftwareCenter
           git add .
-          git commit -m "Sync ${{ steps.vars.outputs.REPO_NAME }} release $GITHUB_REF_NAME"
+          git commit -m "Sync Memrix release $GITHUB_REF_NAME"
           git push
