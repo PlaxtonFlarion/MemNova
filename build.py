@@ -260,6 +260,11 @@ async def packaging() -> tuple[
 
         compile_cmd += [
             f"--mode=standalone",
+            f"--product-name={const.APP_DESC}",
+            f"--product-version={const.APP_VERSION}",
+            f"--file-version={const.WIN_FILE_VERSION}",
+            f"--company-name={const.PUBLISHER}",
+            f"--copyright={const.COPYRIGHT}",
             f"--windows-icon-from-ico=schematic/resources/icons/memrix_icn_1.ico",
         ]
 
