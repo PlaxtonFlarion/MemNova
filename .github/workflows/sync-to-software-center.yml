@@ -40,7 +40,7 @@ jobs:
       - name: Generate individual SHA256 files
         run: |
           cd release_assets
-          for file in *.txt *.dmg *.exe; do
+          for file in *.dmg *.exe; do
             if [ -f "$file" ]; then
               sha256sum "$file" > "$file.sha256"
             fi
@@ -53,7 +53,6 @@ jobs:
           cp README.md $TARGET_DIR/ || true
           cp LICENSE.md $TARGET_DIR/ || true
           cp release_assets/* $TARGET_DIR/ || true
-          cp -r schematic $TARGET_DIR/ || true
 
       - name: Push to SoftwareCenter
         run: |
