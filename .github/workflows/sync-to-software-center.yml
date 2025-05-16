@@ -53,8 +53,8 @@ jobs:
           cp README.md $TARGET_DIR/ || true
           cp LICENSE.md $TARGET_DIR/ || true
           cp release_assets/* $TARGET_DIR/ || true
-          mkdir -p SoftwareCenter/Memrix/schematic/resources/images/
-          cp -r schematic/resources/images/illustration SoftwareCenter/Memrix/schematic/resources/images/
+          mkdir -p SoftwareCenter/Memrix/schematic/resources/images/illustration
+          cp -r schematic/resources/images/illustration/* SoftwareCenter/Memrix/schematic/resources/images/illustration/
 
       - name: Push to SoftwareCenter
         run: |
