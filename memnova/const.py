@@ -14,18 +14,20 @@
 APP_ITEM = r"MemNova"
 APP_NAME = r"memrix"
 APP_DESC = r"Memrix"
+APP_YEAR = r"2024"
 APP_CN = r"记忆星核"
 APP_VERSION = r"1.0.0"
-APP_LICENSE = r"MIT"
+APP_LICENSE = r"Proprietary License"
 APP_URL = r"https://github.com/PlaxtonFlarion/MemNova"
-APP_DECLARE = f"""\
-[bold][bold #FF8787](c)[/] [bold #FFAA33]2024[/] [bold #00D7AF]{APP_DESC} :: {APP_CN}[/]
-Licensed under the Starbound Intelligence Charter.
-Redistribute freely :: let memory echo through every fork.[/]
-"""
-
 AUTHOR = r"AceKeppel"
 EMAIL = r"AceKeppel@outlook.com"
+
+DECLARE = f"""\
+[bold][bold #00D7AF]>>> {APP_DESC} :: {APP_CN} <<<[/]
+[bold #FF8787]Copyright (C)[/] {APP_YEAR} {APP_DESC}. All rights reserved.
+Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization required.
+{'-' * 59}
+"""
 
 ENCODING = r"UTF-8"
 

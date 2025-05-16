@@ -131,9 +131,9 @@ class Display(object):
     @staticmethod
     def show_license() -> None:
         """
-        显示授权声明或使用说明，内容来自 const.APP_DECLARE。
+        显示授权声明或使用说明，内容来自 const.DECLARE。
         """
-        Display.console.print(const.APP_DECLARE)
+        Display.console.print(const.DECLARE)
 
     @staticmethod
     def show_done() -> None:
