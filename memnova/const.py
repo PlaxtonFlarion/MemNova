@@ -23,11 +23,10 @@ ENCODING         = r"UTF-8"
 
 AUTHOR           = r"AceKeppel"
 EMAIL            = r"AceKeppel@outlook.com"
-APP_URL          = r"https://github.com/PlaxtonFlarion/MemNova"
+APP_URL          = r"https://github.com/PlaxtonFlarion/SoftwareCenter"
 
 PUBLISHER        = f"{APP_DESC} Technologies Inc."
 COPYRIGHT        = f"Copyright (C) {APP_YEAR} {APP_DESC}. All rights reserved."
-WIN_FILE_VERSION = r"1.0.0.0"
 
 DECLARE = f"""\
 [bold][bold #00D7AF]>>> {APP_DESC} :: {APP_CN} <<<[/]
