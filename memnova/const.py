@@ -4,12 +4,9 @@
 #  | |__| (_) | | | \__ \ |_
 #   \____\___/|_| |_|___/\__|
 #
-# 版权所有 (c) 2024  Memrix(记忆星核)
-# 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
-#
-# Copyright (c) 2024  Memrix(记忆星核)
-# This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
-#
+# ==== Notes: License ====
+# Copyright (c) 2024  Memrix :: 记忆星核
+# This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 # ========【应用基础信息】========
 APP_ITEM         = r"MemNova"
@@ -62,6 +59,25 @@ ADAPT_HEAD    = f"{APP_DESC} :"
 PRINT_FORMAT  = f"<level>{{level: <8}}</level> | <level>{{message}}</level>"
 WRITE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <level>{{message}}</level>"
 WHILE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | {{name}}:{{function}}:{{line}} - <level>{{message}}</level>"
+
+# ========【应用授权】========
+ACTIVATION_URL   = f"https://license-server-s68o.onrender.com/sign/{APP_NAME}"
+PUBLIC_KEY_NAME  = f"{APP_NAME}_public_key.pem"
+PRIVATE_KEY_NAME = f"{APP_NAME}_private_key.pem"
+KEY_DIR          = r"keys"
+LIC_DIR          = r"licenses"
+
+PUBLIC_KEY: bytes = b'''
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqzOHwMBK5KFXlFlW/elu
+y25VkKnvUXpuifm8Hzl8HfbtdGl5dkKOPv9iENoSSTHqTUJOV0F8X/TqFEG3igf3
+WqhYSEmR56WDXeOdLqvqa2QdI0U9rrjKLBiQPPjPG41n0GmYglxks6zs+5Zrq3G3
+lwiCKt4v+SeGOZC/nqWvCBUtuXAAjm7FdBdZH6aloBk2MieEMlmrWipbXxBQRbs/
+jy6CZDDJGqwdnJXXWdrYCpU5yi2Z2zzxZyBr8zzDS8vSBBDY0rHNcp0p8j72DWTZ
+soH0vlmbN/4MVqYM/w1PTCT/v5IndBikt1z63HeSiOqGvhwfx/LIxlQ69kaDS6Mi
+sQIDAQAB
+-----END PUBLIC KEY-----
+'''
 
 
 if __name__ == '__main__':

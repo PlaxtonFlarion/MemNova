@@ -4,12 +4,9 @@
 # | |  | |  __/ | | | | | |  | |>  <
 # |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
 #
-# 版权所有 (c) 2024  Memrix(记忆星核)
-# 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
-#
-# Copyright (c) 2024  Memrix(记忆星核)
-# This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
-#
+# ==== Notes: License ====
+# Copyright (c) 2024  Memrix :: 记忆星核
+# This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 # ====[ 内置模块 ]====
 import os
@@ -41,8 +38,8 @@ from engine.tackle import (
     Ram, MemrixError, FileAssist
 )
 from memcore.parser import Parser
-from memcore.authorize import verify_license
 from memcore.display import Display
+from memcore import authorize
 from memnova.analyzer import Analyzer
 from memnova import const
 
@@ -855,8 +852,14 @@ async def main() -> typing.Optional[typing.Any]:
         Display.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 
-    # 应用授权
-    verify_license(Path(_src_opera_place) / const.LIC_FILE)
+    _lic_path = Path(_src_opera_place) / const.LIC_FILE
+
+    # 应用激活
+    if _active_code := _cmd_lines.active:
+        return authorize.receive_license(_active_code, _lic_path)
+
+    # 授权校验
+    authorize.verify_license(_lic_path)
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
@@ -884,11 +887,13 @@ async def main() -> typing.Optional[typing.Any]:
             await memrix.dump_close_event.wait()
             await memrix.dump_task_close()
             main_task.cancel()
-            await main_task
+            return await main_task
 
         elif report:
             await Display.doll_animation()
             return await memrix.create_report()
+
+        return None
 
     else:
         raise MemrixError(f"主命令不能为空 ...")

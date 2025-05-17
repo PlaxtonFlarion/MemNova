@@ -4,12 +4,9 @@
 #  |  __/ (_| | |  \__ \  __/ |
 #  |_|   \__,_|_|  |___/\___|_|
 #
-# 版权所有 (c) 2024  Memrix(记忆星核)
-# 此文件受 Memrix(记忆星核) 许可证的保护。您可以在 LICENSE.md 文件中查看详细的许可条款。
-#
-# Copyright (c) 2024  Memrix(记忆星核)
-# This file is licensed under the Memrix(记忆星核) License. See the LICENSE.md file for more details.
-#
+# ==== Notes: License ====
+# Copyright (c) 2024  Memrix :: 记忆星核
+# This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 import typing
 import argparse
@@ -70,7 +67,7 @@ class Parser(object):
         major_group.add_argument(
             "--script", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m^*巡航引擎*^\033[0m 
+                \033[1;34m^*巡航引擎*^\033[0m
                 -------------------------
                 启动 **巡航引擎模式**，读取指定的 **JSON** 文件，根据其中定义的关键步骤，执行 **UI** 自动化操作。
                 **Memrix** 会在执行过程中使用 **异步协程机制**，持续实时检测内存状态，确保测试流程与内存监控同步进行。
@@ -83,7 +80,7 @@ class Parser(object):
         major_group.add_argument(
             "--report", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m^*真相快照*^\033[0m 
+                \033[1;34m^*真相快照*^\033[0m
                 -------------------------
                 启动 **真相快照模式**，从测试过程中记录的本地数据库中提取原始数据，执行统计分析（如均值、峰值、波动区段）。
                 自动生成结构化、可视化的 **HTML** 格式报告，包含内存曲线图、异常区域标记、基本统计指标、测试元信息等。
@@ -94,12 +91,24 @@ class Parser(object):
         major_group.add_argument(
             "--config", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m^*星核蓝图*^\033[0m 
+                \033[1;34m^*星核蓝图*^\033[0m
                 -------------------------
                 启动 **星核蓝图模式**，**Memrix** 将自动调用系统内置的文本编辑器，打开主配置文件（YAML 格式）。
                 文件将以格式化、美观、带注释的方式呈现，便于修改参数行为、默认模式、报告设置等。
                 完成编辑并保存后，**Memrix** 会在下次启动时自动加载该配置。
                 配置文件是 **Memrix** 的“星核蓝图”，定义了程序的运行地图、参数注入与行为预设。
+
+            ''')
+        )
+        major_group.add_argument(
+            "--active", type=str,
+            help=textwrap.dedent(f'''\
+                \033[1;34m^*星图凭证*^\033[0m
+                -------------------------
+                使用激活码向远程授权中心发起请求，获取签名后的授权数据。
+                授权数据将绑定当前设备指纹，并以 LIC 文件形式存储在本地。
+                一旦激活成功，系统将进入已授权状态，具备完全运行权限。
+                适用于首次部署、跨环境迁移、临时激活等场景。
 
             ''')
         )
@@ -113,7 +122,7 @@ class Parser(object):
         minor_group.add_argument(
             "--target", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*数据魔方*^\033[0m 
+                \033[1;36m^*数据魔方*^\033[0m
                 -------------------------
                 用于传递关键上下文信息，根据核心操控命令的不同将自动转换为对应的上下文用途，提供结构化参数支持。
                 **记忆风暴模式** 传递 -> **应用程序包名**
@@ -125,7 +134,7 @@ class Parser(object):
         minor_group.add_argument(
             "--serial", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*宿主代号*^\033[0m 
+                \033[1;36m^*宿主代号*^\033[0m
                 -------------------------
                 指定目标设备的唯一序列号（Serial Number），当连接多个设备或自动识别失败时强制绑定目标设备。
                 它是 **Memrix** 与设备之间的“精确信标”，确保测试任务落在指定设备之上，防止误测、多测或设备错位操作。
@@ -135,14 +144,14 @@ class Parser(object):
         minor_group.add_argument(
             "--folder", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*中枢节点*^\033[0m 
+                \033[1;36m^*中枢节点*^\033[0m
                 -------------------------
                 指定文件夹名称，作为任务的挂载目录或输出目录。数据的中转与聚合中心。
                 每次内存采集任务会将所有数据输出到一个对应的文件夹中，便于归档与后续生成报告。
                 你可以手动传入一个自定义名称，例如 `20250410223015`。
                 如果未传递 `--folder` 参数，将默认生成一个以当前时间戳命名的目录，例如 `20250410223232`。
                 所有输出文件（日志、HTML 报告等）都会保存在该目录下。
-            
+
             ''')
         )
 
