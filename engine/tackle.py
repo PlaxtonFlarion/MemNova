@@ -61,7 +61,7 @@ class MemrixError(_MemrixBaseError):
         """
         返回带有 rich 渲染标记的异常信息，适配 Grapher.view() 等日志系统。
         """
-        return f"[#FF4C4C]<{const.APP_DESC}Error> {self.msg}"
+        return f"<{const.APP_DESC}Error> {self.msg}"
 
     __repr__ = __str__
 
