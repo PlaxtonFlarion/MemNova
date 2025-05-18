@@ -83,8 +83,6 @@ def receive_license(code: str, lic_path: "Path") -> typing.Optional["Path"]:
     """
     使用激活码从远程授权服务器获取授权文件，并保存至本地路径。
     """
-    Display.Doc.log(f"[bold #FFAF5F]Transmitting signature to the authority ...")
-
     payload = json.dumps({"code": code.strip(), "castle": machine_id()}).encode(const.ENCODING)
 
     req = urllib.request.Request(
@@ -94,23 +92,36 @@ def receive_license(code: str, lic_path: "Path") -> typing.Optional["Path"]:
         method="POST"
     )
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            lic = json.loads(resp.read().decode())
-            lic_path.write_text(json.dumps(lic, indent=2), encoding=const.ENCODING)
-            Display.Doc.log(f"[bold #87FF87]License validated successfully. System activated.\n")
+    last_error = None
 
-    except urllib.request.HTTPError as e:
-        raise MemrixError(f"❌ [{e.code}] -> {e.read().decode()}")
-    except Exception as e:
-        raise MemrixError(f"❌ {e}")
+    for attempt in range(1, 6):
+        Display.Doc.log(
+            f"[bold #FFAF5F]Attempt[{attempt:02}] transmitting glyph to central authority ..."
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                lic_file = json.loads(resp.read().decode())
+                lic_path.write_text(json.dumps(lic_file, indent=2), encoding=const.ENCODING)
+                Display.Doc.log(
+                    f"[bold #87FF87]Attempt[{attempt:02}] validation succeeded. activation seal embedded.\n"
+                )
+                return lic_path
+
+        except urllib.request.HTTPError as e:
+            last_error = MemrixError(f"❌ [{e.code}] -> {e.read().decode()}")
+        except Exception as e:
+            last_error = MemrixError(f"❌ {e}")
+
+    raise last_error
 
 
 def verify_license(lic_path: "Path") -> typing.Any:
     """
     验证授权文件的合法性与有效性。
     """
-    Display.Doc.log(f"[bold #FFAF5F]Online check authorization ...")
+    Display.Doc.log(
+        f"[bold #FFAF5F]Initiating license checkpoint ..."
+    )
 
     try:
         # 加载公钥
@@ -130,17 +141,25 @@ def verify_license(lic_path: "Path") -> typing.Any:
         castle = auth_info["castle"]
 
     except Exception as e:
-        raise MemrixError(f"❌ 授权验证失败 -> {e}")
+        raise MemrixError(f"❌ 通行证无效，需要重新授权 -> {e}")
 
     if castle != machine_id():
-        raise MemrixError("❌ 当前设备与授权文件不匹配 ...")
+        raise MemrixError(f"❌ 当前设备与通行证不匹配 ...")
 
-    if not (now := network_time()):
-        raise MemrixError(f"❌ 无法连接授时服务器 ...")
-    if now > expire:
-        raise MemrixError(f"⚠️ 授权已过期 -> {exp}")
+    if not (now_time := network_time()):
+        raise MemrixError(f"❌ 无法连接服务器 ...")
+    if now_time > expire:
+        raise MemrixError(f"⚠️ 通行证已过期，需要重新授权 -> {exp}")
 
-    Display.Doc.log(f"[bold #87FF87]License file verified. Execution is authorized. Valid until {exp}\n")
+    Display.Doc.log(
+        f"[bold #87FF87]License verified. Access granted until [bold #5FD7FF]{exp}.\n"
+    )
+
+    issued = auth_info["issued"]
+    delta_seconds = (now_time - datetime.fromisoformat(issued)).total_seconds()
+    if delta_seconds > 86400:
+        receive_license(auth_info["code"], lic_path)
+
     return auth_info
 
 
