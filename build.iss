@@ -39,7 +39,7 @@ InfoBeforeFile=schematic\resources\documents\memrix_before.txt
 InfoAfterFile=schematic\resources\documents\memrix_after.txt
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputDir=.
+OutputDir={#SourcePath}\dist
 OutputBaseFilename={#MyAppName}-windows-setup-v{#MyAppVersion}
 UninstallDisplayIcon={app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico
 SetupIconFile=schematic\resources\icons\memrix_setup_1.ico
