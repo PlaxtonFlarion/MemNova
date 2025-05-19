@@ -16,7 +16,7 @@ jobs:
 
       - name: Set variables
         run: |
-          echo "TARGET_DIR=SoftwareCenter/Memrix" >> $GITHUB_ENV
+          echo "TARGET_DIR=SoftwareCenter/assets/Memrix" >> $GITHUB_ENV
           echo "REPO_NAME=Memrix" >> $GITHUB_ENV
 
       - name: Clone public SoftwareCenter repo
