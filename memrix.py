@@ -852,14 +852,14 @@ async def main() -> typing.Optional[typing.Any]:
         Display.console.print_json(data=_config.configs)
         return await FileAssist.open(_config_file)
 
-    _lic_path = Path(_src_opera_place) / const.LIC_FILE
+    _lic_file = Path(_src_opera_place) / const.LIC_FILE
 
     # 应用激活
     if _active_code := _cmd_lines.active:
-        return authorize.receive_license(_active_code, _lic_path)
+        return authorize.receive_license(_active_code, _lic_file)
 
     # 授权校验
-    authorize.verify_license(_lic_path)
+    authorize.verify_license(_lic_file)
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
