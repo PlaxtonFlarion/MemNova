@@ -38,7 +38,7 @@ SUBSET_DIR      = r"Tree"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 CONFIG          = f"{APP_NAME}_config.yaml"
-LIC_FILE        = f"{APP_NAME}_signature.lic"
+LIC_FILE        = f".{APP_NAME}_signature.lic"
 
 SCHEMATIC       = r"schematic"
 STRUCTURE       = r"Structure"
@@ -61,21 +61,25 @@ WRITE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> |
 WHILE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | {{name}}:{{function}}:{{line}} - <level>{{message}}</level>"
 
 # ========【应用授权】========
-ACTIVATION_URL   = f"https://license-server-s68o.onrender.com/sign/{APP_NAME}"
-PUBLIC_KEY_NAME  = f"{APP_NAME}_public_key.pem"
-PRIVATE_KEY_NAME = f"{APP_NAME}_private_key.pem"
-KEY_DIR          = r"keys"
-LIC_DIR          = r"licenses"
+BOOTSTRAP_URL = f"https://license-server-s68o.onrender.com/bootstrap"
+BASIC_HEADERS = {
+    "User-Agent": f"{APP_DESC}@{APP_VERSION}",
+    "Content-Type": f"application/json",
+    "X-App-ID": PUBLISHER,
+    "X-App-Token": f"eyJkYXRhIjogImV5SmhJam9pVFdWdGNtbDRJRlJsWTJodWIyeHZaMmxsY3lCSmJtTXVJaXdpZENJNklqRTNORFUyUVVaRk16RkdPU0lzSW00aU9pSkJORGN5UmtZeFJUSkVSRFFpTENKc2FXTmxibk5sWDJsa0lqb2lSRGRGT1RFeE1EUkJOemszTmtJME1pSjkiLCAic2lnbmF0dXJlIjogImtTOEhrbGRwNmRkUndXVHJCcXFtaHRsbjNwNjJEUzdCMk9XaUdaeHdTYzgreFBxNHJoNFNOa0FaSUlmL0wrc2xONG5yek5EREFLbTJQWWZUbWFBQTM2RjhsUjU3Y2NhSFZ6RHhxeWgxNmNVRXBwVWt2MStTQ0hTVCt1RGIxVWI1T25PaC8wREtZaFlCWUU2NFQ3VmppazNvcDQwQTNkS2VzRzl4OVZPcnhkUGt6akU4UElqVEdieGFIYlNKVG5vSUZRK296OHZCd0pDUXowck12Nk5xa1hCUHhxeEZMUVQzVXJRenR0V2ptUHpsZFQ4SkdLc21GL0QyaDhRbFZMTUM2a3RLY0x5QndkWFpaSmM4eUdwdjZvU3dPdFBxSXg1KzdQVERyOUtUczNSb0hGQXd6SVBiYUtCUXVRRUlxR0thekkxK2tlWTlHVUFsaVdrellmMllvZz09In0=",
+    "X-App-Region": f"Global",
+    "X-App-Version": f"v{APP_VERSION}"
+}
 
 PUBLIC_KEY: bytes = b'''
 -----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqzOHwMBK5KFXlFlW/elu
-y25VkKnvUXpuifm8Hzl8HfbtdGl5dkKOPv9iENoSSTHqTUJOV0F8X/TqFEG3igf3
-WqhYSEmR56WDXeOdLqvqa2QdI0U9rrjKLBiQPPjPG41n0GmYglxks6zs+5Zrq3G3
-lwiCKt4v+SeGOZC/nqWvCBUtuXAAjm7FdBdZH6aloBk2MieEMlmrWipbXxBQRbs/
-jy6CZDDJGqwdnJXXWdrYCpU5yi2Z2zzxZyBr8zzDS8vSBBDY0rHNcp0p8j72DWTZ
-soH0vlmbN/4MVqYM/w1PTCT/v5IndBikt1z63HeSiOqGvhwfx/LIxlQ69kaDS6Mi
-sQIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA05gFg8awaj6wzvrEgizQ
+L3OvK4DrBqOqiFRqR7wKvIN9oq5M+p1IZc1N2k7uPM6cexIvMqzY1ajtyTcDJNhF
+ffJpLEDtVWIzH1RO1qzLx3loYo4VfcqlLgWZmB/qa+NWgFenyxMhcNqAOuIYSgN9
+36QXFDKL2E1pqI1hhKjPNM4UffXxJB44tUBWixA6D0JG8ws30AzTGQ+h6V1Zjes5
+Ki08zaPOQ2qe1r0LS3uXXaOCH8urZtjzKQNmRJKAsDqkTfbU8CLHMadr4Nfq6EkL
+4qKs1VUuS+XdmmXdzeNC4RKl9hOWq/vcFE6L2i26zX3JRkH47O8D8GXZPPlneqlD
+YQIDAQAB
 -----END PUBLIC KEY-----
 '''
 

@@ -856,10 +856,10 @@ async def main() -> typing.Optional[typing.Any]:
 
     # 应用激活
     if _active_code := _cmd_lines.active:
-        return authorize.receive_license(_active_code, _lic_file)
+        return await authorize.receive_license(_active_code, _lic_file)
 
     # 授权校验
-    authorize.verify_license(_lic_file)
+    await authorize.verify_license(json.loads(_lic_file.read_text()))
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
