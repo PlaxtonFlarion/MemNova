@@ -859,7 +859,7 @@ async def main() -> typing.Optional[typing.Any]:
         return await authorize.receive_license(_active_code, _lic_file)
 
     # 授权校验
-    await authorize.verify_license(json.loads(_lic_file.read_text()))
+    await authorize.verify_license(_lic_file)
 
     if any((memory := _cmd_lines.memory, script := _cmd_lines.script, report := _cmd_lines.report)):
         if not (target := _cmd_lines.target):
