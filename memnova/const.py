@@ -41,6 +41,8 @@ CONFIG          = f"{APP_NAME}_config.yaml"
 LIC_FILE        = f".{APP_NAME}_signature.lic"
 
 SCHEMATIC       = r"schematic"
+SUPPORTS        = r"supports"
+TEMPLATES       = r"templates"
 STRUCTURE       = r"Structure"
 SRC_OPERA_PLACE = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE = f"{APP_DESC}_Report"

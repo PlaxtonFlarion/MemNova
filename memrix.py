@@ -937,15 +937,17 @@ if __name__ == '__main__':
         else:
             raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
 
-        # 模板文件夹
-        _template = os.path.join(_mx_work, const.SCHEMATIC, "templates", "memory.html")
+        # 模板文件源路径
+        _src_templates = os.path.join(_mx_work, const.SCHEMATIC, const.TEMPLATES).format()
+        # 模板文件路径
+        _template = os.path.join(_src_templates, "memory.html")
         # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
         if not os.path.isfile(_template) and os.path.basename(_template).endswith(".html"):
             _tmp_name = os.path.basename(_template)
-            raise MemrixError(f"{const.APP_DESC}  missing files {_tmp_name}")
+            raise MemrixError(f"{const.APP_DESC} missing files {_tmp_name}")
 
         # 设置工具源路径
-        _turbo = os.path.join(_mx_work, const.SCHEMATIC, "supports").format()
+        _turbo = os.path.join(_mx_work, const.SCHEMATIC, const.SUPPORTS).format()
 
         # 根据平台设置工具路径
         if _platform == "win32":
