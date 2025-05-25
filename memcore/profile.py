@@ -11,7 +11,7 @@
 import os
 import yaml
 import typing
-from engine.tackle import FileAssist
+from engine.tinker import FileAssist
 from memcore.parser import Parser
 
 

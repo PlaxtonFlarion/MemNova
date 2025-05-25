@@ -12,7 +12,7 @@ import re
 import typing
 import asyncio
 import uiautomator2
-from engine.tackle import Pid
+from engine.tinker import Pid
 from engine.terminal import Terminal
 
 

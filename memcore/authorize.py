@@ -28,7 +28,7 @@ from cryptography.hazmat.primitives import (
     hashes, serialization
 )
 from cryptography.hazmat.primitives.asymmetric import padding
-from engine.tackle import MemrixError
+from engine.tinker import MemrixError
 from engine.terminal import Terminal
 from memcore.design import Design
 from memnova import const

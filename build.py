@@ -21,7 +21,7 @@ from rich.progress import (
     BarColumn, TimeElapsedColumn,
     Progress, SpinnerColumn, TextColumn,
 )
-from engine.tackle import (
+from engine.tinker import (
     Active, MemrixError
 )
 from engine.terminal import Terminal
