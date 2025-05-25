@@ -16,7 +16,7 @@ APP_CN           = r"记忆星核"
 APP_VERSION      = r"1.0.0"
 APP_YEAR         = r"2024"
 APP_LICENSE      = r"Proprietary License"
-ENCODING         = r"UTF-8"
+CHARSET         = r"UTF-8"
 
 AUTHOR           = r"AceKeppel"
 EMAIL            = r"AceKeppel@outlook.com"

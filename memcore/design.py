@@ -24,14 +24,14 @@ from rich.console import Console
 from memnova import const
 
 
-class Display(object):
+class Design(object):
     """
     终端视觉交互显示类，提供界面标识、启动动画与状态提示输出。
     """
     console: typing.Optional["Console"] = Console()
 
-    def __init__(self, display_level: str = "WARNING"):
-        self.display_level = display_level
+    def __init__(self, design_level: str = "WARNING"):
+        self.design_level = design_level
 
     class Doc(object):
         """
@@ -48,7 +48,7 @@ class Display(object):
             text : Any
                 要输出的日志内容，可以为任意对象，最终将被格式化为字符串。
             """
-            Display.console.print(const.PRINT_HEAD, f"[bold]{text}")
+            Design.console.print(const.PRINT_HEAD, f"[bold]{text}")
 
         @classmethod
         def suc(cls, text: typing.Any) -> None:
@@ -60,7 +60,7 @@ class Display(object):
             text : Any
                 要输出的日志内容，通常用于表示成功信息。
             """
-            Display.console.print(const.PRINT_HEAD, f"{const.SUC}{text}")
+            Design.console.print(const.PRINT_HEAD, f"{const.SUC}{text}")
 
         @classmethod
         def wrn(cls, text: typing.Any) -> None:
@@ -72,7 +72,7 @@ class Display(object):
             text : Any
                 要输出的日志内容，通常用于提示潜在问题或风险。
             """
-            Display.console.print(const.PRINT_HEAD, f"{const.WRN}{text}")
+            Design.console.print(const.PRINT_HEAD, f"{const.WRN}{text}")
 
         @classmethod
         def err(cls, text: typing.Any) -> None:
@@ -84,12 +84,12 @@ class Display(object):
             text : Any
                 要输出的日志内容，通常用于表示异常或错误信息。
             """
-            Display.console.print(const.PRINT_HEAD, f"{const.ERR}{text}")
+            Design.console.print(const.PRINT_HEAD, f"{const.ERR}{text}")
 
     @staticmethod
     def startup_logo() -> None:
         """
-        显示 Memrix 的项目 LOGO（ASCII banner），使用 rich 渲染。
+        显示项目 LOGO（ASCII banner），使用 rich 渲染。
         """
         color = random.choice([
             "#00D7AF",  # 原色：清爽青绿
@@ -122,20 +122,13 @@ class Display(object):
         """)
         banner = random.choice([banner_standard, banner_speed])
 
-        Display.console.print(f"[bold {color}]{banner}")
-        Display.show_license()
-
-    @staticmethod
-    def show_license() -> None:
-        """
-        显示授权声明或使用说明，内容来自 const.DECLARE。
-        """
-        Display.console.print(const.DECLARE)
+        Design.console.print(f"[bold {color}]{banner}")
+        Design.console.print(const.DECLARE)
 
     @staticmethod
     def show_done() -> None:
         """
-        显示任务完成提示信息（使用 task_done 文案）。
+        显示任务完成提示信息。
         """
         task_done = textwrap.dedent(f"""\
             [bold #00FF88]
@@ -143,12 +136,12 @@ class Display(object):
             |            {const.APP_DESC} Task Done            |
             +----------------------------------------+
         """)
-        Display.console.print(task_done)
+        Design.console.print(task_done)
 
     @staticmethod
     def show_exit() -> None:
         """
-        显示任务退出提示信息（使用 task_exit 文案）。
+        显示任务退出提示信息。
         """
         task_exit = textwrap.dedent(f"""\
             [bold #FFEE55]
@@ -156,12 +149,12 @@ class Display(object):
             |            {const.APP_DESC} Task Exit            |
             +----------------------------------------+
         """)
-        Display.console.print(task_exit)
+        Design.console.print(task_exit)
 
     @staticmethod
     def show_fail() -> None:
         """
-        显示任务失败或异常提示（使用 task_fail 文案）。
+        显示任务失败或异常提示。
         """
         task_fail = textwrap.dedent(f"""\
             [bold #FF4444]
@@ -169,7 +162,7 @@ class Display(object):
             |            {const.APP_DESC} Task Fail            |
             +----------------------------------------+
         """)
-        Display.console.print(task_fail)
+        Design.console.print(task_fail)
 
     @staticmethod
     def build_file_tree(file_path: str) -> str:
@@ -229,7 +222,7 @@ class Display(object):
         ext = (file := Path(parts[-1])).suffix.lower()
         current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
-        Display.console.print("\n", tree, "\n")
+        Design.console.print("\n", tree, "\n")
         return file_color
 
     @staticmethod
@@ -278,7 +271,7 @@ class Display(object):
 
         palette = random.choice(color_palettes)
 
-        with Live(console=Display.console, refresh_per_second=30) as live:
+        with Live(console=Design.console, refresh_per_second=30) as live:
             for _ in range(5):
                 for index, i in enumerate(loading_frames):
                     live.update(
@@ -287,10 +280,10 @@ class Display(object):
                     time.sleep(0.2)
 
         color = random.choice(palette)
-        Display.console.print(
+        Design.console.print(
             f"[bold {color}]{{ {const.APP_DESC} Wave Linking... Aligning... Done. }}"
         )
-        Display.console.print(
+        Design.console.print(
             f"[bold {color}]{{ {const.APP_DESC} Core Initialized. }}\n"
         )
 
@@ -342,7 +335,7 @@ class Display(object):
         ]
         colors = random.choice(soft_palettes)
 
-        with Live(console=Display.console, refresh_per_second=30) as live:
+        with Live(console=Design.console, refresh_per_second=30) as live:
             for _ in range(6):
                 for index, i in enumerate(compile_frames[:-1]):
                     live.update(
@@ -384,7 +377,7 @@ class Display(object):
             "diagnostic grid returned stable metrics."
         ])
 
-        Display.console.print(
+        Design.console.print(
             f"\n[bold #5FD7FF][{const.APP_DESC}::Engine] {const.APP_DESC} {start_banners}\n"
         )
 
@@ -475,7 +468,7 @@ class Display(object):
 
             return Text.from_markup("\n".join(lines))
 
-        with Live(console=Display.console, refresh_per_second=int(1 / interval)) as live:
+        with Live(console=Design.console, refresh_per_second=int(1 / interval)) as live:
             for frame in range(frames):
                 for i in range(height - 1, 0, -1):
                     for j in range(width):
@@ -486,7 +479,7 @@ class Display(object):
 
             await asyncio.sleep(0.1)
 
-        Display.console.print(
+        Design.console.print(
             f"\n[bold #5FFF87][{const.APP_DESC}::Engine] {const.APP_DESC} {close_banners}\n"
         )
 
@@ -494,7 +487,7 @@ class Display(object):
         """
         摘要信息显示。
         """
-        if self.display_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.DISPLAY_LEVEL:
             return None
 
         table_themes = {
@@ -543,7 +536,7 @@ class Display(object):
         """
         系统解体风格，收尾动画。
         """
-        if self.display_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.DISPLAY_LEVEL:
             return None
 
         width, steps = 42, 6
@@ -624,7 +617,7 @@ class Display(object):
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
         """
-        if self.display_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.DISPLAY_LEVEL:
             return None
 
         start_banner = [

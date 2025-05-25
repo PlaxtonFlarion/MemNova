@@ -34,12 +34,13 @@ from loguru import logger
 from engine.device import Device
 from engine.manage import Manage
 from engine.tackle import (
-    Align, Grapher, DataBase,
-    Ram, MemrixError, FileAssist
+    Active, Ram, FileAssist, MemrixError
 )
-from memcore.parser import Parser
-from memcore.display import Display
 from memcore import authorize
+from memcore.cubicle import DataBase
+from memcore.design import Design
+from memcore.parser import Parser
+from memcore.profile import Align
 from memnova.analyzer import Analyzer
 from memnova import const
 
@@ -272,7 +273,7 @@ class Memrix(object):
             "foreground": 0,
             "background": 0
         }
-        self.display: "Display" = Display(self.watch)
+        self.design: "Design" = Design(self.watch)
 
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
@@ -319,8 +320,8 @@ class Memrix(object):
         logger.info(f"{self.group_dir}")
 
         if self.file_insert:
-            fc = Display.build_file_tree(self.group_dir)
-            Display.Doc.log(
+            fc = Design.build_file_tree(self.group_dir)
+            Design.Doc.log(
                 f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(self.group_dir).name}[/]"
             )
 
@@ -328,8 +329,8 @@ class Memrix(object):
             f"^*{self.pad} {const.APP_DESC} Engine Close {self.pad}*^"
         )
 
-        Display.console.print()
-        await self.display.system_disintegrate()
+        Design.console.print()
+        await self.design.system_disintegrate()
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -597,7 +598,7 @@ class Memrix(object):
         logger.info(f"标签 -> {self.align.label}")
         logger.info(f"文件 -> {self.file_folder}\n")
 
-        await self.display.summaries(
+        await self.design.summaries(
             format_before_time, package, self.align.speed, self.align.label, self.file_folder
         )
 
@@ -624,7 +625,7 @@ class Memrix(object):
             await dump_file_task
 
             self.animation_task = asyncio.create_task(
-                self.display.memory_wave(self.memories, self.dump_close_event)
+                self.design.memory_wave(self.memories, self.dump_close_event)
             )
 
             self.exec_start_event.set()
@@ -823,8 +824,8 @@ async def main() -> typing.Optional[typing.Any]:
         return _parser.parse_engine.print_help()
 
     if _cmd_lines.align:
-        Display.build_file_tree(_align_file)
-        Display.console.print_json(data=_align.aligns)
+        Design.build_file_tree(_align_file)
+        Design.console.print_json(data=_align.aligns)
         return await FileAssist.open(_align_file)
 
     _lic_file = Path(_src_opera_place) / const.LIC_FILE
@@ -853,7 +854,7 @@ async def main() -> typing.Optional[typing.Any]:
 
             signal.signal(signal.SIGINT, memrix.clean_up)
 
-            await Display.flame_manifest()
+            await Design.flame_manifest()
 
             main_task = asyncio.create_task(
                 getattr(memrix, "dump_task_start" if storm else "exec_task_start")(device)
@@ -865,7 +866,7 @@ async def main() -> typing.Optional[typing.Any]:
             return await main_task
 
         elif forge:
-            await Display.doll_animation()
+            await Design.doll_animation()
             return await memrix.create_report()
 
         return None
@@ -884,7 +885,7 @@ if __name__ == '__main__':
 
     try:
         # 启动
-        Display.startup_logo()
+        Design.startup_logo()
 
         # 解析命令行参数，此代码块必须在 `__main__` 块下调用
         _parser = Parser()
@@ -953,7 +954,7 @@ if __name__ == '__main__':
             os.makedirs(_src_total_place, exist_ok=True)
 
         # 激活日志
-        Grapher.active(
+        Active.active(
             _watch := "INFO" if _cmd_lines.watch else "WARNING"
         )
 
@@ -970,12 +971,12 @@ if __name__ == '__main__':
         asyncio.run(main())
 
     except MemrixError as _error:
-        Display.Doc.err(_error)
-        Display.show_fail()
+        Design.Doc.err(_error)
+        Design.show_fail()
         sys.exit(1)
     except KeyboardInterrupt:
-        sys.exit(Display.show_exit())
+        sys.exit(Design.show_exit())
     except asyncio.CancelledError:
-        sys.exit(Display.show_done())
+        sys.exit(Design.show_done())
     else:
-        sys.exit(Display.show_done())
+        sys.exit(Design.show_done())

@@ -13,8 +13,8 @@ import typing
 import asyncio
 from rich.prompt import Prompt
 from engine.device import Device
-from engine.tackle import Terminal
-from memcore.display import Display
+from engine.terminal import Terminal
+from memcore.design import Design
 
 
 class Manage(object):
@@ -50,11 +50,10 @@ class Manage(object):
         - 检测通过 adb devices 命令完成
         - 用户交互依赖 rich 的 Prompt 控制台组件
         """
-
         try_again, max_try_again = 0, 20
         while True:
             if try_again == max_try_again:
-                return Display.Doc.log(f"[#FF5F00]设备连接超时 ...")
+                return Design.Doc.log(f"[#FF5F00]设备连接超时 ...")
 
             device_dict = {}
             if result := await Terminal.cmd_line(["adb", "devices"]):
@@ -65,26 +64,26 @@ class Manage(object):
 
             if not device_dict:
                 try_again += 1
-                Display.Doc.log(f"[#FFAF00]检测连接设备 ... 剩余 {(max_try_again - try_again):02} 次 ...")
+                Design.Doc.log(f"[#FFAF00]检测连接设备 ... 剩余 {(max_try_again - try_again):02} 次 ...")
                 await asyncio.sleep(5)
                 continue
 
             if (loc := len(device_dict)) == 1:
-                Display.Doc.log(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
+                Design.Doc.log(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
                 return device_dict[f"{loc}"]
 
             device: typing.Optional["Device"] = None
             for k, v in device_dict.items():
-                Display.Doc.log(f"[#00FA9A]Connect ->[/] [{k}] {v}")
+                Design.Doc.log(f"[#00FA9A]Connect ->[/] [{k}] {v}")
                 if serial == v.serial:
                     device = v
 
             try:
                 return device if device else (
                     device_dict
-                )[Prompt.ask(f"请选择", console=Display.console)]
+                )[Prompt.ask(f"请选择", console=Design.console)]
             except KeyError:
-                Display.Doc.log(f"[#FF005F]没有该设备，请重新选择 ...\n")
+                Design.Doc.log(f"[#FF005F]没有该设备，请重新选择 ...\n")
             finally:
                 try_again = 0
 

@@ -28,10 +28,9 @@ from cryptography.hazmat.primitives import (
     hashes, serialization
 )
 from cryptography.hazmat.primitives.asymmetric import padding
-from engine.tackle import (
-    Terminal, MemrixError
-)
-from memcore.display import Display
+from engine.tackle import MemrixError
+from engine.terminal import Terminal
+from memcore.design import Design
 from memnova import const
 
 
@@ -70,7 +69,7 @@ def fingerprint() -> str:
         str(uuid.getnode()),
         platform.processor() or "-",
     ]
-    raw = "::".join(parts).encode(const.ENCODING)
+    raw = "::".join(parts).encode(const.CHARSET)
     return hashlib.sha256(raw).hexdigest()
 
 
@@ -110,7 +109,7 @@ def network_time() -> typing.Optional["datetime"]:
                     t -= ntp_epoch
                     return datetime.fromtimestamp(t, timezone.utc)
         except Exception as e:
-            Display.Doc.wrn(e)
+            Design.Doc.wrn(e)
             continue
 
     return None
@@ -146,7 +145,7 @@ async def verify_license(lic_file: "Path") -> typing.Any:
     """
     验证本地授权文件是否合法、未过期，并视情况进行更新续签。
     """
-    Display.Doc.log(
+    Design.Doc.log(
         f"[bold #FFAF5F]Initiating license checkpoint ..."
     )
 
@@ -164,7 +163,7 @@ async def verify_license(lic_file: "Path") -> typing.Any:
     if now_time > expire:
         raise MemrixError(f"⚠️ 通行证过期 -> {exp}")
 
-    Display.Doc.log(
+    Design.Doc.log(
         f"[bold #87FF87]License verified. Access granted until [bold #5FD7FF]{exp}.\n"
     )
 
@@ -230,14 +229,14 @@ async def receive_license(code: str, lic_file: "Path") -> typing.Optional["Path"
         auth_info = verify_signature(lic_file)
         payload["license_id"] = auth_info["license_id"]
 
-    Display.Doc.log(
+    Design.Doc.log(
         f"[bold #FFAF5F]Transmitting glyph to central authority ..."
     )
 
     async with httpx.AsyncClient(headers=const.BASIC_HEADERS, timeout=30) as client:
         bs_lic_data = await send(client, "GET", const.BOOTSTRAP_URL, params=params)
         auth_info = verify_signature(bs_lic_data)
-        Display.console.print_json(
+        Design.console.print_json(
             data=mask_fields(
                 auth_info, keys=["url"], keep=5
             )
@@ -246,16 +245,16 @@ async def receive_license(code: str, lic_file: "Path") -> typing.Optional["Path"
 
         ac_lic_data = await send(client, "POST", activation_url, json=payload)
         auth_info = verify_signature(ac_lic_data)
-        Display.console.print_json(
+        Design.console.print_json(
             data=mask_fields(
                 auth_info, keys=["code", "castle", "license_id"], keep=10
             )
         )
-        lic_file.write_text(json.dumps(ac_lic_data, indent=2), encoding=const.ENCODING)
+        lic_file.write_text(json.dumps(ac_lic_data, indent=2), encoding=const.CHARSET)
 
         await hide_lic_file(lic_file)
 
-        Display.Doc.log(
+        Design.Doc.log(
             f"[bold #87FF87]Validation succeeded. activation seal embedded.\n"
         )
         return lic_file

@@ -8,18 +8,15 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import os
 import sys
 import yaml
 import json
 import shutil
 import typing
-import asyncio
-import aiosqlite
 from loguru import logger
 from rich.logging import RichHandler
-from memcore.display import Display
-from memcore.parser import Parser
+from engine.terminal import Terminal
+from memcore.design import Design
 from memnova import const
 
 
@@ -61,92 +58,6 @@ class MemrixError(_MemrixBaseError):
         return f"<{const.APP_DESC}Error> {self.msg}"
 
     __repr__ = __str__
-
-
-class Terminal(object):
-    """
-    异步命令行执行工具类，用于跨平台执行 shell 或子进程命令。
-
-    Terminal 类提供统一接口封装，支持字符串或参数列表形式的命令输入，
-    并可根据需求启用 shell 模式与超时控制，适用于脚本驱动的自动化任务执行。
-    """
-
-    @staticmethod
-    async def cmd_line(cmd: list[str] | str, timeout: bool = True, shell: bool = False) -> typing.Optional[str]:
-        """
-        异步执行命令行指令，支持列表或字符串命令格式，可配置 shell 与超时行为。
-
-        Parameters
-        ----------
-        cmd : Union[list[str], str]
-            要执行的命令行指令，可以是命令字符串，也可以是参数列表。
-
-        timeout : bool, optional
-            是否启用 3 秒超时机制，默认为 True，若为 False 则无限等待命令结束。
-
-        shell : bool, optional
-            是否以 shell 模式执行命令（如支持管道、重定向等），默认为 False。
-
-        Returns
-        -------
-        Optional[str]
-            命令执行的标准输出或错误输出内容（首选 stdout），若超时或无输出则返回 None。
-        """
-        logger.debug(cmd)
-
-        transports = await asyncio.create_subprocess_shell(
-            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        ) if shell else await asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-
-        try:
-            stdout, stderr = await asyncio.wait_for(
-                transports.communicate(), timeout=3
-            ) if timeout else await transports.communicate()
-        except asyncio.TimeoutError:
-            return None
-
-        if stdout:
-            return stdout.decode(encoding=const.ENCODING, errors="ignore").strip()
-        if stderr:
-            return stderr.decode(encoding=const.ENCODING, errors="ignore").strip()
-
-    @staticmethod
-    async def cmd_link(cmd: list[str]) -> "asyncio.subprocess.Process":
-        """
-        异步执行命令行指令，并返回子进程传输句柄。
-
-        该方法与 `cmd_line` 类似，但不等待命令执行结束，而是直接返回进程对象（用于流式或手动控制的场景）。
-
-        Parameters
-        ----------
-        cmd : list[str]
-            要执行的命令及其参数列表。
-
-        Returns
-        -------
-        asyncio.subprocess.Process
-            返回 asyncio 创建的子进程对象（transports），可手动调用 `.communicate()`、`.stdin.write()` 等方法继续交互。
-
-        Notes
-        -----
-        - 与 `cmd_line` 不同，该方法不自动处理输出，也不会解码。
-        - 适合用于需要长时间运行或交互式输入输出的子进程场景。
-
-        Workflow
-        --------
-        1. 异步启动子进程并打开 stdout/stderr 管道。
-        2. 返回子进程 transport 对象供外部使用。
-        """
-        logger.debug(cmd)
-
-        transports = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-
-        return transports
 
 
 class FileAssist(object):
@@ -201,7 +112,7 @@ class FileAssist(object):
         yaml.YAMLError
             当 YAML 文件格式错误时抛出。
         """
-        with open(file, "r", encoding=const.ENCODING) as f:
+        with open(file, "r", encoding=const.CHARSET) as f:
             return yaml.load(f.read(), Loader=yaml.FullLoader)
 
     @staticmethod
@@ -224,7 +135,7 @@ class FileAssist(object):
         json.JSONDecodeError
             当 JSON 文件格式无效时抛出。
         """
-        with open(file, "r", encoding=const.ENCODING) as f:
+        with open(file, "r", encoding=const.CHARSET) as f:
             return json.loads(f.read())
 
     @staticmethod
@@ -240,7 +151,7 @@ class FileAssist(object):
         dst : dict
             要写入的字典内容。
         """
-        with open(src, "w", encoding=const.ENCODING) as f:
+        with open(src, "w", encoding=const.CHARSET) as f:
             yaml.dump(dst, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
     @staticmethod
@@ -256,13 +167,13 @@ class FileAssist(object):
          dst : dict
              要写入的字典内容。
          """
-        with open(src, "w", encoding=const.ENCODING) as f:
+        with open(src, "w", encoding=const.CHARSET) as f:
             json.dump(dst, f, indent=4, separators=(",", ":"), ensure_ascii=False)
 
 
-class Grapher(object):
+class Active(object):
     """
-    日志输出与终端美化工具类，为 Memrix 提供统一的视觉日志体验。
+    日志输出与终端美化工具类，提供统一的视觉日志体验。
 
     封装 `loguru` 日志系统与 `rich.console.Console`，用于配置日志格式、
     启用彩色输出、显示结构化信息，并提供格式化打印视图日志的便捷方法。
@@ -282,7 +193,7 @@ class Grapher(object):
         """
         logger.remove()
         logger.add(
-            RichHandler(console=Display.console, show_level=False, show_path=False, show_time=False),
+            RichHandler(console=Design.console, show_level=False, show_path=False, show_time=False),
             level=log_level, format=const.PRINT_FORMAT
         )
 
@@ -357,388 +268,6 @@ class Ram(object):
         虚拟内存估值信息。
         """
         return self.__details.get("memory_vms", None)
-
-
-class Align(object):
-    """
-    配置管理类，用于加载、更新与访问 YAML 配置文件。
-
-    封装了默认配置结构，包括内存采样频率、测试标签、报告参数等，
-    并通过属性方式提供统一访问接口。同时支持类型容错转换与 YAML 写入。
-    """
-
-    aligns = {
-        "Memory": {
-            "speed": 1,
-            "label": "应用名称"
-        },
-        "Script": {
-            "group": "mission"
-        },
-        "Report": {
-            "fg_max": 0.0,
-            "fg_avg": 0.0,
-            "bg_max": 0.0,
-            "bg_avg": 0.0,
-            "headline": "标题",
-            "criteria": "标准"
-        }
-    }
-
-    def __init__(self, align_file: typing.Any):
-        self.load_align(align_file)
-
-    def __getstate__(self):
-        return self.aligns
-
-    def __setstate__(self, state):
-        self.aligns = state
-
-    @property
-    def speed(self):
-        """
-        采样间隔时间（秒），范围建议为 1~10。
-        """
-        return self.aligns["Memory"]["speed"]
-
-    @property
-    def label(self):
-        """
-        当前测试任务的标签或名称，用于日志与报告标注。
-        """
-        return self.aligns["Memory"]["label"]
-
-    @property
-    def group(self):
-        """
-        JSON 自动化脚本中任务组字段名。
-        """
-        return self.aligns["Script"]["group"]
-
-    @property
-    def fg_max(self):
-        """
-        报告中前台 PSS 峰值容忍阈。
-        """
-        return self.aligns["Report"]["fg_max"]
-
-    @property
-    def fg_avg(self):
-        """
-        报告中前台 PSS 平均值容忍阈。
-        """
-        return self.aligns["Report"]["fg_avg"]
-
-    @property
-    def bg_max(self):
-        """
-        报告中后台 PSS 峰值容忍阈。
-        """
-        return self.aligns["Report"]["bg_max"]
-
-    @property
-    def bg_avg(self):
-        """
-        报告中后台 PSS 平均值容忍阈。
-        """
-        return self.aligns["Report"]["bg_avg"]
-
-    @property
-    def headline(self):
-        """
-        报告页标题。
-        """
-        return self.aligns["Report"]["headline"]
-
-    @property
-    def criteria(self):
-        """
-        报告中的性能评估标准描述。
-        """
-        return self.aligns["Report"]["criteria"]
-
-    @speed.setter
-    def speed(self, value: typing.Any):
-        self.aligns["Memory"]["speed"] = Parser.parse_decimal(value)
-
-    @label.setter
-    def label(self, value: typing.Any):
-        self.aligns["Memory"]["label"] = value
-
-    @group.setter
-    def group(self, value: typing.Any):
-        self.aligns["Script"]["group"] = value
-
-    @fg_max.setter
-    def fg_max(self, value: typing.Any):
-        self.aligns["Report"]["fg_max"] = Parser.parse_decimal(value)
-
-    @fg_avg.setter
-    def fg_avg(self, value: typing.Any):
-        self.aligns["Report"]["fg_avg"] = Parser.parse_decimal(value)
-
-    @bg_max.setter
-    def bg_max(self, value: typing.Any):
-        self.aligns["Report"]["bg_max"] = Parser.parse_decimal(value)
-
-    @bg_avg.setter
-    def bg_avg(self, value: typing.Any):
-        self.aligns["Report"]["bg_avg"] = Parser.parse_decimal(value)
-
-    @headline.setter
-    def headline(self, value: typing.Any):
-        self.aligns["Report"]["headline"] = value
-
-    @criteria.setter
-    def criteria(self, value: typing.Any):
-        self.aligns["Report"]["criteria"] = value
-
-    def load_align(self, align_file: typing.Any) -> None:
-        """
-        加载 YAML 配置文件并更新当前配置项。
-
-        如果指定的配置文件存在且格式正确，则逐项读取其中内容并设置为当前属性值。
-        若文件不存在或读取失败（语法错误等），则自动写入默认配置并覆盖原文件。
-
-        Parameters
-        ----------
-        align_file : str or Path
-            配置文件的路径，应为 YAML 格式。
-
-        Notes
-        -----
-        - 文件结构必须匹配默认结构中的模块与字段
-        - 使用 setattr 动态写入各字段以触发 setter 类型转换（如 parse_integer / parse_decimal）
-        """
-        try:
-            user_align = FileAssist.read_yaml(align_file)
-            for key, value in self.aligns.items():
-                for k, v in value.items():
-                    setattr(self, k, user_align.get(key, {}).get(k, v))
-        except (FileNotFoundError, yaml.YAMLError):
-            self.dump_align(align_file)
-
-    def dump_align(self, align_file: typing.Any) -> None:
-        """
-        将当前配置结构写入 YAML 文件，自动格式化并支持中文。
-
-        Parameters
-        ----------
-        align_file : str or Path
-            要写入的配置文件路径。
-        """
-        os.makedirs(os.path.dirname(align_file), exist_ok=True)
-        FileAssist.dump_yaml(align_file, self.aligns)
-
-
-class DataBase(object):
-    """
-    内存数据数据库操作类，为 Memrix 提供异步持久化能力。
-
-    基于 aiosqlite 提供的异步接口，实现数据表创建、内存数据插入与采集结果查询。
-    所有操作基于统一结构的 memory_data 表，支持前后台筛选与图表构建数据输出。
-    """
-
-    @staticmethod
-    async def create_table(db: "aiosqlite.Connection") -> None:
-        """
-        创建内存采样数据表 `memory_data`，如果表不存在则自动创建。
-
-        表结构涵盖基础信息（时间戳、PID、UID）、前后台状态、内存汇总值与详细内存段字段，
-        可用于图表展示、报告分析与任务回溯。
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
-        """
-
-        await db.execute('''CREATE TABLE IF NOT EXISTS memory_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_dir TEXT,
-            label TEXT,
-            timestamp INTEGER,
-            pid INTEGER,
-            uid INTEGER,
-            adj INTEGER,
-            activity TEXT,
-            foreground INTEGER,
-            graphics REAL,
-            rss REAL,
-            pss REAL,
-            uss REAL,
-            swap REAL,
-            opss REAL,
-            native_heap REAL,
-            dalvik_heap REAL,
-            dalvik_other REAL,
-            stack REAL,
-            ashmem REAL,
-            gfx_dev REAL,
-            other_dev REAL,
-            so_mmap REAL,
-            jar_mmap REAL,
-            apk_mmap REAL,
-            ttf_mmap REAL,
-            dex_mmap REAL,
-            oat_mmap REAL,
-            art_mmap REAL,
-            other_mmap REAL,
-            egl_mtrack REAL,
-            gl_mtrack REAL,
-            unknown REAL,
-            vmrss REAL)''')
-        await db.commit()
-
-    @staticmethod
-    async def insert_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            label: str,
-            remark_map: dict,
-            resume_map: dict,
-            memory_map: dict,
-            vmrss: dict
-    ) -> None:
-        """
-        将一轮内存采样结果写入数据库。
-
-        参数由 `Ram` 对象构建而成，拆解为 remark（基础）、resume（汇总）、
-        memory（明细）和 vmrss（估值）四部分。
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
-
-        data_dir : str
-            当前任务的目录标识（轮次标记）。
-
-        label : str
-            当前测试任务的标签名称。
-
-        remark_map : dict
-            应用运行状态数据，如时间戳、PID、UID、Activity、是否前台等。
-
-        resume_map : dict
-            汇总内存数据，如 PSS、USS、RSS、SWAP、Graphics 等。
-
-        memory_map : dict
-            详细内存段数据，如 Native Heap、.dex、.so、Stack 等。
-
-        vmrss : dict
-            虚拟内存估值，如 VmRSS。
-        """
-        await db.execute('''INSERT INTO memory_data (
-            data_dir,
-            label,
-            timestamp,
-            pid,
-            uid,
-            adj,
-            activity,
-            foreground,
-            graphics,
-            rss,
-            pss,
-            uss,
-            swap,
-            opss,
-            native_heap,
-            dalvik_heap,
-            dalvik_other,
-            stack,
-            ashmem,
-            other_dev,
-            so_mmap,
-            jar_mmap,
-            apk_mmap,
-            ttf_mmap,
-            dex_mmap,
-            oat_mmap,
-            art_mmap,
-            other_mmap,
-            gl_mtrack,
-            unknown,
-            vmrss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
-                data_dir,
-                label,
-                remark_map["tms"],
-                remark_map["pid"],
-                remark_map["uid"],
-                remark_map["adj"],
-                remark_map["act"],
-                remark_map["frg"],
-
-                resume_map["Graphics"],
-                resume_map["TOTAL RSS"],
-                resume_map["TOTAL PSS"],
-                resume_map["TOTAL USS"],
-                resume_map["TOTAL SWAP"],
-                resume_map["OPSS"],
-
-                memory_map["Native Heap"],
-                memory_map["Dalvik Heap"],
-                memory_map["Dalvik Other"],
-                memory_map["Stack"],
-                memory_map["Ashmem"],
-                memory_map["Other dev"],
-                memory_map[".so mmap"],
-                memory_map[".jar mmap"],
-                memory_map[".apk mmap"],
-                memory_map[".ttf mmap"],
-                memory_map[".dex mmap"],
-                memory_map[".oat mmap"],
-                memory_map[".art mmap"],
-                memory_map["Other mmap"],
-                memory_map["GL mtrack"],
-                memory_map["Unknown"],
-
-                vmrss["vms"]
-            )
-        )
-        await db.commit()
-
-    @staticmethod
-    async def query_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
-        """
-        查询指定数据目录（轮次）下的前台与后台内存采样数据。
-
-        输出结果格式为用于图表展示的有序列表，按时间排序，字段结构如下：
-        (timestamp, rss, pss, uss, opss, activity, adj, foreground)
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
-
-        data_dir : str
-            数据采样轮次标识（对应插入时的 data_dir 字段）。
-
-        Returns
-        -------
-        tuple[list, list]
-            两个列表分别为：
-            - 前台数据列表（foreground = '前台'）
-            - 后台数据列表（foreground = '后台'）
-        """
-
-        async def find(sql):
-            async with db.execute(sql) as cursor:
-                return await cursor.fetchall()
-
-        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
-        WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
-        """
-        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
-        WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
-        """
-
-        fg_list, bg_list = await asyncio.gather(
-            find(fg_sql), find(bg_sql)
-        )
-
-        return fg_list, bg_list
 
 
 if __name__ == '__main__':

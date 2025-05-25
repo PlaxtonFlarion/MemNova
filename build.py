@@ -22,9 +22,10 @@ from rich.progress import (
     Progress, SpinnerColumn, TextColumn,
 )
 from engine.tackle import (
-    Grapher, Terminal, MemrixError
+    Active, MemrixError
 )
-from memcore.display import Display
+from engine.terminal import Terminal
+from memcore.design import Design
 from memnova import const
 
 nuitka_version = "2.7"  # 编译器版本
@@ -34,7 +35,7 @@ try:
 except ImportError:
     raise MemrixError(f"Use Nuitka {nuitka_version} for stable builds")
 
-compile_log: typing.Any = lambda x: Display.console.print(
+compile_log: typing.Any = lambda x: Design.console.print(
     const.PRINT_HEAD, Text(x, style="bold #ADD8E6")
 )
 
@@ -328,14 +329,14 @@ async def post_build() -> typing.Coroutine | None:
         异步读取终端标准输出流内容，并打印实时构建日志。
         """
         async for line in transports.stdout:
-            compile_log(line.decode(const.ENCODING, "ignore").strip())
+            compile_log(line.decode(const.CHARSET, "ignore").strip())
 
     async def error_stream() -> typing.Coroutine | None:
         """
         异步读取终端错误输出流内容，实时反馈构建异常信息。
         """
         async for line in transports.stderr:
-            compile_log(line.decode(const.ENCODING, "ignore").strip())
+            compile_log(line.decode(const.CHARSET, "ignore").strip())
 
     async def examine_dependencies() -> typing.Coroutine | None:
         """
@@ -357,7 +358,7 @@ async def post_build() -> typing.Coroutine | None:
         """
         拷贝所有依赖文件与目录至编译产物路径，并执行重命名与缓存清理。
         """
-        bar_width = int(Display.console.width * 0.3)
+        bar_width = int(Design.console.width * 0.3)
 
         with Progress(
                 TextColumn(text_format=f"[bold #80C0FF]{const.APP_DESC} | {{task.description}}", justify="right"),
@@ -394,12 +395,12 @@ async def post_build() -> typing.Coroutine | None:
         await edit_plist_fields(ops, rename[-1], {"CFBundleExecutable": launch[0].name})
 
     # ==== Note: Start from here ====
-    Display.startup_logo()
-    await Display.compile_animation()
+    Design.startup_logo()
+    await Design.compile_animation()
 
     build_start_time = time.time()
 
-    Grapher.active("INFO")
+    Active.active("INFO")
 
     compiles = await packaging()
     ops, app, site_packages, target, rename, *_ = compiles
@@ -447,9 +448,9 @@ if __name__ == "__main__":
         asyncio.run(post_build())
     except MemrixError as _e:
         compile_log(_e)
-        Display.show_fail()
+        Design.show_fail()
         sys.exit(1)
     except KeyboardInterrupt:
-        sys.exit(Display.show_exit())
+        sys.exit(Design.show_exit())
     else:
-        sys.exit(Display.show_done())
+        sys.exit(Design.show_done())

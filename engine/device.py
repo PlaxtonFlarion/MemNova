@@ -12,14 +12,13 @@ import re
 import typing
 import asyncio
 import uiautomator2
-from engine.tackle import (
-    Pid, Terminal
-)
+from engine.tackle import Pid
+from engine.terminal import Terminal
 
 
 class Device(object):
     """
-    Android 设备操作封装类，为 Memrix 提供设备级数据采集与控制接口。
+    Android 设备操作封装类，提供设备级数据采集与控制接口。
 
     该类用于连接并操作指定序列号的 Android 设备，提供基于 ADB 与 uiautomator2 的高层封装，
     支持异步获取 UID、PID、当前 Activity、前后台状态、内存信息等关键指标，
@@ -38,7 +37,6 @@ class Device(object):
     u2_device : Optional[uiautomator2.Device]
         已连接的 uiautomator2 设备对象，在调用 `u2_active()` 后可用。
     """
-
     u2_device: typing.Optional["uiautomator2.Device"] = None
 
     def __init__(self, serial: str):

@@ -32,14 +32,14 @@ from bokeh.models import (
 from jinja2 import (
     Environment, FileSystemLoader
 )
-from engine.tackle import DataBase
-from memcore.display import Display
+from memcore.cubicle import DataBase
+from memcore.design import Design
 from memnova import const
 
 
 class Analyzer(object):
     """
-    Memrix 分析器类，用于生成内存测试报告，包括统计图表绘制与 HTML 页面渲染。
+    分析器类，用于生成内存测试报告，包括统计图表绘制与 HTML 页面渲染。
 
     该类负责读取采集数据库中的内存数据，提取前台与后台运行阶段的指标曲线，
     通过 Bokeh 绘制可交互图表，并基于 Jinja2 模板渲染完整的 HTML 报告页面。
@@ -88,7 +88,7 @@ class Analyzer(object):
         Notes
         -----
         - 模板必须为合法 Jinja2 文件，包含可注入变量。
-        - 输出文件编码遵循系统预设常量 `const.ENCODING`。
+        - 输出文件编码遵循系统预设常量。
         - 模板与数据解耦，支持自定义报告样式与结构。
         """
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
@@ -102,11 +102,11 @@ class Analyzer(object):
         )
         html_file = os.path.join(self.download, f"{const.APP_DESC}_Inform_{salt()}.html")
 
-        async with aiofiles.open(html_file, "w", encoding=const.ENCODING) as f:
+        async with aiofiles.open(html_file, "w", encoding=const.CHARSET) as f:
             await f.write(html)
             logger.info(html_file)
 
-        Display.build_file_tree(html_file)
+        Design.build_file_tree(html_file)
 
     async def draw_memory(self, data_dir: str) -> dict[str, str]:
         """
@@ -133,13 +133,6 @@ class Analyzer(object):
             - fg_avg / bg_avg：PSS 均值（MB）
             - fg_loc / bg_loc：图表文件相对路径
             - minor_title：本轮任务的标识标题
-
-        Notes
-        -----
-        - 图表文件将以 `FG_<data_dir>.html` / `BG_<data_dir>.html` 命名
-        - 所有图表使用 Bokeh 绘制，支持交互与动态图例
-        - 如果数据缺失或结构异常，将自动跳过绘图并返回空结果
-        - 输出路径结构为 `{download}/summary/{data_dir}/`
         """
 
         async def draw(file_name: str, data_list: list[tuple]) -> dict:
@@ -168,13 +161,6 @@ class Analyzer(object):
                     当前数据中的 PSS 平均值（单位 MB）
                 - {file_name}_loc : str
                     图表文件的相对路径（用于最终报告整合）
-
-            Notes
-            -----
-            - 使用 Bokeh 的 HoverTool 提供悬浮提示，包括 PSS、RSS、USS、Activity 和 ADJ 状态
-            - 峰值（红）、均值（粉）、最小值（绿）使用散点与辅助线标注
-            - 图表输出位置为：`{download}/summary/{data_dir}/FG_*.html 或 BG_*.html`
-            - 若数据为空或结构异常将返回空字典，不影响报告主流程
             """
             if not data_list:
                 return {}
