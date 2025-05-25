@@ -359,27 +359,15 @@ class Ram(object):
         return self.__details.get("memory_vms", None)
 
 
-class Config(object):
+class Align(object):
     """
-    配置管理类，用于加载、更新与访问 Memrix 的 YAML 配置文件。
+    配置管理类，用于加载、更新与访问 YAML 配置文件。
 
     封装了默认配置结构，包括内存采样频率、测试标签、报告参数等，
     并通过属性方式提供统一访问接口。同时支持类型容错转换与 YAML 写入。
-
-    初始化时自动尝试读取配置文件，若不存在则写入默认配置。
-
-    Parameters
-    ----------
-    config_file : str or Path
-        配置文件的路径，必须为 YAML 格式。
-
-    Attributes
-    ----------
-    configs : dict
-        当前完整的配置字典结构，按功能模块划分为 Memory / Script / Report。
     """
 
-    configs = {
+    aligns = {
         "Memory": {
             "speed": 1,
             "label": "应用名称"
@@ -397,115 +385,115 @@ class Config(object):
         }
     }
 
-    def __init__(self, config_file: typing.Any):
-        self.load_config(config_file)
+    def __init__(self, align_file: typing.Any):
+        self.load_align(align_file)
 
     def __getstate__(self):
-        return self.configs
+        return self.aligns
 
     def __setstate__(self, state):
-        self.configs = state
+        self.aligns = state
 
     @property
     def speed(self):
         """
         采样间隔时间（秒），范围建议为 1~10。
         """
-        return self.configs["Memory"]["speed"]
+        return self.aligns["Memory"]["speed"]
 
     @property
     def label(self):
         """
         当前测试任务的标签或名称，用于日志与报告标注。
         """
-        return self.configs["Memory"]["label"]
+        return self.aligns["Memory"]["label"]
 
     @property
     def group(self):
         """
         JSON 自动化脚本中任务组字段名。
         """
-        return self.configs["Script"]["group"]
+        return self.aligns["Script"]["group"]
 
     @property
     def fg_max(self):
         """
         报告中前台 PSS 峰值容忍阈。
         """
-        return self.configs["Report"]["fg_max"]
+        return self.aligns["Report"]["fg_max"]
 
     @property
     def fg_avg(self):
         """
         报告中前台 PSS 平均值容忍阈。
         """
-        return self.configs["Report"]["fg_avg"]
+        return self.aligns["Report"]["fg_avg"]
 
     @property
     def bg_max(self):
         """
         报告中后台 PSS 峰值容忍阈。
         """
-        return self.configs["Report"]["bg_max"]
+        return self.aligns["Report"]["bg_max"]
 
     @property
     def bg_avg(self):
         """
         报告中后台 PSS 平均值容忍阈。
         """
-        return self.configs["Report"]["bg_avg"]
+        return self.aligns["Report"]["bg_avg"]
 
     @property
     def headline(self):
         """
         报告页标题。
         """
-        return self.configs["Report"]["headline"]
+        return self.aligns["Report"]["headline"]
 
     @property
     def criteria(self):
         """
         报告中的性能评估标准描述。
         """
-        return self.configs["Report"]["criteria"]
+        return self.aligns["Report"]["criteria"]
 
     @speed.setter
     def speed(self, value: typing.Any):
-        self.configs["Memory"]["speed"] = Parser.parse_decimal(value)
+        self.aligns["Memory"]["speed"] = Parser.parse_decimal(value)
 
     @label.setter
     def label(self, value: typing.Any):
-        self.configs["Memory"]["label"] = value
+        self.aligns["Memory"]["label"] = value
 
     @group.setter
     def group(self, value: typing.Any):
-        self.configs["Script"]["group"] = value
+        self.aligns["Script"]["group"] = value
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
-        self.configs["Report"]["fg_max"] = Parser.parse_decimal(value)
+        self.aligns["Report"]["fg_max"] = Parser.parse_decimal(value)
 
     @fg_avg.setter
     def fg_avg(self, value: typing.Any):
-        self.configs["Report"]["fg_avg"] = Parser.parse_decimal(value)
+        self.aligns["Report"]["fg_avg"] = Parser.parse_decimal(value)
 
     @bg_max.setter
     def bg_max(self, value: typing.Any):
-        self.configs["Report"]["bg_max"] = Parser.parse_decimal(value)
+        self.aligns["Report"]["bg_max"] = Parser.parse_decimal(value)
 
     @bg_avg.setter
     def bg_avg(self, value: typing.Any):
-        self.configs["Report"]["bg_avg"] = Parser.parse_decimal(value)
+        self.aligns["Report"]["bg_avg"] = Parser.parse_decimal(value)
 
     @headline.setter
     def headline(self, value: typing.Any):
-        self.configs["Report"]["headline"] = value
+        self.aligns["Report"]["headline"] = value
 
     @criteria.setter
     def criteria(self, value: typing.Any):
-        self.configs["Report"]["criteria"] = value
+        self.aligns["Report"]["criteria"] = value
 
-    def load_config(self, config_file: typing.Any) -> None:
+    def load_align(self, align_file: typing.Any) -> None:
         """
         加载 YAML 配置文件并更新当前配置项。
 
@@ -514,7 +502,7 @@ class Config(object):
 
         Parameters
         ----------
-        config_file : str or Path
+        align_file : str or Path
             配置文件的路径，应为 YAML 格式。
 
         Notes
@@ -523,27 +511,24 @@ class Config(object):
         - 使用 setattr 动态写入各字段以触发 setter 类型转换（如 parse_integer / parse_decimal）
         """
         try:
-            user_config = FileAssist.read_yaml(config_file)
-            for key, value in self.configs.items():
+            user_align = FileAssist.read_yaml(align_file)
+            for key, value in self.aligns.items():
                 for k, v in value.items():
-                    setattr(self, k, user_config.get(key, {}).get(k, v))
+                    setattr(self, k, user_align.get(key, {}).get(k, v))
         except (FileNotFoundError, yaml.YAMLError):
-            self.dump_config(config_file)
+            self.dump_align(align_file)
 
-    def dump_config(self, config_file: typing.Any) -> None:
+    def dump_align(self, align_file: typing.Any) -> None:
         """
         将当前配置结构写入 YAML 文件，自动格式化并支持中文。
 
-        如果目标路径的文件夹不存在，将自动创建。写入内容为 self.configs，
-        使用 UTF-8 编码保存，保留键顺序并启用多行友好格式。
-
         Parameters
         ----------
-        config_file : str or Path
+        align_file : str or Path
             要写入的配置文件路径。
         """
-        os.makedirs(os.path.dirname(config_file), exist_ok=True)
-        FileAssist.dump_yaml(config_file, self.configs)
+        os.makedirs(os.path.dirname(align_file), exist_ok=True)
+        FileAssist.dump_yaml(align_file, self.aligns)
 
 
 class DataBase(object):

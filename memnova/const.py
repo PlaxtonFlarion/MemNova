@@ -37,7 +37,7 @@ TOTAL_DIR       = f"{APP_DESC}_Library"
 SUBSET_DIR      = r"Tree"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
-CONFIG          = f"{APP_NAME}_config.yaml"
+ALIGN          = f"{APP_NAME}_align.yaml"
 LIC_FILE        = f".{APP_NAME}_signature.lic"
 
 SCHEMATIC       = r"schematic"
