@@ -13,6 +13,7 @@ import yaml
 import json
 import shutil
 import typing
+import aiofiles
 from loguru import logger
 from rich.logging import RichHandler
 from engine.terminal import Terminal
@@ -64,7 +65,7 @@ class FileAssist(object):
     """
     文件操作工具类，用于读取与写入 YAML / JSON 文件，并封装跨平台的文本文件打开方式。
 
-    提供异步和同步方式的文件读写方法，支持编码处理、美化输出、键排序控制等，广泛用于 Memrix 配置、
+    提供异步方式的文件读写方法，支持编码处理、美化输出、键排序控制等，广泛用于 Memrix 配置、
     场景记录、报告数据缓存等操作。
     """
 
@@ -93,9 +94,9 @@ class FileAssist(object):
         return await Terminal.cmd_line(cmd + [file], timeout=False)
 
     @staticmethod
-    def read_yaml(file: str) -> dict:
+    async def read_yaml(file: str) -> dict:
         """
-        从 YAML 文件中读取内容并返回为 Python 字典。
+        异步读取 YAML 文件并解析为字典数据。
 
         Parameters
         ----------
@@ -112,13 +113,13 @@ class FileAssist(object):
         yaml.YAMLError
             当 YAML 文件格式错误时抛出。
         """
-        with open(file, "r", encoding=const.CHARSET) as f:
-            return yaml.load(f.read(), Loader=yaml.FullLoader)
+        async with aiofiles.open(file, "r", encoding=const.CHARSET) as f:
+            return yaml.load(await f.read(), Loader=yaml.FullLoader)
 
     @staticmethod
-    def read_json(file: str) -> dict:
+    async def read_json(file: str) -> dict:
         """
-        从 JSON 文件中读取内容并返回为 Python 字典。
+        异步读取 JSON 文件内容并返回为 Python 字典。
 
         Parameters
         ----------
@@ -135,13 +136,13 @@ class FileAssist(object):
         json.JSONDecodeError
             当 JSON 文件格式无效时抛出。
         """
-        with open(file, "r", encoding=const.CHARSET) as f:
-            return json.loads(f.read())
+        async with aiofiles.open(file, "r", encoding=const.CHARSET) as f:
+            return json.loads(await f.read())
 
     @staticmethod
-    def dump_yaml(src: typing.Any, dst: dict) -> None:
+    async def dump_yaml(src: str, dst: dict) -> None:
         """
-        将 Python 字典写入 YAML 文件，自动格式化并保留中文字符。
+        异步将 Python 字典写入 YAML 文件，自动格式化并保留中文字符。
 
         Parameters
         ----------
@@ -151,32 +152,33 @@ class FileAssist(object):
         dst : dict
             要写入的字典内容。
         """
-        with open(src, "w", encoding=const.CHARSET) as f:
-            yaml.dump(dst, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        async with aiofiles.open(src, "w", encoding=const.CHARSET) as f:
+            await f.write(
+                yaml.dump(dst, allow_unicode=True, default_flow_style=False, sort_keys=False)
+            )
 
     @staticmethod
-    def dump_json(src: typing.Any, dst: dict) -> None:
+    async def dump_json(src: str, dst: dict) -> None:
         """
-         将 Python 字典写入 JSON 文件，格式化输出并保留中文内容。
+        异步将 Python 字典写入 JSON 文件，格式化输出并保留中文内容。
 
-         Parameters
-         ----------
-         src : str
-             目标 JSON 文件路径。
+        Parameters
+        ----------
+        src : str
+            目标 JSON 文件路径。
 
-         dst : dict
-             要写入的字典内容。
-         """
-        with open(src, "w", encoding=const.CHARSET) as f:
-            json.dump(dst, f, indent=4, separators=(",", ":"), ensure_ascii=False)
+        dst : dict
+            要写入的字典内容。
+        """
+        async with aiofiles.open(src, "w", encoding=const.CHARSET) as f:
+            await f.write(
+                json.dumps(dst, indent=4, separators=(",", ":"), ensure_ascii=False)
+            )
 
 
 class Active(object):
     """
     日志输出与终端美化工具类，提供统一的视觉日志体验。
-
-    封装 `loguru` 日志系统与 `rich.console.Console`，用于配置日志格式、
-    启用彩色输出、显示结构化信息，并提供格式化打印视图日志的便捷方法。
     """
 
     @staticmethod

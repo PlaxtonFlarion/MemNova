@@ -609,9 +609,7 @@ class Memrix(object):
             scene = {
                 "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
             }
-        dump_file_task = asyncio.create_task(
-            asyncio.to_thread(FileAssist.dump_yaml, self.team_file, scene)
-        )
+        dump_file_task = asyncio.create_task(FileAssist.dump_yaml(self.team_file, scene))
 
         if not os.path.exists(self.other_dir):
             os.makedirs(self.other_dir, exist_ok=True)
@@ -672,7 +670,7 @@ class Memrix(object):
         - 主流程执行完毕后主动调用 `dump_task_close()` 清理资源
         """
         try:
-            open_file = await asyncio.to_thread(FileAssist.read_json, self.focus)
+            open_file = await FileAssist.read_json(self.focus)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             raise MemrixError(e)
 
@@ -895,6 +893,7 @@ async def main() -> typing.Optional[typing.Any]:
     align_file = os.path.join(initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
     # 加载初始配置
     align = Align(align_file)
+    await align.load_align()
 
     if len(sys.argv) == 1:
         return parser.parse_engine.print_help()

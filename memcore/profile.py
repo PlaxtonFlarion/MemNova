@@ -42,7 +42,7 @@ class Align(object):
     }
 
     def __init__(self, align_file: typing.Any):
-        self.load_align(align_file)
+        self.align_file = align_file
 
     def __getstate__(self):
         return self.aligns
@@ -149,37 +149,27 @@ class Align(object):
     def criteria(self, value: typing.Any):
         self.aligns["Report"]["criteria"] = value
 
-    def load_align(self, align_file: typing.Any) -> None:
+    async def load_align(self) -> None:
         """
         加载 YAML 配置文件并更新当前配置项。
 
         如果指定的配置文件存在且格式正确，则逐项读取其中内容并设置为当前属性值。
         若文件不存在或读取失败（语法错误等），则自动写入默认配置并覆盖原文件。
-
-        Parameters
-        ----------
-        align_file : str or Path
-            配置文件的路径，应为 YAML 格式。
         """
         try:
-            user_align = FileAssist.read_yaml(align_file)
+            user_align = await FileAssist.read_yaml(self.align_file)
             for key, value in self.aligns.items():
                 for k, v in value.items():
                     setattr(self, k, user_align.get(key, {}).get(k, v))
         except (FileNotFoundError, yaml.YAMLError):
-            self.dump_align(align_file)
+            await self.dump_align()
 
-    def dump_align(self, align_file: typing.Any) -> None:
+    async def dump_align(self) -> None:
         """
         将当前配置结构写入 YAML 文件，自动格式化并支持中文。
-
-        Parameters
-        ----------
-        align_file : str or Path
-            要写入的配置文件路径。
         """
-        os.makedirs(os.path.dirname(align_file), exist_ok=True)
-        FileAssist.dump_yaml(align_file, self.aligns)
+        os.makedirs(os.path.dirname(self.align_file), exist_ok=True)
+        await FileAssist.dump_yaml(self.align_file, self.aligns)
 
 
 if __name__ == '__main__':
