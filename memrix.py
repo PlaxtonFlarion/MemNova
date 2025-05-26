@@ -826,6 +826,10 @@ async def main() -> typing.Optional[typing.Any]:
     parser = Parser()
     cmd_lines = Parser().parse_cmd
 
+    # 如果没有提供命令行参数，则显示帮助文档，并退出程序
+    if len(sys.argv) == 1:
+        return parser.parse_engine.print_help()
+
     # 获取当前操作系统平台和应用名称
     platform = sys.platform.strip().lower()
     software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
@@ -885,18 +889,12 @@ async def main() -> typing.Optional[typing.Any]:
         os.makedirs(src_total_place, exist_ok=True)
 
     # 激活日志
-    Active.active(
-        watch := "INFO" if cmd_lines.watch else "WARNING"
-    )
+    Active.active(watch := "INFO" if cmd_lines.watch else "WARNING")
 
     # 设置初始配置文件路径
     align_file = os.path.join(initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
     # 加载初始配置
     align = Align(align_file)
-    await align.load_align()
-
-    if len(sys.argv) == 1:
-        return parser.parse_engine.print_help()
 
     if cmd_lines.align:
         Design.build_file_tree(align_file)
@@ -920,6 +918,8 @@ async def main() -> typing.Optional[typing.Any]:
     logger.info(f"日志等级: {watch}")
     logger.info(f"工具目录: {turbo}")
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}\n")
+
+    await align.load_align()
 
     if any((storm := cmd_lines.storm, pulse := cmd_lines.pulse, forge := cmd_lines.forge)):
         if not (focus := cmd_lines.focus):
