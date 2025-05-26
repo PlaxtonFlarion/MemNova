@@ -818,38 +818,126 @@ class Memrix(object):
 
 async def main() -> typing.Optional[typing.Any]:
     """
-    Memrix 主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
+    主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
     """
+
+    # Notes: Start from here
+    Design.startup_logo()
+
+    # 解析命令行参数
+    parser = Parser()
+    cmd_lines = Parser().parse_cmd
+
+    # 获取当前操作系统平台和应用名称
+    platform = sys.platform.strip().lower()
+    software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
+    sys_symbol = os.sep
+    env_symbol = os.path.pathsep
+
+    # 根据应用名称确定工作目录和配置目录
+    if software == f"{const.APP_NAME}.exe":
+        mx_work = os.path.dirname(os.path.abspath(sys.argv[0]))
+        mx_feasible = os.path.dirname(mx_work)
+    elif software == f"{const.APP_NAME}":
+        mx_work = os.path.dirname(sys.executable)
+        mx_feasible = os.path.dirname(mx_work)
+    elif software == f"{const.APP_NAME}.py":
+        mx_work = os.path.dirname(os.path.abspath(__file__))
+        mx_feasible = mx_work
+    else:
+        raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
+
+    # 模板文件源路径
+    src_templates = os.path.join(mx_work, const.SCHEMATIC, const.TEMPLATES).format()
+    # 模板文件路径
+    template = os.path.join(src_templates, "memory.html")
+    # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
+    if not os.path.isfile(template) or not os.path.basename(template).endswith(".html"):
+        tmp_name = os.path.basename(template)
+        raise MemrixError(f"{const.APP_DESC} missing files {tmp_name}")
+
+    # 设置工具源路径
+    turbo = os.path.join(mx_work, const.SCHEMATIC, const.SUPPORTS).format()
+
+    # 根据平台设置工具路径
+    if platform == "win32":
+        npp = os.path.join(turbo, "Windows", "npp_portable_mini", "notepad++.exe")
+        # 将工具路径添加到系统 PATH 环境变量中
+        os.environ["PATH"] = os.path.dirname(npp) + env_symbol + os.environ.get("PATH", "")
+        # 检查工具是否存在，如果缺失则显示错误信息并退出程序
+        if not shutil.which((tls_name := os.path.basename(npp))):
+            raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
+
+    # 初始文件夹路径
+    if not os.path.exists(
+        initial_source := os.path.join(mx_feasible, const.STRUCTURE).format()
+    ):
+        os.makedirs(initial_source, exist_ok=True)
+
+    # 配置文件夹路径
+    if not os.path.exists(
+        src_opera_place := os.path.join(initial_source, const.SRC_OPERA_PLACE).format()
+    ):
+        os.makedirs(src_opera_place, exist_ok=True)
+
+    # 报告文件夹路径
+    if not os.path.exists(
+        src_total_place := os.path.join(initial_source, const.SRC_TOTAL_PLACE).format()
+    ):
+        os.makedirs(src_total_place, exist_ok=True)
+
+    # 激活日志
+    Active.active(
+        watch := "INFO" if cmd_lines.watch else "WARNING"
+    )
+
+    # 设置初始配置文件路径
+    align_file = os.path.join(initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
+    # 加载初始配置
+    align = Align(align_file)
+
     if len(sys.argv) == 1:
-        return _parser.parse_engine.print_help()
+        return parser.parse_engine.print_help()
 
-    if _cmd_lines.align:
-        Design.build_file_tree(_align_file)
-        Design.console.print_json(data=_align.aligns)
-        return await FileAssist.open(_align_file)
+    if cmd_lines.align:
+        Design.build_file_tree(align_file)
+        Design.console.print_json(data=align.aligns)
+        return await FileAssist.open(align_file)
 
-    _lic_file = Path(_src_opera_place) / const.LIC_FILE
+    lic_file = Path(src_opera_place) / const.LIC_FILE
 
     # 应用激活
-    if _apply_code := _cmd_lines.apply:
-        return await authorize.receive_license(_apply_code, _lic_file)
+    if apply_code := cmd_lines.apply:
+        return await authorize.receive_license(apply_code, lic_file)
 
     # 授权校验
-    await authorize.verify_license(_lic_file)
+    await authorize.verify_license(lic_file)
 
-    if any((storm := _cmd_lines.storm, pulse := _cmd_lines.pulse, forge := _cmd_lines.forge)):
-        if not (focus := _cmd_lines.focus):
+    logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
+    logger.info(f"操作系统: {platform}")
+    logger.info(f"应用名称: {software}")
+    logger.info(f"系统路径: {sys_symbol}")
+    logger.info(f"环境变量: {env_symbol}")
+    logger.info(f"日志等级: {watch}")
+    logger.info(f"工具目录: {turbo}")
+    logger.info(f"{'=' * 15} 系统调试 {'=' * 15}\n")
+
+    if any((storm := cmd_lines.storm, pulse := cmd_lines.pulse, forge := cmd_lines.forge)):
+        if not (focus := cmd_lines.focus):
             raise MemrixError(f"--focus 参数不能为空 ...")
 
+        keywords = {
+            "src_total_place": src_total_place, "template": template, "align": align
+        }
         memrix = Memrix(
-            storm, pulse, forge, focus, _cmd_lines.vault, _watch, **_keywords
+            storm, pulse, forge, focus, cmd_lines.vault, watch, **keywords
         )
 
         if storm or pulse:
             if not shutil.which("adb"):
                 raise MemrixError(f"ADB 环境变量未配置 ...")
 
-            if not (device := await Manage.operate_device(_cmd_lines.imply)):
+            if not (device := await Manage.operate_device(cmd_lines.imply)):
                 raise MemrixError(f"没有连接设备 ...")
 
             signal.signal(signal.SIGINT, memrix.clean_up)
@@ -884,92 +972,9 @@ if __name__ == '__main__':
     #
 
     try:
-        # 启动
-        Design.startup_logo()
-
-        # 解析命令行参数，此代码块必须在 `__main__` 块下调用
-        _parser = Parser()
-        _cmd_lines = Parser().parse_cmd
-
-        # 获取当前操作系统平台和应用名称
-        _platform = sys.platform.strip().lower()
-        _software = os.path.basename(os.path.abspath(sys.argv[0])).strip().lower()
-        _sys_symbol = os.sep
-        _env_symbol = os.path.pathsep
-
-        # 根据应用名称确定工作目录和配置目录
-        if _software == f"{const.APP_NAME}.exe":
-            # Windows
-            _mx_work = os.path.dirname(os.path.abspath(sys.argv[0]))
-            _mx_feasible = os.path.dirname(_mx_work)
-        elif _software == f"{const.APP_NAME}":
-            # MacOS
-            _mx_work = os.path.dirname(sys.executable)
-            _mx_feasible = os.path.dirname(_mx_work)
-        elif _software == f"{const.APP_NAME}.py":
-            # IDE
-            _mx_work = os.path.dirname(os.path.abspath(__file__))
-            _mx_feasible = _mx_work
-        else:
-            raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
-
-        # 模板文件源路径
-        _src_templates = os.path.join(_mx_work, const.SCHEMATIC, const.TEMPLATES).format()
-        # 模板文件路径
-        _template = os.path.join(_src_templates, "memory.html")
-        # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
-        if not os.path.isfile(_template) and os.path.basename(_template).endswith(".html"):
-            _tmp_name = os.path.basename(_template)
-            raise MemrixError(f"{const.APP_DESC} missing files {_tmp_name}")
-
-        # 设置工具源路径
-        _turbo = os.path.join(_mx_work, const.SCHEMATIC, const.SUPPORTS).format()
-
-        # 根据平台设置工具路径
-        if _platform == "win32":
-            # Windows
-            _npp = os.path.join(_turbo, "Windows", "npp_portable_mini", "notepad++.exe")
-            # 将工具路径添加到系统 PATH 环境变量中
-            os.environ["PATH"] = os.path.dirname(_npp) + _env_symbol + os.environ.get("PATH", "")
-            # 检查工具是否存在，如果缺失则显示错误信息并退出程序
-            if not shutil.which((_tls_name := os.path.basename(_npp))):
-                raise MemrixError(f"{const.APP_DESC} missing files {_tls_name}")
-
-        # 初始文件夹路径
-        if not os.path.exists(
-                _initial_source := os.path.join(_mx_feasible, const.STRUCTURE).format()
-        ):
-            os.makedirs(_initial_source, exist_ok=True)
-
-        # 配置文件夹路径
-        if not os.path.exists(
-                _src_opera_place := os.path.join(_initial_source, const.SRC_OPERA_PLACE).format()
-        ):
-            os.makedirs(_src_opera_place, exist_ok=True)
-
-        # 报告文件夹路径
-        if not os.path.exists(
-                _src_total_place := os.path.join(_initial_source, const.SRC_TOTAL_PLACE).format()
-        ):
-            os.makedirs(_src_total_place, exist_ok=True)
-
-        # 激活日志
-        Active.active(
-            _watch := "INFO" if _cmd_lines.watch else "WARNING"
-        )
-
-        # 设置初始配置文件路径
-        _align_file = os.path.join(_initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
-        # 加载初始配置
-        _align = Align(_align_file)
-
-        # 打包关键字参数
-        _keywords = {
-            "src_total_place": _src_total_place, "template": _template, "align": _align
-        }
-
-        asyncio.run(main())
-
+        main_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(main_loop)
+        main_loop.run_until_complete(main())
     except MemrixError as _error:
         Design.Doc.err(_error)
         Design.show_fail()
