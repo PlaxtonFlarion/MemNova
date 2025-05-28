@@ -136,9 +136,9 @@ class Device(object):
 
     async def examine_package(self, package: str) -> typing.Optional[str]:
         """
-        检查应用是否存在，返回 dumpsys 包信息。
+        检查指定包名是否存在于目标设备上，并返回其路径。
         """
-        cmd = ["adb", "-s", self.serial, "shell", "dumpsys", "package", package]
+        cmd = ["adb", "-s", self.serial, "shell", "pm", "path", package]
         return result if (result := await Terminal.cmd_line(cmd)) else None
 
     async def memory_info(self, package: str) -> typing.Optional[str]:

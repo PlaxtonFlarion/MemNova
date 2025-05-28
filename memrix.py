@@ -311,7 +311,8 @@ class Memrix(object):
             logger.info(f"等待流程结束 ...")
             await self.closed.wait()
 
-        await self.animation_task
+        if self.animation_task:
+            await self.animation_task
 
         time_cost = (time.time() - self.before_time) / 60
         logger.info(
@@ -579,8 +580,8 @@ class Memrix(object):
         # Notes: Start from here
         package: typing.Optional[str] = post_pkg if post_pkg else self.focus  # 传入的应用名称
 
-        if not post_pkg and "Unable" in (check := await device.examine_package(package)):
-            raise MemrixError(check)
+        if not post_pkg and not await device.examine_package(package):
+            raise MemrixError(f"应用不存在 -> {package}")
 
         logger.add(self.log_file, level="INFO", format=const.WHILE_FORMAT)
 
@@ -603,7 +604,7 @@ class Memrix(object):
         )
 
         if os.path.isfile(self.team_file):
-            scene = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
+            scene = await FileAssist.read_yaml(self.team_file)
             scene["file"].append(self.file_folder)
         else:
             scene = {
@@ -681,8 +682,8 @@ class Memrix(object):
         except (AssertionError, KeyError, TypeError) as e:
             raise MemrixError(e)
 
-        if "Unable" in (check := await device.examine_package(package)):
-            raise MemrixError(check)
+        if not await device.examine_package(package):
+            raise MemrixError(f"应用不存在 -> {package}")
 
         try:
             await device.u2_active()
@@ -771,7 +772,7 @@ class Memrix(object):
                 db, os.path.join(self.group_dir, f"Report_{os.path.basename(self.group_dir)}")
             )
 
-            team_data = await asyncio.to_thread(FileAssist.read_yaml, self.team_file)
+            team_data = await FileAssist.read_yaml(self.team_file)
             if not (memory_data_list := team_data["file"]):
                 raise MemrixError(f"No data scenario {memory_data_list} ...")
 
@@ -956,7 +957,8 @@ async def main() -> typing.Optional[typing.Any]:
             await Design.doll_animation()
             return await memrix.create_report()
 
-        return None
+        else:
+            return None
 
     else:
         raise MemrixError(f"主命令不能为空 ...")
@@ -971,9 +973,7 @@ if __name__ == '__main__':
     #
 
     try:
-        main_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(main_loop)
-        main_loop.run_until_complete(main())
+        asyncio.run(main())
     except MemrixError as _error:
         Design.Doc.err(_error)
         Design.show_fail()
