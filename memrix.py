@@ -672,14 +672,10 @@ class Memrix(object):
         """
         try:
             open_file = await FileAssist.read_json(self.focus)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            raise MemrixError(e)
-
-        try:
             assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
             assert (package := open_file["package"]), f"包名为空 {package}"
             assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
-        except (AssertionError, KeyError, TypeError) as e:
+        except Exception as e:
             raise MemrixError(e)
 
         if not await device.examine_package(package):
