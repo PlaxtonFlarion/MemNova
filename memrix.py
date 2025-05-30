@@ -12,6 +12,7 @@
 import os
 import re
 import sys
+import json
 import time
 import typing
 import signal
@@ -20,7 +21,7 @@ import asyncio
 
 # ====[ 第三方库 ]====
 import aiosqlite
-import uiautomator2
+import uiautomator2.exceptions as u2exc
 
 # ====[ from: 内置模块 ]====
 from pathlib import Path
@@ -333,7 +334,7 @@ class Memrix(object):
         await self.design.system_disintegrate()
 
     # """记忆风暴"""
-    async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
+    async def dump_task_start(self, device: "Device", pkg: typing.Optional[str] = None) -> None:
         """
         启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
 
@@ -355,7 +356,7 @@ class Memrix(object):
         device : Device
             目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
 
-        post_pkg : typing.Optional[str]
+        pkg : typing.Optional[str]
             可以传入的应用包名。
 
         Raises
@@ -577,10 +578,7 @@ class Memrix(object):
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
         # Notes: Start from here
-        package: typing.Optional[str] = post_pkg if post_pkg else self.focus  # 传入的应用名称
-
-        if not post_pkg and not await device.examine_package(package):
-            raise MemrixError(f"应用不存在 -> {package}")
+        package: typing.Optional[str] = pkg or self.focus
 
         logger.add(self.log_file, level="INFO", format=const.WHILE_FORMAT)
 
@@ -672,17 +670,14 @@ class Memrix(object):
         try:
             open_file = await FileAssist.read_json(self.focus)
             assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
-            assert (package := open_file["package"]), f"包名为空 {package}"
+            assert (package := open_file["package"]), f"应用名称为空 {package}"
             assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
-        except Exception as e:
+        except (AssertionError, TypeError, ValueError, json.JSONDecodeError) as e:
             raise MemrixError(e)
-
-        if not await device.examine_package(package):
-            raise MemrixError(f"应用不存在 -> {package}")
 
         try:
             await device.u2_active()
-        except (uiautomator2.exceptions.DeviceError, uiautomator2.exceptions.ConnectError) as e:
+        except (u2exc.DeviceError, u2exc.ConnectError) as e:
             raise MemrixError(e)
 
         auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
