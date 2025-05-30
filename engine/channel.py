@@ -101,7 +101,7 @@ class Messenger(object):
 
         Raises
         ------
-        FramixError
+        MemrixError
             请求失败或连接异常时抛出。
         """
         assert self.client
