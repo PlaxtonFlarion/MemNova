@@ -41,8 +41,8 @@ InfoAfterFile=schematic\resources\documents\memrix_after.txt
 ;PrivilegesRequired=lowest
 OutputDir={#SourcePath}\dist
 OutputBaseFilename={#MyAppName}-windows-setup-v{#MyAppVersion}
-UninstallDisplayIcon={app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico
-SetupIconFile=schematic\resources\icons\memrix_icn_1.ico
+UninstallDisplayIcon={app}\{#MyEngineName}\schematic\resources\icons\memrix_windows_icn.ico
+SetupIconFile=schematic\resources\icons\memrix_windows_icn.ico
 WizardImageFile=schematic\resources\images\windows\memrix_192dpi_328_628.bmp
 Compression=lzma
 SolidCompression=yes
@@ -133,9 +133,9 @@ Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes
 
 
 [Icons]
-;Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_icn_1.ico"
+;Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_windows_icn.ico"
 ;Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-;Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_delete_1.ico"
+;Name: "{autoprograms}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#MyEngineName}\schematic\resources\icons\memrix_windows_icn.ico"
 
 
 [UninstallDelete]
