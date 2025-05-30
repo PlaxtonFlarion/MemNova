@@ -61,7 +61,6 @@ class ToolKit(object):
     text_content : Optional[str]
         用于正则匹配的文本内容。可通过 `fit()` 方法执行查找与转换。
     """
-
     text_content: typing.Optional[str] = None
 
     @staticmethod
@@ -212,10 +211,7 @@ class Memrix(object):
             **kwargs
     ):
         """
-        初始化 Memrix 实例，根据所选运行模式（storm/pulse/forge）配置任务路径与环境变量。
-
-        初始化过程包括文件目录创建、数据库路径设定、日志与 YAML 场景文件命名等，
-        并绑定配置文件对象与模板路径。
+        初始化核心控制器，配置运行模式、路径结构、分析状态与动画资源。
 
         Parameters
         ----------
@@ -239,6 +235,47 @@ class Memrix(object):
                 报告模板文件路径。
             - align : Align
                 从配置文件中解析出的运行配置对象。
+
+        Attributes
+        ----------
+        total_dir : str
+            所有数据总目录（如 output/total）。
+
+        group_dir : str
+            当前任务组结果输出路径，依据 vault 创建。
+
+        db_file : str
+            本任务使用的 SQLite 数据库路径。
+
+        log_file : str
+            当前任务日志文件路径。
+
+        team_file : str
+            当前任务输出的结构化 YAML 配置路径。
+
+        memories : dict
+            当前任务运行过程中的状态标记字典。
+
+        design : Design
+            UI/动画设计器实例，绑定 `watch` 属性。
+
+        mistake : Optional[Exception]
+            任务执行过程中的异常记录，便于外部引用。
+
+        animation_task : Optional[asyncio.Task]
+            异步动画运行任务引用。
+
+        exec_start_event : asyncio.Event
+            执行启动信号，等待主循环调度。
+
+        dump_close_event : asyncio.Event
+            Dump 关闭信号，用于数据收束。
+
+        dumped : Optional[asyncio.Event]
+            Dump 完成信号（可选）。
+
+        closed : Optional[asyncio.Event]
+            整体关闭信号（可选）。
         """
         self.storm, self.pulse, self.forge = storm, pulse, forge
 
@@ -275,6 +312,8 @@ class Memrix(object):
         }
         self.design: "Design" = Design(self.watch)
 
+        self.mistake: typing.Optional["Exception"] = None
+
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
         self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
@@ -286,22 +325,12 @@ class Memrix(object):
     def clean_up(self, *_, **__) -> None:
         """
         异步触发内存采集任务的收尾流程。
-
-        该方法可在外部逻辑（如 UI 自动化任务结束）中调用，用于通知内存拉取逻辑停止，
-        并调度关闭流程 `dump_task_close()`。本方法本身不等待任务执行完成，仅注册关闭任务。
         """
         self.dump_close_event.set()
 
     async def dump_task_close(self) -> None:
         """
         关闭内存采样任务，释放资源并触发报告生成。
-
-        该方法通常在用户中断（Ctrl+C）或任务完成后调用，执行以下流程：
-        - 通知设备检查任务退出（设置事件）
-        - 通知采样任务退出（设置事件）
-        - 等待最后一次内存采样写入完成
-        - 取消所有后台 asyncio 任务
-        - 输出日志（采样次数、耗时等）
         """
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待任务结束 ...")
@@ -334,7 +363,7 @@ class Memrix(object):
         await self.design.system_disintegrate()
 
     # """记忆风暴"""
-    async def dump_task_start(self, device: "Device", pkg: typing.Optional[str] = None) -> None:
+    async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
         """
         启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
 
@@ -356,21 +385,8 @@ class Memrix(object):
         device : Device
             目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
 
-        pkg : typing.Optional[str]
+        post_pkg : typing.Optional[str]
             可以传入的应用包名。
-
-        Raises
-        ------
-        MemrixError
-            当目标包无法识别，或采集初始化失败时抛出异常。
-
-        Notes
-        -----
-        - 拉取结果会写入数据库文件：`data.db`
-        - 每一轮采集完成后会写入日志，并更新进度统计
-        - 日志与数据目录按时间命名，支持场景标记（YAML）
-        - 多进程结构通过 `defaultdict()` 聚合并转换为嵌套字典
-        - 如果 YAML 场景文件已存在，当前轮次将追加入 file 列表中
         """
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
@@ -396,12 +412,6 @@ class Memrix(object):
             Optional[dict[str, dict]]
                 包含三个键的字典（resume_map, memory_map, memory_vms）。
                 若内存数据拉取失败，则返回 None。
-
-            Notes
-            -----
-            - 使用多个正则表达式进行分段提取，并做空值过滤与容错
-            - 支持识别 "App Summary" 与 "TOTAL" 结构
-            - 采集结果为标准化后的数值映射（单位为 MB，四舍五入）
             """
             if not (memory := await device.memory_info(package)):
                 return None
@@ -442,22 +452,6 @@ class Memrix(object):
         async def flash_memory_launch() -> None:
             """
             执行一轮完整的内存采集任务流程（包括应用状态 & 多进程内存分析）。
-
-            步骤如下：
-            1. 获取应用 PID 列表（支持多进程）
-            2. 获取 UID / ADJ / ACT 状态信息
-            3. 并发执行 `flash_memory(pid)`，合并所有结果
-            4. 构建标准结构 Ram 对象
-            5. 插入数据库并打印采集结果
-
-            采集完成后自动触发 `self.dumped.set()`，用于通知主控制循环进入下一轮。
-
-            Notes
-            -----
-            - 使用 `asyncio.gather()` 并发拉取进程数据
-            - 使用 `defaultdict()` 对结果进行多进程合并，保证结构完整性
-            - 使用 `Ram(...)` 对象包装采集结果用于入库
-            - 若数据不完整，将跳过插入并记录日志
             """
             self.dumped.clear()
 
@@ -578,7 +572,11 @@ class Memrix(object):
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
         # Notes: Start from here
-        package: typing.Optional[str] = pkg or self.focus
+        package: typing.Optional[str] = post_pkg or self.focus
+
+        if not post_pkg and not (check := await device.examine_package(package)):
+            self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
+            return self.dump_close_event.set()
 
         logger.add(self.log_file, level="INFO", format=const.WHILE_FORMAT)
 
@@ -652,20 +650,6 @@ class Memrix(object):
         ----------
         device : Device
             被测试设备对象，需支持 u2_active、examine_package、u2/sleep 等命令映射接口。
-
-        Raises
-        ------
-        MemrixError
-            - 当 JSON 文件缺失、字段不合法、数据类型错误
-            - 当设备连接失败或包名无效
-            - 当任务组名称不存在或解析失败
-
-        Notes
-        -----
-        - 使用 asyncio 并发机制启动内存拉取任务
-        - 所有指令通过 `getattr()` 动态调用：支持扩展其他命令类型
-        - 使用 `Grapher.view()` 记录每一步执行命令和返回值
-        - 主流程执行完毕后主动调用 `dump_task_close()` 清理资源
         """
         try:
             open_file = await FileAssist.read_json(self.focus)
@@ -673,12 +657,18 @@ class Memrix(object):
             assert (package := open_file["package"]), f"应用名称为空 {package}"
             assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
         except (FileNotFoundError, AssertionError, TypeError, ValueError, json.JSONDecodeError) as e:
-            raise MemrixError(e)
+            self.mistake = MemrixError(e)
+            return self.dump_close_event.set()
+
+        if not (check := await device.examine_package(package)):
+            self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
+            return self.dump_close_event.set()
 
         try:
             await device.u2_active()
         except (u2exc.DeviceError, u2exc.ConnectError) as e:
-            raise MemrixError(e)
+            self.mistake = MemrixError(e)
+            return self.dump_close_event.set()
 
         auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
 
@@ -743,13 +733,6 @@ class Memrix(object):
             - 当所需文件不存在或路径错误
             - 当 YAML 场景中无采集数据记录
             - 当报告数据生成失败或为空
-
-        Notes
-        -----
-        - 场景文件由 `dump_task_start()` 创建，每轮采集结束追加记录
-        - 最终报告文件路径为：`{group_dir}/Report_{group_dir_name}/index.html`
-        - 使用配置对象中的 `template`, `criteria`, `headline` 等参数进行个性化渲染
-        - 报告内容适用于浏览器查看，也可导出为 PDF
         """
         for file in [self.db_file, self.log_file, self.team_file]:
             try:
@@ -939,6 +922,10 @@ async def main() -> typing.Optional[typing.Any]:
             )
 
             await memrix.dump_close_event.wait()
+
+            if mistake := memrix.mistake:
+                raise mistake
+
             await memrix.dump_task_close()
             main_task.cancel()
             return await main_task
