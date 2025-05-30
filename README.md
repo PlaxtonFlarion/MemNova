@@ -1,6 +1,6 @@
 # 🚀 Memrix :: 记忆星核
 
-![LOGO](https://raw.githubusercontent.com/PlaxtonFlarion/SoftwareCenter/main/assets/MemrixSource/app_readme.png)
+![LOGO](https://raw.githubusercontent.com/PlaxtonFlarion/SoftwareCenter/main/Assets/MemrixSource/app_readme.png)
 
 ---
 
@@ -272,7 +272,7 @@ memrix --forge --focus <file.name>
 
 ## Memrix｜记忆星核 编译 / Compile
 
-![LOGO](https://raw.githubusercontent.com/PlaxtonFlarion/SoftwareCenter/main/assets/MemrixSource/app_compile.png)
+![LOGO](https://raw.githubusercontent.com/PlaxtonFlarion/SoftwareCenter/main/Assets/MemrixSource/app_compile.png)
 
 ---
 
