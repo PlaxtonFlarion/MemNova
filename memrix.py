@@ -672,7 +672,7 @@ class Memrix(object):
             assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
             assert (package := open_file["package"]), f"应用名称为空 {package}"
             assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
-        except (AssertionError, TypeError, ValueError, json.JSONDecodeError) as e:
+        except (FileNotFoundError, AssertionError, TypeError, ValueError, json.JSONDecodeError) as e:
             raise MemrixError(e)
 
         try:
