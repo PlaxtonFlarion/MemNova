@@ -825,6 +825,8 @@ async def main() -> typing.Optional[typing.Any]:
 
     # 模板文件源路径
     src_templates = os.path.join(mx_work, const.SCHEMATIC, const.TEMPLATES).format()
+    # 模板版本文件路径
+    _ = os.path.join(src_templates, const.X_TEMPLATE_VERSION).format()
     # 模板文件路径
     template = os.path.join(src_templates, "memory.html")
     # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
