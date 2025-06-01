@@ -578,7 +578,7 @@ class Memrix(object):
             self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
             return self.dump_close_event.set()
 
-        logger.add(self.log_file, level="INFO", format=const.WHILE_FORMAT)
+        logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
         logger.info(
             f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
@@ -792,6 +792,15 @@ async def main() -> typing.Optional[typing.Any]:
     """
     主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
     """
+    async def previewing() -> None:
+        if not Path(align_file).exists():
+            await align.dump_align()
+
+        Design.build_file_tree(align_file)
+        await FileAssist.open(align_file)
+        await align.load_align()
+
+        return Design.console.print_json(data=align.aligns)
 
     # Notes: Start from here
     Design.startup_logo()
@@ -873,9 +882,7 @@ async def main() -> typing.Optional[typing.Any]:
     align = Align(align_file)
 
     if cmd_lines.align:
-        Design.build_file_tree(align_file)
-        Design.console.print_json(data=align.aligns)
-        return await FileAssist.open(align_file)
+        return await previewing()
 
     lic_file = Path(src_opera_place) / const.LIC_FILE
 

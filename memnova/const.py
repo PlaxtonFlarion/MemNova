@@ -48,7 +48,8 @@ SRC_OPERA_PLACE = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE = f"{APP_DESC}_Report"
 
 # ========【日志与显示设置】========
-DISPLAY_LEVEL = r"WARNING"
+SHOW_LEVEL    = r"WARNING"
+NOTE_LEVEL    = r"INFO"
 
 SUC           = f"[bold #FFFFFF on #32CD32]"
 WRN           = f"[bold #000000 on #FFFF00]"

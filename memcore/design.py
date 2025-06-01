@@ -1,9 +1,9 @@
-#   ____  _           _
-#  |  _ \(_)___ _ __ | | __ _ _   _
-#  | | | | / __| '_ \| |/ _` | | | |
-#  | |_| | \__ \ |_) | | (_| | |_| |
-#  |____/|_|___/ .__/|_|\__,_|\__, |
-#              |_|            |___/
+#   ____            _
+#  |  _ \  ___  ___(_) __ _ _ __
+#  | | | |/ _ \/ __| |/ _` | '_ \
+#  | |_| |  __/\__ \ | (_| | | | |
+#  |____/ \___||___/_|\__, |_| |_|
+#                     |___/
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -487,7 +487,7 @@ class Design(object):
         """
         摘要信息显示。
         """
-        if self.design_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.SHOW_LEVEL:
             return None
 
         table_themes = {
@@ -536,7 +536,7 @@ class Design(object):
         """
         系统解体风格，收尾动画。
         """
-        if self.design_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.SHOW_LEVEL:
             return None
 
         width, steps = 42, 6
@@ -617,7 +617,7 @@ class Design(object):
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
         """
-        if self.design_level != const.DISPLAY_LEVEL:
+        if self.design_level != const.SHOW_LEVEL:
             return None
 
         start_banner = [

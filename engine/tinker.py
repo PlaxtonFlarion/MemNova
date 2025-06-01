@@ -1,8 +1,8 @@
-#   _____          _    _
-#  |_   _|_ _  ___| | _| | ___
-#    | |/ _` |/ __| |/ / |/ _ \
-#    | | (_| | (__|   <| |  __/
-#    |_|\__,_|\___|_|\_\_|\___|
+#   _____ _       _
+#  |_   _(_)_ __ | | _____ _ __
+#    | | | | '_ \| |/ / _ \ '__|
+#    | | | | | | |   <  __/ |
+#    |_| |_|_| |_|_|\_\___|_|
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -11,11 +11,16 @@
 import sys
 import yaml
 import json
+import random
 import shutil
 import typing
 import aiofiles
 from loguru import logger
-from rich.logging import RichHandler
+from rich.text import Text
+from rich.console import Console
+from rich.logging import (
+    LogRecord, RichHandler
+)
 from engine.terminal import Terminal
 from memcore.design import Design
 from memnova import const
@@ -181,6 +186,76 @@ class Active(object):
     日志输出与终端美化工具类，提供统一的视觉日志体验。
     """
 
+    class _RichSink(RichHandler):
+        """
+        基于 RichHandler 的日志输出接收器，用于自定义控制台美化输出。
+
+        _RichSink 继承自 rich.logging.RichHandler，重载 emit 方法，
+        将日志信息通过 rich 控制台格式化输出，适用于实时、美观的日志展示。
+
+        Parameters
+        ----------
+        console : Console
+            rich 提供的 Console 实例，用于渲染日志文本与样式。
+        """
+        debug_color = [
+            "#00CED1",  # 深青色 - 冷静理性
+            "#7FFFD4",  # 冰蓝绿 - 轻盈科技
+            "#66CDAA",  # 中度绿松石 - 适合背景级别
+            "#20B2AA",  # 浅海蓝 - 稳定中间调
+            "#5F9EA0",  # 军蓝灰 - 稳重调试色
+            "#87CEEB",  # 天蓝 - 清晰非干扰性
+            "#4682B4",  # 钢蓝 - 稍微暗一点用于子模块
+            "#98FB98",  # 浅绿色 - 绿色无压调试层
+            "#B0C4DE",  # 灰蓝色 - 安静辅助信息
+            "#AAAAAA",  # 中灰 - 用于淡化无关 debug 流
+        ]
+        info_color = [
+            "#00FF7F",  # 春绿色 - 默认 Info 风格，清新明亮
+            "#32CD32",  # 酸橙绿 - 活跃进行中，状态良好
+            "#3CB371",  # 中海绿 - 稍深一点，适合常驻状态
+            "#40E0D0",  # 宝石绿 - 信息明确、富有层次感
+            "#00FA9A",  # 亮绿色 - 活力信息输出
+            "#90EE90",  # 浅绿 - 背景型提示，柔和不刺眼
+            "#2E8B57",  # 海藻绿 - 正常运行中，低调稳定
+            "#8FBC8F",  # 深灰绿 - 辅助性 info，例如预加载提示
+            "#7CFC00",  # 草地绿 - 执行中提示，轻快欢快
+            "#ADFF2F",  # 黄绿 - 接近完成或重要 info 提示
+            "#F5DEB3",  # 小麦色 - 柔和状态提示
+            "#F0E68C",  # 卡其 - 稳定温和
+            "#FFE4B5",  # 浅橙米 - 成功通知感
+            "#FFDAB9",  # 桃色 - 轻松提示色
+            "#E6E6FA",  # 淡紫 - 不干扰的存在感
+            "#D8BFD8",  # 藕荷紫 - 精致低饱和
+            "#FFEFD5",  # 浅金 - 近似 OK 状态色
+            "#FFFACD",  # 柠檬乳黄 - 活泼但不跳脱
+            "#EEE8AA",  # 浅卡其 - 稳妥类日志色
+            "#F0FFF0",  # 蜜瓜白 - 极淡提示背景色
+        ]
+        level_style = {
+            "DEBUG": f"bold {random.choice(debug_color)}",
+            "INFO": f"bold {random.choice(info_color)}",
+            "WARNING": "bold #FFD700",
+            "ERROR": "bold #FF4500",
+            "CRITICAL": "bold #FF1493",
+        }
+
+        def __init__(self, console: "Console"):
+            super().__init__(
+                console=console, rich_tracebacks=True, show_path=False,
+                show_time=False, markup=False
+            )
+
+        def emit(self, record: "LogRecord") -> None:
+            """
+            重载日志处理器的输出逻辑，将格式化后的记录打印到指定控制台。
+            """
+            self.console.print(
+                const.PRINT_HEAD, Text(self.format(record), style=self.level_style.get(
+                    record.levelname, "bold #ADD8E6"
+                ))
+            )
+
     @staticmethod
     def active(log_level: str) -> None:
         """
@@ -195,7 +270,7 @@ class Active(object):
         """
         logger.remove()
         logger.add(
-            RichHandler(console=Design.console, show_level=False, show_path=False, show_time=False),
+            Active._RichSink(Design.console),
             level=log_level, format=const.PRINT_FORMAT
         )
 

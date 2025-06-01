@@ -25,7 +25,7 @@ class Align(object):
 
     aligns = {
         "Memory": {
-            "speed": 1,
+            "speed": 1.0,
             "label": "应用名称"
         },
         "Script": {
@@ -53,7 +53,7 @@ class Align(object):
     @property
     def speed(self):
         """
-        采样间隔时间（秒），范围建议为 1~10。
+        采样间隔时间（秒）。
         """
         return self.aligns["Memory"]["speed"]
 
