@@ -792,7 +792,11 @@ async def main() -> typing.Optional[typing.Any]:
     """
     主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
     """
+
     async def previewing() -> None:
+        """
+        预览对齐配置文件，若不存在则自动生成。
+        """
         if not Path(align_file).exists():
             await align.dump_align()
 

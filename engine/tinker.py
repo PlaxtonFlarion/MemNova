@@ -259,14 +259,15 @@ class Active(object):
     @staticmethod
     def active(log_level: str) -> None:
         """
-        启用 rich 日志渲染器，绑定至 loguru 并设置日志等级。
+        配置并激活 Rich 控制台日志处理器。
 
-        内部将清空 loguru 的默认日志通道，绑定 rich 格式控制器，并使用指定等级激活输出。
+        移除默认日志处理器，添加自定义 _RichSink 实例，结合 rich.console
+        提供彩色输出支持，并通过传入的 log_level 控制日志等级。
 
         Parameters
         ----------
         log_level : str
-            日志等级（如 "INFO", "DEBUG", "WARNING", "ERROR"）。
+            日志等级（如 "INFO", "DEBUG", "WARNING", "ERROR"），不区分大小写。
         """
         logger.remove()
         logger.add(
