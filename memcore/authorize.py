@@ -241,7 +241,6 @@ async def receive_license(code: str, lic_file: "Path") -> typing.Optional["Path"
                 auth_info, keys=["code", "castle", "license_id"], keep=10
             )
         )
-        lic_file.write_text(json.dumps(ac_lic_data, indent=2), encoding=const.CHARSET)
 
         await save_lic_file(lic_file, ac_lic_data)
 
