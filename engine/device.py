@@ -60,17 +60,24 @@ class Device(object):
         self.u2_device = await asyncio.to_thread(uiautomator2.connect, self.serial)
 
     async def u2(
-            self, choice: dict, method: str, *args, **kwargs
-    ) -> typing.Optional[typing.Union[typing.Any, Exception]]:
+            self,
+            selector: dict,
+            function: str,
+            *args,
+            **kwargs
+    ) -> typing.Any:
         """
         执行 uiautomator2 元素方法，支持传参与回调。
         """
-        element = self.u2_device(**choice) if choice else self.u2_device
-        if callable(method := getattr(element, method)):
-            try:
-                return await asyncio.to_thread(method, *args, **kwargs)
-            except Exception as e:
-                return e
+        try:
+            element = self.u2_device(**selector) if selector else self.u2_device
+
+            return await asyncio.to_thread(
+                current, *args, **kwargs
+            ) if callable(current := getattr(element, function)) else current
+
+        except Exception as e:
+            return e
 
     @staticmethod
     async def sleep(delay: float, *_, **__) -> None:
