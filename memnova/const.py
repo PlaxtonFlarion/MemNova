@@ -39,6 +39,7 @@ SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"
 LIC_FILE        = f"{APP_NAME}_signature.lic"
+VOICES          = r"voices"
 
 SCHEMATIC       = r"schematic"
 SUPPORTS        = r"supports"
