@@ -574,7 +574,7 @@ class Memrix(object):
         # Notes: Start from here
         package: typing.Optional[str] = post_pkg or self.focus
 
-        if not post_pkg and not (check := await device.examine_package(package)):
+        if not post_pkg and not (check := await device.examine_pkg(package)):
             self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
             return self.dump_close_event.set()
 
@@ -631,28 +631,30 @@ class Memrix(object):
     # """巡航引擎"""
     async def exec_task_start(self, device: "Device") -> None:
         """
-        执行自动化脚本任务（巡航引擎），按 JSON 文件中的流程指令驱动设备操作，并并行进行内存采集。
-
-        支持的自动化指令包括：
-        - `u2`：调用 uiautomator2 的控件操作接口
-        - `sleep`：等待延时
-        - `audio`：播放音频反馈（通过 Player.audio 实现）
-
-        该方法将从指定的 JSON 文件中解析：
-        - 循环次数（loopers）
-        - 应用包名（package）
-        - 对应任务组（由配置文件中的 `group` 指定）
-
-        脚本执行过程中，会并行启动内存采集任务（`dump_task_start()`），
-        并在主控流程结束后主动关闭采集任务。
+        执行任务调度主流程，负责：
+        - 加载焦点任务 JSON 配置；
+        - 校验任务数据、应用是否安装；
+        - 启动 UI 自动化服务；
+        - 启动自动转储任务；
+        - 根据 JSON 结构执行多轮命令任务；
+        - 正确设置同步事件状态与错误追踪。
 
         Parameters
         ----------
         device : Device
-            被测试设备对象，需支持 u2_active、examine_package、u2/sleep 等命令映射接口。
+            当前连接的目标设备对象，必须已初始化并可交互。
+
+        Raises
+        ------
+        - 无直接 raise；所有错误通过设置 `self.mistake` 标记，并提前 return；
+        - 支持如下异常的容错处理：
+            - FileNotFoundError、AssertionError、json.JSONDecodeError 等文件读取/格式校验类；
+            - u2.DeviceError、u2.ConnectError 设备连接类异常；
+            - 包名不存在等业务校验错误。
         """
         try:
             open_file = await FileAssist.read_json(self.focus)
+
             assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
             assert (package := open_file["package"]), f"应用名称为空 {package}"
             assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
@@ -660,12 +662,12 @@ class Memrix(object):
             self.mistake = MemrixError(e)
             return self.dump_close_event.set()
 
-        if not (check := await device.examine_package(package)):
+        if not (check := await device.examine_pkg(package)):
             self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
             return self.dump_close_event.set()
 
         try:
-            await device.u2_active()
+            await device.automator_activation()
         except (u2exc.DeviceError, u2exc.ConnectError) as e:
             self.mistake = MemrixError(e)
             return self.dump_close_event.set()
@@ -680,26 +682,19 @@ class Memrix(object):
 
         logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
 
-        # 外层循环，控制任务执行次数（loopers 次）
         for data in range(loopers):
-            # 遍历 JSON 脚本中每个任务组（如 click、input、swipe 等）
             for key, value in mission.items():
-                # 遍历该任务组内的每条指令
                 for i in value:
-                    # 提取命令类型（cmds），并检查是否在支持的类型列表中
                     if not (cmds := i.get("cmds", None)):
                         logger.info(f"cmds -> {cmds}")
                         continue
 
                     self.closed.clear()
-                    # 根据 cmds 类型选择对应执行对象（device 或 player），获取方法引用
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
-                        # 提取参数：位置参数 vals、额外 args、关键字参数 kwds
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
-
                         logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
-                        logger.info(f"{func.__name__} Returns -> {await func(*vals, *args, **kwds)}")
-
+                        resp = await func(*vals, *args, **kwds)
+                        logger.info(f"{func.__name__} Returns -> {resp}")
                     else:
                         logger.info(f"func -> {func}")
                     self.closed.set()
