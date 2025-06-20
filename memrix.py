@@ -228,13 +228,7 @@ class Memrix(object):
             额外位置参数。
 
         **kwargs :
-            命名参数集合，必须包含以下键：
-            - src_total_place : str
-                输出根目录（用于存放 Library 等结构）。
-            - template : str
-                报告模板文件路径。
-            - align : Align
-                从配置文件中解析出的运行配置对象。
+            命名参数集合。
 
         Attributes
         ----------
@@ -281,6 +275,7 @@ class Memrix(object):
 
         self.focus, self.vault, self.watch, *_ = args
 
+        self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
         self.template: str = kwargs["template"]
         self.align: "Align" = kwargs["align"]
@@ -908,7 +903,10 @@ async def main() -> typing.Optional[typing.Any]:
             raise MemrixError(f"--focus 参数不能为空 ...")
 
         keywords = {
-            "src_total_place": src_total_place, "template": template, "align": align
+            "src_opera_place": src_opera_place,
+            "src_total_place": src_total_place,
+            "template": template,
+            "align": align
         }
         memrix = Memrix(
             storm, pulse, forge, focus, cmd_lines.vault, watch, **keywords
