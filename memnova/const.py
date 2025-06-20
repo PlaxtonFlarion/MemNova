@@ -40,6 +40,7 @@ DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"
 LIC_FILE        = f"{APP_NAME}_signature.lic"
 VOICES          = r"voices"
+WAVERS          = r"mp3"
 
 SCHEMATIC       = r"schematic"
 SUPPORTS        = r"supports"
@@ -68,6 +69,7 @@ WHILE_FORMAT  = f"{OTHER_HEAD} <green>{{time:YYYY-MM-DD HH:mm:ss.SSS}}</green> |
 BOOTSTRAP_URL      = f"https://appserver-u7hd.onrender.com/bootstrap"
 TEMPLATE_META_URL  = f"https://appserver-u7hd.onrender.com/template-meta"
 BUSINESS_CASE_URL  = f"https://appserver-u7hd.onrender.com/business-case"
+SPEECH_META_URL    = f"https://appserver-u7hd.onrender.com/speech-meta"
 SPEECH_VOICE_URL   = f"https://appserver-u7hd.onrender.com/speech-voice"
 X_TEMPLATE_VERSION = f"x_template_version.json"
 
@@ -75,7 +77,7 @@ BASIC_HEADERS = {
     "User-Agent": f"{APP_DESC}@{APP_VERSION}",
     "Content-Type": f"application/json",
     "X-App-ID": PUBLISHER,
-    "X-App-Token": f"eyJkYXRhIjogImV5SmhJam9pVFdWdGNtbDRJRlJsWTJodWIyeHZaMmxsY3lCSmJtTXVJaXdpZENJNklqRTNORFUyUVVaRk16RkdPU0lzSW00aU9pSkJORGN5UmtZeFJUSkVSRFFpTENKc2FXTmxibk5sWDJsa0lqb2lSRGRGT1RFeE1EUkJOemszTmtJME1pSjkiLCAic2lnbmF0dXJlIjogImtTOEhrbGRwNmRkUndXVHJCcXFtaHRsbjNwNjJEUzdCMk9XaUdaeHdTYzgreFBxNHJoNFNOa0FaSUlmL0wrc2xONG5yek5EREFLbTJQWWZUbWFBQTM2RjhsUjU3Y2NhSFZ6RHhxeWgxNmNVRXBwVWt2MStTQ0hTVCt1RGIxVWI1T25PaC8wREtZaFlCWUU2NFQ3VmppazNvcDQwQTNkS2VzRzl4OVZPcnhkUGt6akU4UElqVEdieGFIYlNKVG5vSUZRK296OHZCd0pDUXowck12Nk5xa1hCUHhxeEZMUVQzVXJRenR0V2ptUHpsZFQ4SkdLc21GL0QyaDhRbFZMTUM2a3RLY0x5QndkWFpaSmM4eUdwdjZvU3dPdFBxSXg1KzdQVERyOUtUczNSb0hGQXd6SVBiYUtCUXVRRUlxR0thekkxK2tlWTlHVUFsaVdrellmMllvZz09In0=",
+    "X-App-Token": f"eyJkYXRhIjogImV5SmhjSEFpT2lKTlpXMXlhWGdnVkdWamFHNXZiRzluYVdWeklFbHVZeTRpTENKMGFXMWxJam9pTXpZd01qVkJRVEV5TVVSRElpd2libTl1WTJVaU9pSXpOVVZCT1RaQ1FrRXlRelFpTENKc2FXTmxibk5sWDJsa0lqb2lNek0wTlRJMU1qUkNSakZDTURGRU1pSjkiLCAic2lnbmF0dXJlIjogInlzQVB0dHVlSmIwZ2ZMSnh0Rm5Dd2trSjdOb3hXeVBvdGc4dm04VnpONEt3ZFUweU91NnI2K2tqaU9BTjFsWkhyOFBZNjRrdHlEUmd4dmVtZmFNVzF5dUE2SHBEajY0NHdDdUVQNDVmMGxiV1dpa0dRYUVXdTBkUGdHZDhjMVRUanErTG5pVGt0d0RGUmErZXZmRFRmbXRoSC8renIrRVc3S3VCcG5CWkMrN2hoeThSUk1WUG1LbjV2SnFhR3RKMWhVWEgrZ2pIbCtUc2JCL3dUT2dpRFRCaTg1WHJqSHF4c3lYajhyN2xoVllYeHIxcDF5Y0pNQ3JYMTk4TTA0cnFEd01POGN4MzRBRUtaNmJ0OUx3NERHemVEVkZneUJqTTB5MFA3NmFtZGRpRXZYZlhaeWZxY2xFS3k5MHBya3NBNW1IdCtseTNxeERKZHJPYWhlc1RRUT09In0=",
     "X-App-Region": f"Global",
     "X-App-Version": f"v{APP_VERSION}"
 }
