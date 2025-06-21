@@ -79,9 +79,6 @@ class FileAssist(object):
         """
         打开指定文件，使用系统默认文本编辑器，支持异步调用。
 
-        - Windows：优先尝试 Notepad++，若不存在则退回到系统记事本
-        - macOS：使用 TextEdit 并以阻塞模式打开（-W）
-
         Parameters
         ----------
         file : str
