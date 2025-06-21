@@ -692,16 +692,21 @@ class Memrix(object):
             for key, value in mission.items():
                 for i in value:
                     cmds = i.get("cmds", "")
+
                     self.closed.clear()
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
-                        logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
+
                         try:
+                            logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
                             resp = await func(*vals, *args, **kwds)
                         except Exception as e:
                             logger.error(f"Mistake -> {e}")
                         else:
                             logger.info(f"{func.__name__} Returns -> {resp}")
+
+                    else:
+                        logger.info(f"Lost func -> {cmds}")
                     self.closed.set()
 
         self.dump_close_event.set()
