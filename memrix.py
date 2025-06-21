@@ -31,6 +31,9 @@ from collections import defaultdict
 from loguru import logger
 
 # ====[ from: 本地模块 ]====
+from engine.channel import (
+    Channel, Messenger
+)
 from engine.device import Device
 from engine.manage import Manage
 from engine.tinker import (
@@ -43,7 +46,6 @@ from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.analyzer import Analyzer
 from memnova import const
-
 
 try:
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
@@ -154,8 +156,11 @@ class Player(object):
     音频播放工具类，用于异步播放本地音频文件。
     """
 
-    @staticmethod
-    async def audio(audio_file: str, *_, **__) -> None:
+    def __init__(self, opera_place: str, allowed_extra: list):
+        self.opera_place = opera_place
+        self.allowed_extra = allowed_extra
+
+    async def audio(self, audio_file: str, *_, **__) -> None:
         """
         异步播放指定的音频文件（支持常见音频格式）。
 
@@ -174,7 +179,11 @@ class Player(object):
         - 音量默认设置为最大（1.0），可在必要时添加音量控制参数。
         - 若音频播放失败（如文件路径无效或格式不受支持），可能抛出 pygame 错误。
         """
-        logger.info(f"Player -> {Path(audio_file).name}")
+        voice = Path(audio_file)
+        logger.info(f"Player -> {voice.name}")
+        audio_file = await Api.synthesize(
+            voice.stem, voice.suffix or const.WAVERS, self.opera_place, self.allowed_extra
+        )
 
         pygame.mixer.init()
         pygame.mixer.music.load(audio_file)
@@ -667,11 +676,13 @@ class Memrix(object):
             self.mistake = MemrixError(e)
             return self.dump_close_event.set()
 
+        allowed_extra_task = asyncio.create_task(Api.formatting())
         auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
 
-        player: "Player" = Player()
-
         await self.exec_start_event.wait()
+
+        allowed_extra = await allowed_extra_task or [const.WAVERS]
+        player: "Player" = Player(self.src_opera_place, allowed_extra)
 
         self.closed = asyncio.Event()
 
@@ -680,18 +691,17 @@ class Memrix(object):
         for data in range(loopers):
             for key, value in mission.items():
                 for i in value:
-                    if not (cmds := i.get("cmds", None)):
-                        logger.info(f"cmds -> {cmds}")
-                        continue
-
+                    cmds = i.get("cmds", "")
                     self.closed.clear()
                     if callable(func := getattr(player if cmds == "audio" else device, cmds)):
                         vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
                         logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
-                        resp = await func(*vals, *args, **kwds)
-                        logger.info(f"{func.__name__} Returns -> {resp}")
-                    else:
-                        logger.info(f"func -> {func}")
+                        try:
+                            resp = await func(*vals, *args, **kwds)
+                        except Exception as e:
+                            logger.error(f"Mistake -> {e}")
+                        else:
+                            logger.info(f"{func.__name__} Returns -> {resp}")
                     self.closed.set()
 
         self.dump_close_event.set()
@@ -778,6 +788,157 @@ class Memrix(object):
             return await analyzer.form_report(self.template, **rendering)
 
 
+class Api(object):
+    """
+    Api
+
+    通用异步接口适配器类，封装各类与远程服务交互的静态方法，包括数据获取、
+    文件生成、命令配置加载等逻辑，适用于微服务通信、TTS 服务、自动化平台等场景。
+
+    当前支持的服务包括语音格式元信息拉取、语音合成任务、业务用例命令获取等。
+    所有接口方法均通过异步方式与后端 API 通信，支持 JSON 响应解析及异常处理。
+
+    Notes
+    -----
+    - 提供统一的参数打包与请求流程，封装远程接口调用的细节。
+    - 支持动态参数拼接、异常捕获、数据缓存与文件写入。
+    - 可根据实际业务场景扩展其他静态方法，如上传日志、获取配置、拉取资源等。
+    """
+
+    @staticmethod
+    async def formatting() -> typing.Optional[list]:
+        """
+        获取支持的语音合成格式列表。
+
+        异步从远程服务获取格式信息，若发生异常则返回 None 并记录日志。
+
+        Returns
+        -------
+        list or None
+            成功时返回格式字符串列表，例如 ["mp3", "ogg", "webm"]；
+            若请求失败则返回 None。
+
+        Raises
+        ------
+        Exception
+            当远程请求或解析失败时捕获并记录日志，返回 None。
+        """
+        params = Channel.make_params()
+        try:
+            async with Messenger() as messenger:
+                resp = await messenger.poke("GET", const.SPEECH_META_URL, params=params)
+                return resp.json()["formats"]
+        except Exception as e:
+            return logger.error(e)
+
+    @staticmethod
+    async def synthesize(speak: str, waver: str, src_opera_place: str, allowed_extra: list) -> str:
+        """
+        合成语音音频文件。
+
+        根据指定文本与音频格式生成语音文件，若已存在本地缓存则直接返回路径；
+        否则通过远程接口获取下载链接并保存音频至本地。
+
+        Parameters
+        ----------
+        speak : str
+            要合成的语音内容。
+
+        waver : str
+            请求的音频格式后缀（如 'mp3'、'wav'）。
+
+        allowed_extra : list
+            支持的音频格式列表，仅这些格式会触发远程合成逻辑。
+
+        src_opera_place : str
+            本地语音文件根目录（将生成在其下的 VOICES 子目录中）。
+
+        Returns
+        -------
+        str
+            本地语音文件的绝对路径，或拼接后的默认字符串（当 waver 不被允许时）。
+        """
+        allowed_ext = {ext.lower().lstrip('.') for ext in allowed_extra}
+        logger.info(f"Allowed ext -> {allowed_ext}")
+
+        # 清洗输入
+        clean_speak = speak.strip()
+        clean_waver = waver.strip().lower().lstrip(".")
+
+        # 检查 speak 中是否包含扩展名
+        match = re.search(r"\.([a-zA-Z0-9]{1,6})$", clean_speak)
+        speak_ext = match.group(1).lower() if match else ""
+        speak_stem = re.sub(r"\.([a-zA-Z0-9]{1,6})$", "", clean_speak)
+
+        # 判断是否为音频请求
+        if clean_waver in allowed_ext:
+            final_speak = speak_stem
+            final_waver = clean_waver
+        elif speak_ext in allowed_ext:
+            final_speak = speak_stem
+            final_waver = speak_ext
+        else:
+            # 非音频请求，直接拼接返回
+            combination = f"{clean_speak}.{clean_waver}" if clean_waver else clean_speak
+            logger.info(f"Non-audio request, combination -> {combination}")
+            return combination
+
+        # 构建文件名和本地缓存路径
+        audio_name = str(Path(final_speak).with_suffix(f".{final_waver}"))
+
+        if not (voices := Path(src_opera_place) / const.VOICES).exists():
+            voices.mkdir(parents=True, exist_ok=True)
+
+        if (audio_file := voices / audio_name).is_file():
+            logger.info(f"Local audio file: {audio_file}")
+            return str(audio_file)
+
+        # 构建 payload
+        payload = {"speak": final_speak, "waver": final_waver} | Channel.make_params()
+        logger.info(f"Remote synthesize: {payload}")
+
+        try:
+            async with Messenger() as messenger:
+                resp = await messenger.poke("POST", const.SPEECH_VOICE_URL, json=payload)
+                logger.info(f"Download url: {(download_url := resp.json()['url'])}")
+
+                redis_or_r2_resp = await messenger.poke("GET", download_url)
+                audio_file.write_bytes(redis_or_r2_resp.content)
+
+        except Exception as e:
+            logger.debug(e)
+
+        return str(audio_file)
+
+    @staticmethod
+    async def profession(case: str) -> dict:
+        """
+        根据指定用例名从业务接口获取命令列表。
+
+        通过异步请求远程业务系统，加载指定 case 的命令配置数据。
+
+        Parameters
+        ----------
+        case : str
+            用例名称，用于作为参数查询业务命令配置。
+
+        Returns
+        -------
+        dict
+            返回包含命令配置的字典组成结构。
+
+        Raises
+        ------
+        FramixError
+            当网络请求失败或响应异常时，将在外层调用中处理。
+        """
+        params = Channel.make_params() | {"case": case}
+        async with Messenger() as messenger:
+            resp = await messenger.poke("GET", const.BUSINESS_CASE_URL, params=params)
+            return resp.json()
+
+
+# """Main"""
 async def main() -> typing.Optional[typing.Any]:
     """
     主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
@@ -947,6 +1108,11 @@ async def main() -> typing.Optional[typing.Any]:
         raise MemrixError(f"主命令不能为空 ...")
 
 
+# """Test"""
+async def test() -> None:
+    pass
+
+
 if __name__ == '__main__':
     #   __  __                     _
     #  |  \/  | ___ _ __ ___  _ __(_)_  __
@@ -954,6 +1120,8 @@ if __name__ == '__main__':
     #  | |  | |  __/ | | | | | |  | |>  <
     #  |_|  |_|\___|_| |_| |_|_|  |_/_/\_\
     #
+
+    # asyncio.run(test())
 
     try:
         asyncio.run(main())
