@@ -199,86 +199,16 @@ class Memrix(object):
 
     类实例在初始化时根据运行模式自动构建工作路径、配置数据库与日志文件，
     并提供事件同步机制以支持异步任务的协同关闭。
-
-    Attributes
-    ----------
-    file_insert : Optional[int]
-        成功插入的采集数据条数，记录写入数据库的轮次数。
-
-    file_folder : Optional[str]
-        当前采集数据所属的文件夹名称，用于组织日志与中间输出。
     """
+
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
 
-    def __init__(
-            self,
-            storm: typing.Optional[bool],
-            pulse: typing.Optional[bool],
-            forge: typing.Optional[bool],
-            *args,
-            **kwargs
-    ):
+    remote: typing.Optional[dict] = None
+
+    def __init__(self, storm: bool, pulse: bool, forge: bool, *args, **kwargs):
         """
         初始化核心控制器，配置运行模式、路径结构、分析状态与动画资源。
-
-        Parameters
-        ----------
-        storm : Optional[bool]
-            是否启用内存采集任务（记忆风暴模式）。
-
-        pulse : Optional[bool]
-            是否启用 UI 自动化测试任务（巡航引擎模式）。
-
-        forge : Optional[bool]
-            是否启用报告生成流程（真相快照模式）。
-
-        *args :
-            额外位置参数。
-
-        **kwargs :
-            命名参数集合。
-
-        Attributes
-        ----------
-        total_dir : str
-            所有数据总目录（如 output/total）。
-
-        group_dir : str
-            当前任务组结果输出路径，依据 vault 创建。
-
-        db_file : str
-            本任务使用的 SQLite 数据库路径。
-
-        log_file : str
-            当前任务日志文件路径。
-
-        team_file : str
-            当前任务输出的结构化 YAML 配置路径。
-
-        memories : dict
-            当前任务运行过程中的状态标记字典。
-
-        design : Design
-            UI/动画设计器实例，绑定 `watch` 属性。
-
-        mistake : Optional[Exception]
-            任务执行过程中的异常记录，便于外部引用。
-
-        animation_task : Optional[asyncio.Task]
-            异步动画运行任务引用。
-
-        exec_start_event : asyncio.Event
-            执行启动信号，等待主循环调度。
-
-        dump_close_event : asyncio.Event
-            Dump 关闭信号，用于数据收束。
-
-        dumped : Optional[asyncio.Event]
-            Dump 完成信号（可选）。
-
-        closed : Optional[asyncio.Event]
-            整体关闭信号（可选）。
         """
         self.storm, self.pulse, self.forge = storm, pulse, forge
 
@@ -988,6 +918,18 @@ async def main() -> typing.Optional[typing.Any]:
     主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
     """
 
+    async def remote_config() -> typing.Optional[dict]:
+        """
+        获取远程配置中心的全局配置数据。
+        """
+        try:
+            config_data = await Api.ask_request_get(const.GLOBAL_CF_URL)
+            auth_info = authorize.verify_signature(config_data)
+        except Exception as e:
+            return logger.debug(e)
+
+        return auth_info.get("configuration", {})
+
     async def previewing() -> None:
         """
         预览对齐配置文件，若不存在则自动生成。
@@ -1126,7 +1068,9 @@ async def main() -> typing.Optional[typing.Any]:
 
             signal.signal(signal.SIGINT, memrix.clean_up)
 
+            global_config_task = asyncio.create_task(remote_config())
             await Design.flame_manifest()
+            memrix.remote = await global_config_task or {}
 
             main_task = asyncio.create_task(
                 getattr(memrix, "dump_task_start" if storm else "exec_task_start")(device)
