@@ -204,7 +204,7 @@ class Memrix(object):
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
 
-    remote: typing.Optional[dict] = None
+    remote: dict = {}
 
     def __init__(self, storm: bool, pulse: bool, forge: bool, *args, **kwargs):
         """
