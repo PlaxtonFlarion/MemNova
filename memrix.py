@@ -911,13 +911,7 @@ class Api(object):
 
         return str(audio_file)
 
-
-# """Main"""
-async def main() -> typing.Optional[typing.Any]:
-    """
-    主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
-    """
-
+    @staticmethod
     async def remote_config() -> typing.Optional[dict]:
         """
         获取远程配置中心的全局配置数据。
@@ -929,6 +923,13 @@ async def main() -> typing.Optional[typing.Any]:
             return logger.debug(e)
 
         return auth_info.get("configuration", {})
+
+
+# """Main"""
+async def main() -> typing.Optional[typing.Any]:
+    """
+    主控制入口，用于解析命令行参数并根据不同模式执行配置展示、内存转储、脚本执行或报告生成等功能。
+    """
 
     async def previewing() -> None:
         """
@@ -1068,7 +1069,7 @@ async def main() -> typing.Optional[typing.Any]:
 
             signal.signal(signal.SIGINT, memrix.clean_up)
 
-            global_config_task = asyncio.create_task(remote_config())
+            global_config_task = asyncio.create_task(Api.remote_config())
             await Design.flame_manifest()
             memrix.remote = await global_config_task or {}
 
