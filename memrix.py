@@ -740,6 +740,8 @@ class Api(object):
     - 可根据实际业务场景扩展其他静态方法，如上传日志、获取配置、拉取资源等。
     """
 
+    background: list = []
+
     @staticmethod
     async def ask_request_get(
         url: str, key: typing.Optional[str] = None, *_, **kwargs
@@ -797,13 +799,13 @@ class Api(object):
         Exception
             当远程请求或解析失败时捕获并记录日志，返回 None。
         """
-        params = Channel.make_params()
         try:
-            async with Messenger() as messenger:
-                resp = await messenger.poke("GET", const.SPEECH_META_URL, params=params)
-                return resp.json()["formats"]
+            sign_data = await Api.ask_request_get(const.SPEECH_META_URL)
+            auth_info = authorize.verify_signature(sign_data)
         except Exception as e:
             return logger.debug(e)
+
+        return auth_info.get("formats", [])
 
     @staticmethod
     async def profession(case: str) -> dict:
@@ -917,8 +919,8 @@ class Api(object):
         获取远程配置中心的全局配置数据。
         """
         try:
-            config_data = await Api.ask_request_get(const.GLOBAL_CF_URL)
-            auth_info = authorize.verify_signature(config_data)
+            sign_data = await Api.ask_request_get(const.GLOBAL_CF_URL)
+            auth_info = authorize.verify_signature(sign_data)
         except Exception as e:
             return logger.debug(e)
 
