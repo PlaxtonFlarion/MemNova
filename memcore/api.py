@@ -70,11 +70,6 @@ class Api(object):
         -------
         dict
             远程服务返回的 JSON 数据（或提取后的字段值）。
-
-        Raises
-        ------
-        FramixError
-            当请求失败、响应格式异常或字段不存在时，将在 `Messenger` 层抛出自定义异常。
         """
         params = Channel.make_params() | kwargs
         async with Messenger() as messenger:
@@ -138,11 +133,6 @@ class Api(object):
         -------
         dict
             远程模板名与版本号及其下载链接的映射。
-
-        Raises
-        ------
-        Exception
-            若远程请求失败或返回异常，将抛出由 Messenger 封装的异常。
         """
         params = Channel.make_params()
         async with Messenger() as messenger:
@@ -169,11 +159,6 @@ class Api(object):
         -------
         str
             请求返回的模板文件内容字符串。
-
-        Raises
-        ------
-        Exception
-            若远程请求失败或返回异常，将抛出由 Messenger 封装的异常。
         """
         params = Channel.make_params() | {"page": template_name}
         async with Messenger() as messenger:
