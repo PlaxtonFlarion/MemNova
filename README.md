@@ -60,10 +60,10 @@
 ## 🧭 安装指南
 
 ### ⭐️ Memrix 提供简洁明了的安装包，让您能够轻松开始您的性能测试之旅。
-- **1. 下载**: 访问我们的 [发布页面](https://github.com/PlaxtonFlarion/MemNova/releases) 下载最新版的 **Memrix** 安装包。
+- **1. 下载**: 访问我们的 [发布页面](https://github.com/PlaxtonFlarion/SoftwareCenter/releases) 下载最新版的 **Memrix** 安装包。
 - **2. 安装**: 运行下载的安装包，并按照提示完成安装过程，安装完成后设置系统环境变量。
 - **3. 启动**: 安装完成后，通过命令行启动 **Memrix** 开始体验高效的性能测试。
-- **4. 体验**: 如果您使用的是 **Windows** 操作系统，为了增加体验感，强烈建议您使用 [Windows Terminal](https://apps.microsoft.com/detail/9N0DX20HK701) 等现代终端。
+- **4. 体验**: 如果您使用的是 **Windows** 操作系统，为了增加体验感，强烈建议您使用 [Windows Terminal](https://github.com/microsoft/terminal) 等现代终端。
 - **5. 就绪**: 在 **Memrix** 启动前，确保所有系统正常。
 
 ---

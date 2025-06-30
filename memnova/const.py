@@ -72,6 +72,9 @@ BUSINESS_CASE_URL  = f"https://api.appserverx.com/business-case"
 SPEECH_META_URL    = f"https://api.appserverx.com/speech-meta"
 SPEECH_VOICE_URL   = f"https://api.appserverx.com/speech-voice"
 GLOBAL_CF_URL      = f"https://api.appserverx.com/global-configuration"
+PREDICT_URL        = r""
+TOOLKIT_META_URL   = r"https://api.appserverx.com/toolkit-meta"
+MODEL_META_URL     = r""
 X_TEMPLATE_VERSION = f"x_template_version.json"
 
 BASIC_HEADERS = {

@@ -770,67 +770,66 @@ async def main() -> typing.Optional[typing.Any]:
     else:
         raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
 
-    # 模板文件源路径
+    # notes: --- 路径初始化 ---
     src_templates = os.path.join(mx_work, const.SCHEMATIC, const.TEMPLATES).format()
-    # 模板版本文件路径
-    _ = os.path.join(src_templates, const.X_TEMPLATE_VERSION).format()
-    # 模板文件路径
-    template = os.path.join(src_templates, "memory.html")
-    # 检查模板文件是否存在，如果缺失则显示错误信息并退出程序
-    if not os.path.isfile(template) or not os.path.basename(template).endswith(".html"):
-        tmp_name = os.path.basename(template)
-        raise MemrixError(f"{const.APP_DESC} missing files {tmp_name}")
 
-    # 设置工具源路径
     turbo = os.path.join(mx_work, const.SCHEMATIC, const.SUPPORTS).format()
 
-    # 根据平台设置工具路径
-    if platform == "win32":
-        npp = os.path.join(turbo, "Windows", "npp_portable_mini", "notepad++.exe")
-        # 将工具路径添加到系统 PATH 环境变量中
-        os.environ["PATH"] = os.path.dirname(npp) + env_symbol + os.environ.get("PATH", "")
-        # 检查工具是否存在，如果缺失则显示错误信息并退出程序
-        if not shutil.which((tls_name := os.path.basename(npp))):
-            raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
-
-    # 初始文件夹路径
     if not os.path.exists(
         initial_source := os.path.join(mx_feasible, const.STRUCTURE).format()
     ):
         os.makedirs(initial_source, exist_ok=True)
 
-    # 配置文件夹路径
     if not os.path.exists(
         src_opera_place := os.path.join(initial_source, const.SRC_OPERA_PLACE).format()
     ):
         os.makedirs(src_opera_place, exist_ok=True)
 
-    # 报告文件夹路径
     if not os.path.exists(
         src_total_place := os.path.join(initial_source, const.SRC_TOTAL_PLACE).format()
     ):
         os.makedirs(src_total_place, exist_ok=True)
 
-    # 激活日志
     Active.active(watch := "INFO" if cmd_lines.watch else "WARNING")
 
-    # 设置初始配置文件路径
     align_file = os.path.join(initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
-    # 加载初始配置
     align = Align(align_file)
 
     if cmd_lines.align:
         return await previewing()
 
+    # notes: --- 授权流程 ---
     lic_file = Path(src_opera_place) / const.LIC_FILE
 
-    # 应用激活
     if apply_code := cmd_lines.apply:
         return await authorize.receive_license(apply_code, lic_file)
 
-    # 授权校验
     await authorize.verify_license(lic_file)
 
+    # notes: --- 工具路径设置 ---
+    tools = []
+    if platform == "win32":
+        supports = os.path.join(turbo, "Windows").format()
+        tools.append(npp := os.path.join(supports, "npp_portable_mini", "notepad++.exe"))
+        os.environ["PATH"] = os.path.dirname(npp) + env_symbol + os.environ.get("PATH", "")
+
+    # notes: --- 手动同步命令（提前返回）---
+    # ......
+
+    # notes: --- 模板与工具检查 ---
+    template = os.path.join(src_templates, "memory.html")
+    # 检查每个模板文件是否存在，如果缺失则显示错误信息并退出程序
+    if not os.path.isfile(template) or not os.path.basename(template).endswith(".html"):
+        tmp_name = os.path.basename(template)
+        raise MemrixError(f"{const.APP_DESC} missing files {tmp_name}")
+
+    # 检查每个工具是否存在，如果缺失则显示错误信息并退出程序
+    if tools:
+        for tls in tools:
+            if not shutil.which((tls_name := os.path.basename(tls))):
+                raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
+
+    # notes: --- 配置与启动 ---
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
     logger.info(f"操作系统: {platform}")
     logger.info(f"应用名称: {software}")
