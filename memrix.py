@@ -188,55 +188,8 @@ class Memrix(object):
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
-        """
-        启动内存数据拉取任务（记忆风暴模式），定时采集目标应用的内存状态，并写入本地数据库。
-
-        方法内部包含多级流程，包括：
-        - 设备 PID / UID / Activity 状态获取
-        - 内存快照解析（PSS、RSS、USS、SWAP、Graphics 等）
-        - 多进程内存合并与结构构建
-        - 数据持久化（使用 SQLite）
-        - 文件结构与任务标识管理
-
-        内部定义的协程包括：
-        - `flash_memory(pid)`：对单个 PID 进行内存解析与归类
-        - `flash_memory_launch()`：执行一次完整的采集流程，并组织入库结构
-
-        采集周期由配置文件控制，任务会持续运行直到 `dump_close_event` 被触发。
-
-        Parameters
-        ----------
-        device : Device
-            目标设备对象，需实现 memory_info、pid_value、uid_value、adj_value、act_value 等接口方法。
-
-        post_pkg : typing.Optional[str]
-            可以传入的应用包名。
-        """
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
-            """
-            拉取并解析指定进程（PID）的内存信息。
-
-            调用设备的 `memory_info()` 接口获取完整原始内存数据（/proc/pid 等），
-            解析后提取三大内存映射结构：
-
-            - resume_map：汇总性指标（USS、RSS、PSS、Graphics、SWAP 等）
-            - memory_map：详细结构（Native Heap、mmap 分段等）
-            - memory_vms：VMS 估值（通过 pkg_value 拉取）
-
-            使用正则表达式提取文本内容，结合 `ToolKit.fit()` 进行数据清洗与单位转换。
-
-            Parameters
-            ----------
-            pid : str
-                目标进程的 PID，用于获取应用的内存快照。
-
-            Returns
-            -------
-            Optional[dict[str, dict]]
-                包含三个键的字典（resume_map, memory_map, memory_vms）。
-                若内存数据拉取失败，则返回 None。
-            """
             if not (memory := await device.memory_info(package)):
                 return None
 
@@ -340,15 +293,11 @@ class Memrix(object):
             if all(memory_result := await asyncio.gather(
                     *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
-                # 使用双层 defaultdict 构建合并容器
                 muster = defaultdict(lambda: defaultdict(float))
-                # 遍历所有进程的 memory_result（每项包含多个子映射：resume_map、memory_map 等）
                 for result in memory_result:
                     for key, value in result.items():
                         for k, v in value.items():
-                            # 对同一个字段名累加所有进程的值（如 TOTAL PSS）
                             muster[key][k] += v
-                # 将内部 defaultdict 转换为普通 dict 结构，便于后续使用（如插入数据库、写入 YAML）
                 muster = {k: dict(v) for k, v in muster.items()}
             else:
                 self.dumped.set()
@@ -500,29 +449,6 @@ class Memrix(object):
 
     # """真相快照"""
     async def create_report(self) -> None:
-        """
-        生成内存测试报告（真相快照），基于数据库与中间缓存构建完整 HTML 分析结果。
-
-        本方法会执行以下步骤：
-        1. 验证采集数据（数据库、日志、任务标记文件）是否存在
-        2. 读取 YAML 场景文件，获取所有已记录数据目录
-        3. 使用 `Analyzer.draw_memory()` 渲染每一轮数据的统计图与数值结果
-        4. 汇总所有测试轮次的前后台内存指标均值、峰值
-        5. 调用 `Analyzer.form_report()` 根据模板生成最终报告页面
-
-        报告结构将包含：
-        - 测试信息（时间、设备、任务标签、评价标准）
-        - 每轮数据对比分析图（柱状图、折线图等）
-        - 总体统计：前台/后台峰值、均值
-        - 数据详情列表（每轮一项）
-
-        Raises
-        ------
-        MemrixError
-            - 当所需文件不存在或路径错误
-            - 当 YAML 场景中无采集数据记录
-            - 当报告数据生成失败或为空
-        """
         for file in [self.db_file, self.log_file, self.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"文件无效 {file}")
