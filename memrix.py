@@ -58,7 +58,7 @@ class Memrix(object):
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
 
-    remote: dict = {}
+    __remote: dict = {}
 
     def __init__(self, storm: bool, pulse: bool, forge: bool, *args, **kwargs):
         """
@@ -107,6 +107,14 @@ class Memrix(object):
 
         self.dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
         self.dumped: typing.Optional["asyncio.Event"] = None
+
+    @property
+    def remote(self) -> dict:
+        return self.__remote
+
+    @remote.setter
+    def remote(self, value: dict) -> None:
+        self.__remote = value
 
     def clean_up(self, *_, **__) -> None:
         """
@@ -377,7 +385,7 @@ class Memrix(object):
             scene = {
                 "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
             }
-        dump_file_task = asyncio.create_task(FileAssist.dump_yaml(self.team_file, scene))
+        await FileAssist.dump_yaml(self.team_file, scene)
 
         if not os.path.exists(self.other_dir):
             os.makedirs(self.other_dir, exist_ok=True)
@@ -388,14 +396,10 @@ class Memrix(object):
 
         async with aiosqlite.connect(self.db_file) as db:
             await DataBase.create_table(db)
-            await dump_file_task
-
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.dump_close_event)
             )
-
             self.exec_start_event.set()
-
             while not self.dump_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
