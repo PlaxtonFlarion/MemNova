@@ -154,41 +154,35 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    async def run_missions(self, open_file: dict, device: "Device", player: "Player"):
+    async def automatic(self, open_file: dict, device: "Device", player: "Player"):
         logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
-
-        outer_loopers = open_file.get("loopers", 1)
-        missions = open_file.get("missions", [])
 
         self.closed = asyncio.Event()
 
-        for outer in range(outer_loopers):
-            for i, mission in enumerate(missions):
-                group = mission.get("group", f"group_{outer}_{i}")
-                inner_loopers = mission.get("loopers", 1)
-                steps = mission.get("steps", [])
+        for outer in range(open_file.get("loopers", 1)):
+            for index, mission in enumerate(open_file.get("mission", [])):
 
-                for inner in range(inner_loopers):
-                    for step in steps:
-                        if not (cmds := step.get("cmds")):
-                            logger.warning(f"[{group}] Missing 'cmds' → {step}")
-                            continue
+                    for key, value in mission.items():
+                        for inner in range(value.get("loopers", 1)):
+                            for step in value.get("command", []):
 
-                        vals = step.get("vals", [])
-                        args = step.get("args", [])
-                        kwds = step.get("kwds", {})
-                        target = player if cmds == "audio_player" else device
+                                cmds = step.get("cmds", "")
+                                vals = step.get("vals", [])
+                                args = step.get("args", [])
+                                kwds = step.get("kwds", {})
 
-                        self.closed.clear()
-                        if callable(func := getattr(target, cmds, None)):
-                            try:
-                                logger.info(f"[{group}] Step {cmds} → {vals}, {args}, {kwds}")
-                                await func(*vals, *args, **kwds)
-                            except Exception as e:
-                                logger.warning(f"[{group}] Failed {cmds}: {e}")
-                        else:
-                            logger.warning(f"[{group}] Unknown command: {cmds}")
-                        self.closed.set()
+                                target = player if cmds == "audio_player" else device
+
+                                self.closed.clear()
+                                if callable(func := getattr(target, cmds, None)):
+                                    try:
+                                        logger.info(f"[{key}] Step {cmds} → {vals}, {args}, {kwds}")
+                                        await func(*vals, *args, **kwds)
+                                    except Exception as e:
+                                        logger.warning(f"[{key}] Failed {cmds}: {e}")
+                                else:
+                                    logger.warning(f"[{key}] Unknown command: {cmds}")
+                                self.closed.set()
 
         logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
 
@@ -492,9 +486,7 @@ class Memrix(object):
         allowed_extra = await allowed_extra_task or [const.WAVERS]
         player: "Player" = Player(self.src_opera_place, allowed_extra)
 
-        exec_task = asyncio.create_task(
-            self.run_missions(open_file, device, player)
-        )
+        exec_task = asyncio.create_task(self.automatic(open_file, device, player))
 
         await self.dump_close_event.wait()
 
@@ -532,10 +524,8 @@ class Memrix(object):
             - 当报告数据生成失败或为空
         """
         for file in [self.db_file, self.log_file, self.team_file]:
-            try:
-                assert os.path.isfile(file), f"文件无效 {file}"
-            except AssertionError as e:
-                raise MemrixError(e)
+            if not Path(file).is_file():
+                raise MemrixError(f"文件无效 {file}")
 
         async with aiosqlite.connect(self.db_file) as db:
             analyzer = Analyzer(
