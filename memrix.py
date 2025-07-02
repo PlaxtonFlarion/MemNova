@@ -280,7 +280,7 @@ class Memrix(object):
                 "uid": uid, "adj": adj, "act": act
             })
             remark_map.update({
-                "frg": "前台" if self.focus in act else "前台" if int(adj) <= 0 else "后台"
+                "frg": "前台" if package in act else "前台" if int(adj) <= 0 else "后台"
             })
 
             state = "foreground" if remark_map["frg"] == "前台" else "background"
