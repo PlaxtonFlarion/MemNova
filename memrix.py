@@ -33,8 +33,9 @@ from loguru import logger
 # ====[ from: 本地模块 ]====
 from engine.device import Device
 from engine.manage import Manage
+from engine.medias import Player
 from engine.tinker import (
-    Active, Ram, FileAssist, MemrixError
+    Active, Ram, FileAssist, ToolKit, MemrixError
 )
 from memcore.api import Api
 from memcore import authorize
@@ -44,151 +45,6 @@ from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.analyzer import Analyzer
 from memnova import const
-
-try:
-    os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
-    import pygame
-except ImportError:
-    raise ImportError("AudioPlayer requires pygame. install it first.")
-
-
-class ToolKit(object):
-    """
-    内存工具类，用于执行单位转换、数值计算与文本匹配等基础功能。
-
-    Attributes
-    ----------
-    text_content : Optional[str]
-        用于正则匹配的文本内容。可通过 `fit()` 方法执行查找与转换。
-    """
-    text_content: typing.Optional[str] = None
-
-    @staticmethod
-    def transform(number: typing.Any) -> float:
-        """
-        将任意数字（或可转换为数字的值）转换为以 KB 为单位的浮点数。
-
-        Parameters
-        ----------
-        number : Any
-            任意可被转换为 float 的值（通常为字节数或字符串表示的数字）。
-
-        Returns
-        -------
-        float
-            返回值为输入数值除以 1024 后的结果，精确到小数点后两位。
-            若转换失败，则返回 0.00。
-        """
-        try:
-            return round(float(number) / 1024, 2)
-        except TypeError:
-            return 0.00
-
-    @staticmethod
-    def addition(*numbers) -> float:
-        """
-        执行多个数值的加法求和。
-
-        Parameters
-        ----------
-        *numbers : float or str
-            任意数量的参数，每个都应可被转换为 float。
-
-        Returns
-        -------
-        float
-            所有数值之和，四舍五入保留两位小数。
-            若存在无法转换的值，则返回 0.00。
-        """
-        try:
-            return round(sum([float(number) for number in numbers]), 2)
-        except TypeError:
-            return 0.00
-
-    @staticmethod
-    def subtract(number_begin: typing.Any, number_final: typing.Any) -> float:
-        """
-        执行两个数值之间的减法操作。
-
-        Parameters
-        ----------
-        number_begin : Any
-            被减数，需可转换为 float。
-
-        number_final : Any
-            减数，需可转换为 float。
-
-        Returns
-        -------
-        float
-            差值结果，四舍五入保留两位小数。
-            若任一参数无法转换为 float，则返回 0.00。
-        """
-        try:
-            return round(float(number_begin) - float(number_final), 2)
-        except TypeError:
-            return 0.00
-
-    def fit(self, pattern: typing.Union[str, "re.Pattern[str]"]) -> float:
-        """
-         使用正则表达式在 `text_content` 中提取匹配的第一个分组，并转换为 KB 单位。
-
-         Parameters
-         ----------
-         pattern : str or Pattern[str]
-             要匹配的正则表达式，可以是字符串或已编译的 re.Pattern。
-
-         Returns
-         -------
-         float
-             若匹配成功，返回分组内容转换为 KB 后的浮点值；
-             若匹配失败或分组无效，返回 0.00。
-         """
-        return self.transform(find.group(1)) if (
-            find := re.search(pattern, self.text_content, re.S)
-        ) else 0.00
-
-
-class Player(object):
-    """
-    音频播放工具类，用于异步播放本地音频文件。
-    """
-
-    def __init__(self, opera_place: str, allowed_extra: list):
-        self.opera_place = opera_place
-        self.allowed_extra = allowed_extra
-
-    async def audio(self, audio_file: str, *_, **__) -> None:
-        """
-        异步播放指定的音频文件（支持常见音频格式）。
-
-        使用 pygame 的音频引擎进行加载与播放。函数在播放期间会阻塞，直到播放结束。
-        适用于需要在异步流程中播放提示音或语音反馈的场景。
-
-        Parameters
-        ----------
-        audio_file : str
-            音频文件的路径，支持 `.mp3`, `.wav`, `.ogg` 等格式。
-
-        Notes
-        -----
-        - 本方法需在支持 asyncio 的事件循环中运行。
-        - pygame 必须已正确初始化，并具备音频播放环境。
-        - 音量默认设置为最大（1.0），可在必要时添加音量控制参数。
-        - 若音频播放失败（如文件路径无效或格式不受支持），可能抛出 pygame 错误。
-        """
-        voice = Path(audio_file)
-        logger.info(f"Player -> {voice.name}")
-        audio_file = await Api.synthesize(
-            voice.stem, voice.suffix or const.WAVERS, self.opera_place, self.allowed_extra
-        )
-
-        pygame.mixer.init()
-        pygame.mixer.music.load(audio_file)
-        pygame.mixer.music.set_volume(1.0)
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
 
 
 class Memrix(object):
@@ -244,8 +100,6 @@ class Memrix(object):
         }
         self.design: "Design" = Design(self.watch)
 
-        self.mistake: typing.Optional["Exception"] = None
-
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
         self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
@@ -266,11 +120,17 @@ class Memrix(object):
         """
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待任务结束 ...")
-            await self.dumped.wait()
+            try:
+                await asyncio.wait_for(self.dumped.wait(), timeout=3)
+            except asyncio.TimeoutError:
+                logger.warning("任务超时结束 ...")
 
         if self.closed and not self.closed.is_set():
             logger.info(f"等待流程结束 ...")
-            await self.closed.wait()
+            try:
+                await asyncio.wait_for(self.closed.wait(), timeout=3)
+            except asyncio.TimeoutError:
+                logger.warning("流程超时结束 ...")
 
         if self.animation_task:
             await self.animation_task
@@ -293,6 +153,44 @@ class Memrix(object):
 
         Design.console.print()
         await self.design.system_disintegrate()
+
+    async def run_missions(self, open_file: dict, device: "Device", player: "Player"):
+        logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
+
+        outer_loopers = open_file.get("loopers", 1)
+        missions = open_file.get("missions", [])
+
+        self.closed = asyncio.Event()
+
+        for outer in range(outer_loopers):
+            for i, mission in enumerate(missions):
+                group = mission.get("group", f"group_{outer}_{i}")
+                inner_loopers = mission.get("loopers", 1)
+                steps = mission.get("steps", [])
+
+                for inner in range(inner_loopers):
+                    for step in steps:
+                        if not (cmds := step.get("cmds")):
+                            logger.warning(f"[{group}] Missing 'cmds' → {step}")
+                            continue
+
+                        vals = step.get("vals", [])
+                        args = step.get("args", [])
+                        kwds = step.get("kwds", {})
+                        target = player if cmds == "audio_player" else device
+
+                        self.closed.clear()
+                        if callable(func := getattr(target, cmds, None)):
+                            try:
+                                logger.info(f"[{group}] Step {cmds} → {vals}, {args}, {kwds}")
+                                await func(*vals, *args, **kwds)
+                            except Exception as e:
+                                logger.warning(f"[{group}] Failed {cmds}: {e}")
+                        else:
+                            logger.warning(f"[{group}] Unknown command: {cmds}")
+                        self.closed.set()
+
+        logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -507,8 +405,7 @@ class Memrix(object):
         package: typing.Optional[str] = post_pkg or self.focus
 
         if not post_pkg and not (check := await device.examine_pkg(package)):
-            self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
-            return self.dump_close_event.set()
+            raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
         logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
@@ -560,49 +457,32 @@ class Memrix(object):
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
+        await self.dump_task_close()
+
     # """巡航引擎"""
     async def exec_task_start(self, device: "Device") -> None:
-        """
-        执行任务调度主流程，负责：
-        - 加载焦点任务 JSON 配置；
-        - 校验任务数据、应用是否安装；
-        - 启动 UI 自动化服务；
-        - 启动自动转储任务；
-        - 根据 JSON 结构执行多轮命令任务；
-        - 正确设置同步事件状态与错误追踪。
-
-        Parameters
-        ----------
-        device : Device
-            当前连接的目标设备对象，必须已初始化并可交互。
-
-        Raises
-        ------
-        - 无直接 raise；所有错误通过设置 `self.mistake` 标记，并提前 return；
-        - 支持如下异常的容错处理：
-            - FileNotFoundError、AssertionError、json.JSONDecodeError 等文件读取/格式校验类；
-            - u2.DeviceError、u2.ConnectError 设备连接类异常；
-            - 包名不存在等业务校验错误。
-        """
         try:
             open_file = await FileAssist.read_json(self.focus)
 
-            assert (loopers := int(open_file["loopers"])), f"循环次数为空 {loopers}"
-            assert (package := open_file["package"]), f"应用名称为空 {package}"
-            assert (mission := open_file[self.align.group]), f"脚本文件为空 {mission}"
-        except (FileNotFoundError, AssertionError, TypeError, ValueError, json.JSONDecodeError) as e:
-            self.mistake = MemrixError(e)
-            return self.dump_close_event.set()
+            if not (_ := int(open_file.get("loopers", 0))):
+                raise ValueError("循环次数为空")
+
+            if not (package := open_file.get("package", "").strip()):
+                raise ValueError("应用名称为空")
+
+            if not (_ := open_file.get(self.align.group, [])):
+                raise ValueError(f"脚本文件为空，未找到字段: {self.align.group}")
+
+        except (FileNotFoundError, TypeError, ValueError, json.JSONDecodeError) as e:
+            raise MemrixError(e)
 
         if not (check := await device.examine_pkg(package)):
-            self.mistake = MemrixError(f"应用名称不存在 {package} -> {check}")
-            return self.dump_close_event.set()
+            raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
         try:
             await device.automator_activation()
         except (u2exc.DeviceError, u2exc.ConnectError) as e:
-            self.mistake = MemrixError(e)
-            return self.dump_close_event.set()
+            raise MemrixError(e)
 
         allowed_extra_task = asyncio.create_task(Api.formatting())
         auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
@@ -612,35 +492,19 @@ class Memrix(object):
         allowed_extra = await allowed_extra_task or [const.WAVERS]
         player: "Player" = Player(self.src_opera_place, allowed_extra)
 
-        self.closed = asyncio.Event()
+        exec_task = asyncio.create_task(
+            self.run_missions(open_file, device, player)
+        )
 
-        logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
+        await self.dump_close_event.wait()
 
-        for data in range(loopers):
-            for key, value in mission.items():
-                for i in value:
-                    cmds = i.get("cmds", "")
+        exec_task.cancel()
+        try:
+            await exec_task
+        except asyncio.CancelledError:
+            logger.info(f"任务完成")
 
-                    self.closed.clear()
-                    if callable(func := getattr(player if cmds == "audio" else device, cmds)):
-                        vals, args, kwds = i.get("vals", []), i.get("args", []), i.get("kwds", {})
-
-                        try:
-                            logger.info(f"{func.__name__} Digital -> {vals} {args} {kwds}")
-                            resp = await func(*vals, *args, **kwds)
-                        except Exception as e:
-                            logger.error(f"Mistake -> {e}")
-                        else:
-                            logger.info(f"{func.__name__} Returns -> {resp}")
-
-                    else:
-                        logger.info(f"Lost func -> {cmds}")
-                    self.closed.set()
-
-        self.dump_close_event.set()
         await auto_dump_task
-
-        logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
 
     # """真相快照"""
     async def create_report(self) -> None:
@@ -745,7 +609,7 @@ async def main() -> typing.Optional[typing.Any]:
 
     # 解析命令行参数
     parser = Parser()
-    cmd_lines = Parser().parse_cmd
+    cmd_lines = parser.parse_cmd
 
     # 如果没有提供命令行参数，则显示帮助文档，并退出程序
     if len(sys.argv) == 1:
@@ -868,17 +732,7 @@ async def main() -> typing.Optional[typing.Any]:
             await Design.flame_manifest()
             memrix.remote = await global_config_task or {}
 
-            main_task = asyncio.create_task(
-                getattr(memrix, "dump_task_start" if storm else "exec_task_start")(device)
-            )
-
-            await memrix.dump_close_event.wait()
-
-            if mistake := memrix.mistake:
-                raise mistake
-
-            await memrix.dump_task_close()
-            main_task.cancel()
+            main_task = getattr(memrix, "dump_task_start" if storm else "exec_task_start")(device)
             return await main_task
 
         elif forge:

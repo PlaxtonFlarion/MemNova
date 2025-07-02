@@ -68,7 +68,7 @@ class Device(object):
         检查指定包名是否存在于目标设备上，并返回其路径。
         """
         cmd = self.__initial + ["shell", "pm", "path", package]
-        return response if (response := await Terminal.cmd_line(cmd)) else None
+        return await Terminal.cmd_line(cmd)
 
     async def pid_value(self, package: str, *_, **__) -> typing.Optional["Pid"]:
         """
@@ -90,7 +90,11 @@ class Device(object):
         """
         cmd = self.__initial + ["shell", "dumpsys", "package", package, "|", "grep", "uid="]
         response = await Terminal.cmd_line(cmd)
-        return uid.group(0) if (uid := re.search(r"(?<=uid=)\d+", response)) else None
+
+        if response:
+            if match := re.search(r"(?<=uid=)\d+", response):
+                return match.group(0)
+        return None
 
     async def act_value(self, *_, **__) -> typing.Any:
         """
@@ -99,8 +103,11 @@ class Device(object):
         cmd = self.__initial + ["shell", "dumpsys", "window", "|", "grep", "mCurrentFocus"]
         response = await Terminal.cmd_line(cmd)
 
-        if match := re.search(r"(?<=Window\{).*?(?=})", response):
-            return match.group().split("/" if "/" in match.group() else None)[-1]
+        if response:
+            if match := re.search(r"(?<=Window\{).*?(?=})", response):
+                sep = "/" if "/" in match.group() else None
+                return match.group().split(sep)[-1]
+        return None
 
     async def adj_value(self, pid: str, *_, **__) -> typing.Any:
         """
@@ -116,14 +123,18 @@ class Device(object):
         """
         cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/status"]
         response = await Terminal.cmd_line(cmd)
-        return vm.group(1) if (vm := re.search(r"VmRSS:.*?(\d+)", response, re.S)) else None
+
+        if response:
+            if match := re.search(r"VmRSS:.*?(\d+)", response):
+                return match.group(1)
+        return None
 
     async def memory_info(self, package: str, *_, **__) -> typing.Any:
         """
         获取应用内存明细（dumpsys meminfo 原始文本）。
         """
         cmd = self.__initial + ["shell", "dumpsys", "meminfo", package]
-        return response if (response := await Terminal.cmd_line(cmd)) else None
+        return await Terminal.cmd_line(cmd)
 
     async def device_online(self, *_, **__) -> typing.Any:
         """

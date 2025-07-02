@@ -8,6 +8,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import re
 import sys
 import yaml
 import json
@@ -359,6 +360,99 @@ class Ram(object):
         虚拟内存估值信息。
         """
         return self.__details.get("memory_vms", None)
+
+
+class ToolKit(object):
+    """
+    内存工具类，用于执行单位转换、数值计算与文本匹配等基础功能。
+    """
+
+    text_content: str = ""
+
+    @staticmethod
+    def transform(number: typing.Any) -> float:
+        """
+        将任意数字（或可转换为数字的值）转换为以 KB 为单位的浮点数。
+
+        Parameters
+        ----------
+        number : Any
+            任意可被转换为 float 的值（通常为字节数或字符串表示的数字）。
+
+        Returns
+        -------
+        float
+            返回值为输入数值除以 1024 后的结果，精确到小数点后两位。
+            若转换失败，则返回 0.00。
+        """
+        try:
+            return round(float(number) / 1024, 2)
+        except TypeError:
+            return 0.00
+
+    @staticmethod
+    def addition(*args) -> float:
+        """
+        执行多个数值的加法求和。
+
+        Parameters
+        ----------
+        *args : float or str
+            任意数量的参数，每个都应可被转换为 float。
+
+        Returns
+        -------
+        float
+            所有数值之和，四舍五入保留两位小数。
+            若存在无法转换的值，则返回 0.00。
+        """
+        try:
+            return round(sum([float(arg) for arg in args]), 2)
+        except TypeError:
+            return 0.00
+
+    @staticmethod
+    def subtract(number_begin: typing.Any, number_final: typing.Any) -> float:
+        """
+        执行两个数值之间的减法操作。
+
+        Parameters
+        ----------
+        number_begin : Any
+            被减数，需可转换为 float。
+
+        number_final : Any
+            减数，需可转换为 float。
+
+        Returns
+        -------
+        float
+            差值结果，四舍五入保留两位小数。
+            若任一参数无法转换为 float，则返回 0.00。
+        """
+        try:
+            return round(float(number_begin) - float(number_final), 2)
+        except TypeError:
+            return 0.00
+
+    def fit(self, pattern: typing.Union[str, "re.Pattern[str]"]) -> float:
+        """
+         使用正则表达式在 `text_content` 中提取匹配的第一个分组，并转换为 KB 单位。
+
+         Parameters
+         ----------
+         pattern : str or Pattern[str]
+             要匹配的正则表达式，可以是字符串或已编译的 re.Pattern。
+
+         Returns
+         -------
+         float
+             若匹配成功，返回分组内容转换为 KB 后的浮点值；
+             若匹配失败或分组无效，返回 0.00。
+         """
+        return self.transform(find.group(1)) if (
+            find := re.search(pattern, self.text_content, re.S)
+        ) else 0.00
 
 
 if __name__ == '__main__':
