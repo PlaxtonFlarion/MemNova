@@ -18,49 +18,22 @@ from memcore.design import Design
 
 
 class Manage(object):
-    """
-    设备管理器，用于识别、筛选并连接 ADB 设备。
 
-    提供基于 asyncio 的异步设备检测流程，支持自动识别单设备，
-    或在多设备环境下提示用户交互选择。
-    """
+    def __init__(self, adb: str):
+        self.adb = adb
 
-    @staticmethod
-    async def operate_device(serial: str) -> typing.Optional["Device"]:
-        """
-        异步检测并连接目标设备，根据传入序列号匹配可用设备。
-
-        - 若当前仅连接一个设备，将自动返回
-        - 若存在多个设备，匹配序列号或提示用户手动选择
-        - 若暂未检测到设备，则每 5 秒轮询并提示等待
-        - 最大重试次数 20 次
-
-        Parameters
-        ----------
-        serial : str
-            目标设备的序列号，用于精确绑定目标设备。
-
-        Returns
-        -------
-        Optional[Device]
-            成功连接的设备对象，若始终无法连接则返回 None。
-
-        Notes
-        -----
-        - 检测通过 adb devices 命令完成
-        - 用户交互依赖 rich 的 Prompt 控制台组件
-        """
+    async def operate_device(self, serial: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
+
         while True:
             if try_again == max_try_again:
                 return Design.Doc.log(f"[#FF5F00]设备连接超时 ...")
 
-            device_dict = {}
-            if result := await Terminal.cmd_line(["adb", "devices"]):
-                if serial_list := [line.split()[0] for line in result.split("\n")[1:]]:
-                    device_dict = {
-                        str(index): Device(serial) for index, serial in enumerate(serial_list, 1)
-                    }
+            result = await Terminal.cmd_line([self.adb, "devices"])
+            device_dict = {
+                str(i): Device(self.adb, serial) for i, line in enumerate(result.splitlines()[1:], 1)
+                if (parts := line.strip().split()) and (serial := parts[0])
+            } if result else {}
 
             if not device_dict:
                 try_again += 1

@@ -70,8 +70,11 @@ class Memrix(object):
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
-        self.template: str = kwargs["template"]
+        self.memory_template: str = kwargs["memory_template"]
+
         self.align: "Align" = kwargs["align"]
+
+        self.adb: str = kwargs["adb"]
 
         if self.forge:
             vault: str = self.focus
@@ -91,6 +94,7 @@ class Memrix(object):
 
         self.pad: str = "-" * 8
         self.memories: dict[str, typing.Union[str, int]] = {
+            "exc": "*",
             "msg": "*",
             "stt": "*",
             "act": "*",
@@ -103,9 +107,8 @@ class Memrix(object):
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
         self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-        self.closed: typing.Optional["asyncio.Event"] = None
-
         self.dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+
         self.dumped: typing.Optional["asyncio.Event"] = None
 
     @property
@@ -131,14 +134,7 @@ class Memrix(object):
             try:
                 await asyncio.wait_for(self.dumped.wait(), timeout=3)
             except asyncio.TimeoutError:
-                logger.warning("任务超时结束 ...")
-
-        if self.closed and not self.closed.is_set():
-            logger.info(f"等待流程结束 ...")
-            try:
-                await asyncio.wait_for(self.closed.wait(), timeout=3)
-            except asyncio.TimeoutError:
-                logger.warning("流程超时结束 ...")
+                logger.info("任务超时结束 ...")
 
         if self.animation_task:
             await self.animation_task
@@ -165,8 +161,6 @@ class Memrix(object):
     async def automatic(self, open_file: dict, device: "Device", player: "Player"):
         logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
 
-        self.closed = asyncio.Event()
-
         for outer in range(open_file.get("loopers", 1)):
             for index, mission in enumerate(open_file.get("mission", [])):
 
@@ -181,18 +175,19 @@ class Memrix(object):
 
                                 target = player if cmds == "audio_player" else device
 
-                                self.closed.clear()
+                                self.memories.update({"exc": f"{cmds} → {vals}, {args}, {kwds}"})
+
                                 if callable(func := getattr(target, cmds, None)):
                                     try:
                                         logger.info(f"[{key}] Step {cmds} → {vals}, {args}, {kwds}")
                                         await func(*vals, *args, **kwds)
                                     except Exception as e:
-                                        logger.warning(f"[{key}] Failed {cmds}: {e}")
+                                        logger.info(f"[{key}] Failed {cmds}: {e}")
                                 else:
-                                    logger.warning(f"[{key}] Unknown command: {cmds}")
-                                self.closed.set()
+                                    logger.info(f"[{key}] Unknown command: {cmds}")
 
         logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
+        self.dump_close_event.set()
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -447,7 +442,7 @@ class Memrix(object):
         try:
             await exec_task
         except asyncio.CancelledError:
-            logger.info(f"任务完成")
+            logger.info(f"Automated task completed ...")
 
         await auto_dump_task
 
@@ -502,7 +497,7 @@ class Memrix(object):
                 },
                 "report_list": report_list
             }
-            return await analyzer.form_report(self.template, **rendering)
+            return await analyzer.form_report(self.memory_template, **rendering)
 
 
 # """Main"""
@@ -588,30 +583,39 @@ async def main() -> typing.Optional[typing.Any]:
     if apply_code := cmd_lines.apply:
         return await authorize.receive_license(apply_code, lic_file)
 
-    await authorize.verify_license(lic_file)
+    # await authorize.verify_license(lic_file)
 
     # notes: --- 工具路径设置 ---
-    tools = []
     if platform == "win32":
         supports = os.path.join(turbo, "Windows").format()
-        tools.append(npp := os.path.join(supports, "npp_portable_mini", "notepad++.exe"))
-        os.environ["PATH"] = os.path.dirname(npp) + env_symbol + os.environ.get("PATH", "")
+        adb = "adb.exe"
+    elif platform == "darwin":
+        supports = os.path.join(turbo, "MacOS").format()
+        adb = "adb"
+    else:
+        raise MemrixError(f"{const.APP_DESC} is not supported on this platform: {platform}.")
+
+    adb = os.path.join(supports, "platform-tools", adb)
+
+    for tls in (tools := [adb]):
+        os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
     # notes: --- 手动同步命令（提前返回）---
     # ......
 
     # notes: --- 模板与工具检查 ---
-    template = os.path.join(src_templates, "memory.html")
+    memory_template = os.path.join(src_templates, "memory.html")
     # 检查每个模板文件是否存在，如果缺失则显示错误信息并退出程序
-    if not os.path.isfile(template) or not os.path.basename(template).endswith(".html"):
-        tmp_name = os.path.basename(template)
+    for tmp in (temps := [memory_template]):
+        if os.path.isfile(tmp) and os.path.basename(tmp).endswith(".html"):
+            continue
+        tmp_name = os.path.basename(tmp)
         raise MemrixError(f"{const.APP_DESC} missing files {tmp_name}")
 
     # 检查每个工具是否存在，如果缺失则显示错误信息并退出程序
-    if tools:
-        for tls in tools:
-            if not shutil.which((tls_name := os.path.basename(tls))):
-                raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
+    for tls in tools:
+        if not shutil.which((tls_name := os.path.basename(tls))):
+            raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
 
     # notes: --- 配置与启动 ---
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
@@ -623,6 +627,25 @@ async def main() -> typing.Optional[typing.Any]:
     logger.info(f"工具目录: {turbo}")
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}\n")
 
+    logger.info(f"{'=' * 15} 环境变量 {'=' * 15}")
+    for env in os.environ["PATH"].split(env_symbol):
+        logger.info(f"ENV: {env}")
+    logger.info(f"{'=' * 15} 环境变量 {'=' * 15}\n")
+
+    logger.info(f"{'=' * 15} 工具路径 {'=' * 15}")
+    for tls in tools:
+        logger.info(f"TLS: {tls}")
+    logger.info(f"{'=' * 15} 工具路径 {'=' * 15}\n")
+
+    logger.info(f"{'=' * 15} 报告模版 {'=' * 15}")
+    for tmp in temps:
+        logger.info(f"TMP: {tmp}")
+    logger.info(f"{'=' * 15} 报告模版 {'=' * 15}\n")
+
+    logger.info(f"{'=' * 15} 初始路径 {'=' * 15}")
+    logger.info(f"部署文件路径: {align_file}")
+    logger.info(f"{'=' * 15} 初始路径 {'=' * 15}\n")
+
     await align.load_align()
 
     if any((storm := cmd_lines.storm, pulse := cmd_lines.pulse, forge := cmd_lines.forge)):
@@ -632,18 +655,17 @@ async def main() -> typing.Optional[typing.Any]:
         keywords = {
             "src_opera_place": src_opera_place,
             "src_total_place": src_total_place,
-            "template": template,
-            "align": align
+            "memory_template": memory_template,
+            "align": align,
+            "adb": adb
         }
         memrix = Memrix(
             storm, pulse, forge, focus, cmd_lines.vault, watch, **keywords
         )
 
         if storm or pulse:
-            if not shutil.which("adb"):
-                raise MemrixError(f"ADB 环境变量未配置 ...")
-
-            if not (device := await Manage.operate_device(cmd_lines.imply)):
+            manage = Manage(adb)
+            if not (device := await manage.operate_device(cmd_lines.imply)):
                 raise MemrixError(f"没有连接设备 ...")
 
             signal.signal(signal.SIGINT, memrix.clean_up)
@@ -682,7 +704,9 @@ if __name__ == '__main__':
     # asyncio.run(test())
 
     try:
-        asyncio.run(main())
+        main_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(main_loop)
+        main_loop.run_until_complete(main())
     except MemrixError as _error:
         Design.Doc.err(_error)
         Design.show_fail()

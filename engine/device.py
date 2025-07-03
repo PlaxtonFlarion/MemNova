@@ -26,8 +26,9 @@ class Device(object):
 
     __facilities: typing.Optional[typing.Union["u2.Device", "u2.UiObject"]] = None
 
-    def __init__(self, serial: str):
-        self.serial, self.__initial = serial, ["adb", "-s", serial]
+    def __init__(self, adb: str, serial: str):
+        self.__initial = [adb, "-s", serial]
+        self.serial = serial
 
     def __str__(self):
         return f"<Device serial={self.serial}>"

@@ -49,7 +49,6 @@ class Player(object):
             speech_file = await Api.synthesize(
                 speech.stem, speech.suffix or const.WAVERS, self.opera_place, self.allowed_extra
             )
-        logger.info(f"Player -> {speech.name}")
 
         pygame.mixer.init()
         pygame.mixer.music.load(speech_file)

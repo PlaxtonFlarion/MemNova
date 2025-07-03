@@ -704,7 +704,8 @@ class Design(object):
                 sc = "#AF87FF"
 
             return textwrap.dedent(f"""\
-                [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
+                [bold #EEEEEE][{brand}::EXC] [bold #FFD75F]{memories['exc']}[/]
+                [{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
                 [{brand}::STT] [bold {sc}]{memories['stt'].upper()}[/]
                 [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
                 [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
@@ -781,6 +782,7 @@ class Design(object):
             visual_center = (cols * 2 - 1) // 2
             pad = " " * (visual_center - (len(final_text) // 2))
             memories.update({
+                "exc": "*",
                 "msg": f"Memory Data {(memories['foreground'] + memories['background'])}",
                 "stt": "*",
                 "act": "*",
