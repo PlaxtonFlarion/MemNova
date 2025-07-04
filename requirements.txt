@@ -76,5 +76,5 @@ Nuitka              ==2.7          # Python → C 打包器
 
 
 # Notes: 开发环境依赖
-plotly              ==6.2.0
 perfetto            ==0.13.1
+protobuf            ==6.31.1

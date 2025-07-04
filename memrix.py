@@ -633,88 +633,6 @@ class TraceLoader(object):
 
         return jank_ranges
 
-    @staticmethod
-    async def plot_frame_timeline(
-            frames: list[dict],
-            scrolling_ranges: typing.Optional[list[dict]] = None,
-            consecutive_jank_ranges: typing.Optional[list[dict]] = None,
-            drag_ranges: typing.Optional[list[dict]] = None
-    ):
-        figure = go.Figure()
-
-        figure.add_trace(go.Scatter(
-            x=[f['timestamp_ms'] for f in frames],
-            y=[f['duration_ms'] for f in frames],
-            mode='lines+markers',
-            name='Frame Duration',
-            marker=dict(color=['red' if f['is_jank'] else 'green' for f in frames]),
-            text=[
-                f"Layer: {f.get('layer_name', '')}<br>"
-                f"Process: {f.get('process_name', '')}<br>"
-                f"Dur: {f['duration_ms']:.2f} ms<br>"
-                f"Jank: {'Yes' if f['is_jank'] else 'No'}"
-                for f in frames
-            ],
-            hoverinfo='text'
-        ))
-
-        if frames:
-            figure.add_shape(
-                type="line",
-                x0=frames[0]['timestamp_ms'],
-                x1=frames[-1]['timestamp_ms'],
-                y0=16.67, y1=16.67,
-                line=dict(color="gray", dash="dash")
-            )
-
-        if scrolling_ranges:
-            for rng in scrolling_ranges:
-                figure.add_vrect(
-                    x0=rng["start_ts"] / 1e6,
-                    x1=rng["end_ts"] / 1e6,
-                    fillcolor="lightblue",
-                    opacity=0.3,
-                    layer="below",
-                    line_width=0,
-                    annotation_text="Scroll",
-                    annotation_position="top left"
-                )
-
-        if drag_ranges:
-            for rng in drag_ranges:
-                figure.add_vrect(
-                    x0=rng["start_ts"] / 1e6,
-                    x1=rng["end_ts"] / 1e6,
-                    fillcolor="orange",
-                    opacity=0.25,
-                    layer="below",
-                    line_width=0,
-                    annotation_text="Drag",
-                    annotation_position="top left"
-                )
-
-        if consecutive_jank_ranges:
-            for rng in consecutive_jank_ranges:
-                figure.add_vrect(
-                    x0=rng["start_ts"],
-                    x1=rng["end_ts"],
-                    fillcolor="red",
-                    opacity=0.2,
-                    layer="below",
-                    line_width=0,
-                    annotation_text="Jank",
-                    annotation_position="top left"
-                )
-
-        figure.update_layout(
-            title="帧耗时分析",
-            xaxis_title="Time (ms)",
-            yaxis_title="Frame Duration (ms)",
-            height=500
-        )
-
-        figure.show()
-
     async def frame_time_line(self):
         config = TraceProcessorConfig(self.perfetto_shell)
         with TraceProcessor(self.trace_file, config=config) as tp:
@@ -723,9 +641,9 @@ class TraceLoader(object):
             scroll_ranges = await self.extract_scrolling_ranges(tp)
             drag_ranges = await self.extract_drag_ranges(tp)
 
-            await self.plot_frame_timeline(
-                frames, jank_ranges, scroll_ranges, drag_ranges
-            )
+            # await self.plot_frame_timeline(
+            #     frames, jank_ranges, scroll_ranges, drag_ranges
+            # )
 
 
 # """Main"""
