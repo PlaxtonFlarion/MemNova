@@ -48,6 +48,16 @@ class Parser(object):
         )
         major_group = mutually_exclusive.add_mutually_exclusive_group()
 
+        # todo
+        major_group.add_argument(
+            "--sleek", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;34m^*流畅度*^\033[0m
+                -------------------------
+                - 流畅度
+            ''')
+        )
+
         major_group.add_argument(
             "--storm", action="store_true",
             help=textwrap.dedent(f'''\

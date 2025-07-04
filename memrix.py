@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import json
+import stat
 import time
 import typing
 import signal
@@ -21,6 +22,7 @@ import asyncio
 
 # ====[ 第三方库 ]====
 import aiosqlite
+import plotly.graph_objects as go
 import uiautomator2.exceptions as u2exc
 
 # ====[ from: 内置模块 ]====
@@ -29,11 +31,15 @@ from collections import defaultdict
 
 # ====[ from: 第三方库 ]====
 from loguru import logger
+from perfetto.trace_processor import (
+    TraceProcessor, TraceProcessorConfig
+)
 
 # ====[ from: 本地模块 ]====
 from engine.device import Device
 from engine.manage import Manage
 from engine.medias import Player
+from engine.terminal import Terminal
 from engine.tinker import (
     Active, Ram, FileAssist, ToolKit, MemrixError
 )
@@ -60,13 +66,14 @@ class Memrix(object):
 
     __remote: dict = {}
 
-    def __init__(self, storm: bool, pulse: bool, forge: bool, *args, **kwargs):
+    def __init__(self, remote: dict, *args, **kwargs):
         """
         初始化核心控制器，配置运行模式、路径结构、分析状态与动画资源。
         """
-        self.storm, self.pulse, self.forge = storm, pulse, forge
+        self.remote = remote
 
-        self.focus, self.vault, self.watch, *_ = args
+        self.sleek, self.storm, self.pulse, self.forge, *_ = args
+        _, _, _, _, self.focus, self.vault, self.watch, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -75,6 +82,9 @@ class Memrix(object):
         self.align: "Align" = kwargs["align"]
 
         self.adb: str = kwargs["adb"]
+        self.perfetto: str = kwargs["perfetto"]
+        self.tp_shell: str = kwargs["tp_shell"]
+        self.ft_file: str = kwargs["ft_file"]
 
         if self.forge:
             vault: str = self.focus
@@ -499,6 +509,224 @@ class Memrix(object):
             }
             return await analyzer.form_report(self.memory_template, **rendering)
 
+    # notes: 流畅度测试引擎
+    async def frame_analyzer(self, device: "Device") -> None:
+        if not (check := await device.examine_pkg(self.focus)):
+            raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
+
+        if not (total_dir := os.path.join(
+            self.src_total_place, f"{const.APP_DESC}_Frame_Library", "Traces"
+        )):
+            os.makedirs(total_dir, exist_ok=True)
+
+        trace_locals: str = os.path.join(
+            total_dir, f"trace_{time.strftime('%Y%m%d%H%M%S')}_{os.getpid()}.perfetto-trace"
+        )
+
+        device_folder = f"/data/local/tmp/{self.ft_file}"
+        target = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
+
+        await device.push(self.ft_file, device_folder)
+        await Terminal.cmd_line(["adb", "shell", "chmod", "777", device_folder])
+
+        transports = await Terminal.cmd_link(
+            ["adb", "shell", f"cat {device_folder} | perfetto --txt -c - -o {target}"]
+        )
+
+        logger.info(f"开始采样 ...")
+        await self.dump_close_event.wait()
+        transports.terminate()
+
+        await device.pull(target, trace_locals)
+        loader = TraceLoader(trace_locals, self.tp_shell)
+        await loader.frame_time_line()
+
+
+class TraceLoader(object):
+
+    def __init__(self, trace_file: str, perfetto_shell: str):
+        self.trace_file = trace_file
+        self.perfetto_shell = perfetto_shell
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+    @staticmethod
+    async def extract_raw_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
+        where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
+
+        sql = f"""
+            SELECT * FROM (
+                SELECT
+                    a.ts AS actual_ts,
+                    a.dur AS actual_dur,
+                    e.ts AS expected_ts,
+                    e.dur AS expected_dur,
+                    a.layer_name,
+                    a.surface_frame_token,
+                    p.name AS process_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY a.layer_name, a.surface_frame_token
+                        ORDER BY a.ts
+                    ) AS row_rank
+                FROM actual_frame_timeline_slice a
+                JOIN expected_frame_timeline_slice e ON a.cookie = e.cookie
+                LEFT JOIN process p ON a.upid = p.upid
+                {where_clause}
+            )
+            WHERE row_rank = 1
+            ORDER BY actual_ts
+        """
+
+        return [
+            {
+                "timestamp_ms": row.actual_ts / 1e6,
+                "duration_ms": row.actual_dur / 1e6,
+                "drop_count": (drop_count := max(0, round(row.actual_dur / int(1e9 / 60)) - 1)),
+                "is_jank": drop_count > 0,
+                "process_name": row.process_name
+            } for row in tp.query(sql)
+        ]
+
+    @staticmethod
+    async def extract_scrolling_ranges(tp: "TraceProcessor") -> list[dict]:
+        sql = """
+            SELECT ts, dur
+            FROM slice
+            WHERE name LIKE '%Scroll%' OR name LIKE '%scroll%'
+        """
+        return [
+            {"start_ts": row.ts, "end_ts": row.ts + row.dur} for row in tp.query(sql)
+        ]
+
+    @staticmethod
+    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+        sql = """
+            SELECT ts, dur
+            FROM slice
+            WHERE name LIKE '%drag%' OR name LIKE '%Drag%'
+        """
+        return [
+            {"start_ts": row.ts, "end_ts": row.ts + row.dur} for row in tp.query(sql)
+        ]
+
+    @staticmethod
+    async def detect_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
+        jank_ranges = []
+        count = 0
+        start_ts = None
+
+        for frame in frames:
+            if frame["is_jank"]:
+                if count == 0:
+                    start_ts = frame["actual_ts"]
+                count += 1
+            else:
+                if count >= min_count:
+                    end_ts = frame["actual_ts"]
+                    jank_ranges.append({"start_ts": start_ts, "end_ts": end_ts})
+                count = 0
+                start_ts = None
+
+        if count >= min_count:
+            jank_ranges.append({"start_ts": start_ts, "end_ts": frames[-1]["actual_ts"]})
+
+        return jank_ranges
+
+    @staticmethod
+    async def plot_frame_timeline(
+            frames: list[dict],
+            scrolling_ranges: typing.Optional[list[dict]] = None,
+            consecutive_jank_ranges: typing.Optional[list[dict]] = None,
+            drag_ranges: typing.Optional[list[dict]] = None
+    ):
+        figure = go.Figure()
+
+        figure.add_trace(go.Scatter(
+            x=[f['timestamp_ms'] for f in frames],
+            y=[f['duration_ms'] for f in frames],
+            mode='lines+markers',
+            name='Frame Duration',
+            marker=dict(color=['red' if f['is_jank'] else 'green' for f in frames]),
+            text=[
+                f"Layer: {f.get('layer_name', '')}<br>"
+                f"Process: {f.get('process_name', '')}<br>"
+                f"Dur: {f['duration_ms']:.2f} ms<br>"
+                f"Jank: {'Yes' if f['is_jank'] else 'No'}"
+                for f in frames
+            ],
+            hoverinfo='text'
+        ))
+
+        if frames:
+            figure.add_shape(
+                type="line",
+                x0=frames[0]['timestamp_ms'],
+                x1=frames[-1]['timestamp_ms'],
+                y0=16.67, y1=16.67,
+                line=dict(color="gray", dash="dash")
+            )
+
+        if scrolling_ranges:
+            for rng in scrolling_ranges:
+                figure.add_vrect(
+                    x0=rng["start_ts"] / 1e6,
+                    x1=rng["end_ts"] / 1e6,
+                    fillcolor="lightblue",
+                    opacity=0.3,
+                    layer="below",
+                    line_width=0,
+                    annotation_text="Scroll",
+                    annotation_position="top left"
+                )
+
+        if drag_ranges:
+            for rng in drag_ranges:
+                figure.add_vrect(
+                    x0=rng["start_ts"] / 1e6,
+                    x1=rng["end_ts"] / 1e6,
+                    fillcolor="orange",
+                    opacity=0.25,
+                    layer="below",
+                    line_width=0,
+                    annotation_text="Drag",
+                    annotation_position="top left"
+                )
+
+        if consecutive_jank_ranges:
+            for rng in consecutive_jank_ranges:
+                figure.add_vrect(
+                    x0=rng["start_ts"],
+                    x1=rng["end_ts"],
+                    fillcolor="red",
+                    opacity=0.2,
+                    layer="below",
+                    line_width=0,
+                    annotation_text="Jank",
+                    annotation_position="top left"
+                )
+
+        figure.update_layout(
+            title="帧耗时分析",
+            xaxis_title="Time (ms)",
+            yaxis_title="Frame Duration (ms)",
+            height=500
+        )
+
+        figure.show()
+
+    async def frame_time_line(self):
+        config = TraceProcessorConfig(self.perfetto_shell)
+        with TraceProcessor(self.trace_file, config=config) as tp:
+            frames = await self.extract_raw_frames(tp, "com.heytap.speechassist")
+            jank_ranges = await self.detect_consecutive_jank(frames)
+            scroll_ranges = await self.extract_scrolling_ranges(tp)
+            drag_ranges = await self.extract_drag_ranges(tp)
+
+            await self.plot_frame_timeline(
+                frames, jank_ranges, scroll_ranges, drag_ranges
+            )
+
 
 # """Main"""
 async def main() -> typing.Optional[typing.Any]:
@@ -518,6 +746,30 @@ async def main() -> typing.Optional[typing.Any]:
         await align.load_align()
 
         return Design.console.print_json(data=align.aligns)
+
+    async def authorized() -> None:
+        """
+        检查目录下的所有文件是否具备执行权限，如果文件没有执行权限，则自动添加 +x 权限。
+        """
+        if platform != "darwin":
+            return None
+
+        tools_set = [kit for kit in [adb, perfetto, tp_shell, ft_file] if Path(kit).exists()]
+
+        ensure = [
+            kit for kit in tools_set if not (Path(kit).stat().st_mode & stat.S_IXUSR)
+        ]
+
+        if not ensure:
+            return None
+
+        for auth in ensure:
+            logger.debug(f"Authorizing: {auth}")
+
+        for resp in await asyncio.gather(
+            *(Terminal.cmd_line(["chmod", "+x", kit]) for kit in ensure), return_exceptions=True
+        ):
+            logger.debug(f"Authorize: {resp}")
 
     # Notes: Start from here
     Design.startup_logo()
@@ -583,28 +835,32 @@ async def main() -> typing.Optional[typing.Any]:
     if apply_code := cmd_lines.apply:
         return await authorize.receive_license(apply_code, lic_file)
 
-    # await authorize.verify_license(lic_file)
+    await authorize.verify_license(lic_file)
 
     # notes: --- 工具路径设置 ---
     if platform == "win32":
         supports = os.path.join(turbo, "Windows").format()
-        adb = "adb.exe"
+        adb, perfetto, tp_shell = "adb.exe", "perfetto.exe", "trace_processor_shell.exe"
     elif platform == "darwin":
         supports = os.path.join(turbo, "MacOS").format()
-        adb = "adb"
+        adb, perfetto, tp_shell = "adb", "perfetto", "trace_processor_shell"
     else:
         raise MemrixError(f"{const.APP_DESC} is not supported on this platform: {platform}.")
 
     adb = os.path.join(supports, "platform-tools", adb)
+    perfetto = os.path.join(supports, "perfetto-kit", perfetto)
+    tp_shell = os.path.join(supports, "perfetto-kit", tp_shell)
+    ft_file = os.path.join(supports, "perfetto-kit", "frametime.pbtxt")
 
-    for tls in (tools := [adb]):
+    for tls in (tools := [adb, perfetto, tp_shell, ft_file]):
         os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
-    # notes: --- 手动同步命令（提前返回）---
+    # notes: --- 手动同步命令 ---
     # ......
 
     # notes: --- 模板与工具检查 ---
     memory_template = os.path.join(src_templates, "memory.html")
+
     # 检查每个模板文件是否存在，如果缺失则显示错误信息并退出程序
     for tmp in (temps := [memory_template]):
         if os.path.isfile(tmp) and os.path.basename(tmp).endswith(".html"):
@@ -612,12 +868,21 @@ async def main() -> typing.Optional[typing.Any]:
         tmp_name = os.path.basename(tmp)
         raise MemrixError(f"{const.APP_DESC} missing files {tmp_name}")
 
+    # 三方应用以及文件授权
+    await authorized()
+
     # 检查每个工具是否存在，如果缺失则显示错误信息并退出程序
     for tls in tools:
         if not shutil.which((tls_name := os.path.basename(tls))):
             raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
 
     # notes: --- 配置与启动 ---
+
+    # 远程全局配置
+    global_config_task = asyncio.create_task(Api.remote_config())
+    # 启动仪式
+    await Design.flame_manifest()
+
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
     logger.info(f"操作系统: {platform}")
     logger.info(f"应用名称: {software}")
@@ -648,44 +913,56 @@ async def main() -> typing.Optional[typing.Any]:
 
     await align.load_align()
 
-    if any((storm := cmd_lines.storm, pulse := cmd_lines.pulse, forge := cmd_lines.forge)):
-        if not (focus := cmd_lines.focus):
+    positions = (
+        cmd_lines.sleek, cmd_lines.storm, cmd_lines.pulse, cmd_lines.forge,
+        cmd_lines.focus, cmd_lines.vault, cmd_lines.watch
+    )
+    keywords = {
+        "src_opera_place": src_opera_place,
+        "src_total_place": src_total_place,
+        "memory_template": memory_template,
+        "align": align,
+        "adb": adb,
+        "perfetto": perfetto,
+        "tp_shell": tp_shell,
+        "ft_file": ft_file,
+    }
+    remote = await global_config_task
+
+    memrix = Memrix(remote, *positions, **keywords)
+
+    if cmd_lines.sleek:
+        if not cmd_lines.focus:
             raise MemrixError(f"--focus 参数不能为空 ...")
 
-        keywords = {
-            "src_opera_place": src_opera_place,
-            "src_total_place": src_total_place,
-            "memory_template": memory_template,
-            "align": align,
-            "adb": adb
-        }
-        memrix = Memrix(
-            storm, pulse, forge, focus, cmd_lines.vault, watch, **keywords
-        )
+        manage = Manage(adb)
+        if not (device := await manage.operate_device(cmd_lines.imply)):
+            raise MemrixError(f"没有连接设备 ...")
 
-        if storm or pulse:
-            manage = Manage(adb)
-            if not (device := await manage.operate_device(cmd_lines.imply)):
-                raise MemrixError(f"没有连接设备 ...")
+        signal.signal(signal.SIGINT, memrix.clean_up)
 
-            signal.signal(signal.SIGINT, memrix.clean_up)
+        return await memrix.frame_analyzer(device)
 
-            global_config_task = asyncio.create_task(Api.remote_config())
-            await Design.flame_manifest()
-            memrix.remote = await global_config_task or {}
+    elif cmd_lines.storm or cmd_lines.pulse:
+        if not cmd_lines.focus:
+            raise MemrixError(f"--focus 参数不能为空 ...")
 
-            main_task = getattr(memrix, "dump_task_start" if storm else "exec_task_start")(device)
-            return await main_task
+        manage = Manage(adb)
+        if not (device := await manage.operate_device(cmd_lines.imply)):
+            raise MemrixError(f"没有连接设备 ...")
 
-        elif forge:
-            await Design.doll_animation()
-            return await memrix.create_report()
+        signal.signal(signal.SIGINT, memrix.clean_up)
 
-        else:
-            return None
+        main_task = getattr(
+            memrix, "dump_task_start" if cmd_lines.storm else "exec_task_start"
+        )(device)
+        return await main_task
+
+    elif cmd_lines.forge:
+        return await memrix.create_report()
 
     else:
-        raise MemrixError(f"主命令不能为空 ...")
+        return None
 
 
 # """Test"""
