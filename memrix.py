@@ -70,7 +70,7 @@ class Memrix(object):
         """
         初始化核心控制器，配置运行模式、路径结构、分析状态与动画资源。
         """
-        self.remote = remote
+        self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.sleek, self.storm, self.pulse, self.forge, *_ = args
         _, _, _, _, self.focus, self.vault, self.watch, *_ = args
