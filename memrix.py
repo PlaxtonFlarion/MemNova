@@ -22,7 +22,6 @@ import asyncio
 
 # ====[ 第三方库 ]====
 import aiosqlite
-import plotly.graph_objects as go
 import uiautomator2.exceptions as u2exc
 
 # ====[ from: 内置模块 ]====
@@ -609,6 +608,63 @@ class TraceLoader(object):
         return [
             {"start_ts": row.ts, "end_ts": row.ts + row.dur} for row in tp.query(sql)
         ]
+
+    @staticmethod
+    def extract_vsync_sf_points(tp: "TraceProcessor") -> list[dict]:
+        sql = """
+            SELECT counter.ts
+            FROM counter
+            WHERE counter.track_id IN (
+                SELECT track.id FROM track WHERE track.name = 'VSYNC-sf'
+            )
+            ORDER BY counter.ts
+        """
+
+        result = tp.query(sql)
+        timestamps = [row["ts"] for row in result]
+
+        points = []
+        for i in range(1, len(timestamps)):
+            ts_prev = timestamps[i - 1]
+            ts_curr = timestamps[i]
+            interval_ns = ts_curr - ts_prev
+
+            # 防止除以零，并过滤异常数据
+            if interval_ns <= 0 or interval_ns > 1e9:
+                continue
+
+            fps = 1e9 / interval_ns
+            points.append({
+                "ts": ts_curr / 1e6,  # ms
+                "fps": round(fps, 2)
+            })
+
+        return points
+
+    @staticmethod
+    def extract_vsync_fps_points(tp: "TraceProcessor", track_name: str = "VSYNC-app") -> list[dict]:
+        sql = f"""
+            SELECT counter.ts FROM counter
+            WHERE counter.track_id IN (
+                SELECT track.id FROM track WHERE track.name = '{track_name}'
+            )
+            ORDER BY counter.ts
+        """
+        result = list(tp.query(sql))
+
+        fps_points = []
+        for i in range(1, len(result)):
+            prev_ts = result[i - 1]["ts"]
+            curr_ts = result[i]["ts"]
+            interval_ns = curr_ts - prev_ts
+            if interval_ns == 0:
+                continue
+            fps = round(1e9 / interval_ns, 1)
+            fps_points.append({
+                "ts": curr_ts / 1e6,  # 转为 ms
+                "fps": fps
+            })
+        return fps_points
 
     @staticmethod
     async def detect_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
