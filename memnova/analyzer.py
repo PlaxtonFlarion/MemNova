@@ -17,8 +17,10 @@ import asyncio
 import aiofiles
 import aiosqlite
 import numpy as np
+import pandas as pd
 from loguru import logger
 from datetime import datetime
+from bokeh.layouts import column
 from bokeh.io import (
     curdoc, output_file
 )
@@ -32,7 +34,7 @@ from bokeh.models import (
 from jinja2 import (
     Environment, FileSystemLoader
 )
-from memcore.cubicle import DataBase
+from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memnova import const
 
@@ -311,7 +313,7 @@ class Analyzer(object):
                 f"{file_name}_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
             }
 
-        fg_list, bg_list = await DataBase.query_data(self.db, data_dir)
+        fg_list, bg_list = await Cubicle.query_mem_data(self.db, data_dir)
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
         fg_data_dict, bg_data_dict = await asyncio.gather(
@@ -321,6 +323,148 @@ class Analyzer(object):
         logger.info(f"{data_dir} Handler Done ...")
 
         return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
+
+    @staticmethod
+    async def split_frames_by_time(frames: list[dict], segment_ms: int = 5000) -> list[list[dict]]:
+        if not frames:
+            return []
+
+        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
+        segments = []
+        start_ts = frames[0]["timestamp_ms"]
+        close_ts = frames[-1]["timestamp_ms"]
+
+        cur_start = start_ts
+        while cur_start < close_ts:
+            cur_end = cur_start + segment_ms
+            if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
+                segments.append(seg)
+            cur_start = cur_end  # 保证不重叠
+
+        return segments
+
+    @staticmethod
+    async def plot_frame_analysis(
+            frames: list[dict],
+            x_start: int | float,
+            x_close: int | float,
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict]
+    ) -> typing.Any:
+
+        for f in frames:
+            f["color"] = "#FF4D4D" if f.get("is_jank") else "#32CD32"
+
+        df = pd.DataFrame(frames)
+        source = ColumnDataSource(df)
+
+        p = figure(
+            title="帧耗时分析图",
+            x_range=Range1d(x_start, x_close),
+            x_axis_label="时间 (ms)",
+            y_axis_label="帧耗时 (ms)",
+            height=500,
+            sizing_mode="stretch_width",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            toolbar_location="above"
+        )
+
+        p.xaxis.major_label_orientation = 0.5  # 约30度
+        align_start = min(f["timestamp_ms"] for f in frames)
+        p.xaxis.axis_label = f"时间 (ms) - 起点 {align_start}ms"
+
+        # 主帧折线图与散点
+        p.line(
+            "timestamp_ms", "duration_ms",
+            source=source, line_width=2, color="#A9A9A9", alpha=0.6
+        )
+        p.scatter(
+            "timestamp_ms", "duration_ms",
+            source=source, size=6, color="color", alpha=0.8, legend_label="帧耗时"
+        )
+
+        # Hover 显示信息
+        p.add_tools(HoverTool(tooltips=[
+            ("时间", "@timestamp_ms ms"),
+            ("耗时", "@duration_ms ms"),
+            ("掉帧", "@is_jank"),
+            ("图层", "@layer_name")
+        ]))
+
+        # 16.67ms 阈值线
+        threshold_line = Span(
+            location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5
+        )
+        p.add_layout(threshold_line)
+
+        # 背景区间：滑动
+        for rng in roll_ranges or []:
+            p.add_layout(BoxAnnotation(
+                left=rng["start_ts"] / 1e6,
+                right=rng["end_ts"] / 1e6,
+                fill_color="#ADD8E6",
+                fill_alpha=0.3
+            ))
+
+        # 背景区间：拖拽
+        for rng in drag_ranges or []:
+            p.add_layout(BoxAnnotation(
+                left=rng["start_ts"] / 1e6,
+                right=rng["end_ts"] / 1e6,
+                fill_color="#FFA500",
+                fill_alpha=0.25
+            ))
+
+        # 背景区间：连续掉帧
+        for rng in jank_ranges or []:
+            p.add_layout(BoxAnnotation(
+                left=rng["start_ts"] / 1e6,
+                right=rng["end_ts"] / 1e6,
+                fill_color="#FF0000",
+                fill_alpha=0.15
+            ))
+
+        p.legend.label_text_font_size = "10pt"
+        p.title.text_font_size = "16pt"
+
+        return p
+
+    async def plot_multiple_segments(
+            self,
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            segment_ms: int,
+            data_dir: str
+    ) -> dict:
+
+        segments = await self.split_frames_by_time(frames, segment_ms=segment_ms)
+        plots = []
+
+        for idx, segment in enumerate(segments, start=1):
+            x_start, x_close = segment[0]["timestamp_ms"], segment[1]["timestamp_ms"],
+            p = await self.plot_frame_analysis(
+                frames=segment,
+                x_start=x_start,
+                x_close=x_close,
+                roll_ranges=roll_ranges,
+                drag_ranges=drag_ranges,
+                jank_ranges=jank_ranges,
+            )
+            p.title.text = f"帧分析片段 {idx}"
+            plots.append(p)
+
+        os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
+
+        file_path = os.path.join(group, f"{data_dir}.html")
+        output_file(file_path)
+        save(column(*plots, sizing_mode="stretch_width"))
+
+        return {
+            f"frame_analysis_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+        }
 
 
 if __name__ == '__main__':

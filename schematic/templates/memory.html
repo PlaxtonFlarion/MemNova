@@ -81,6 +81,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .results-info p.pass:hover {
             background: #2fe70a;
         }
+        .result-highlight {
+            margin-left: 20px;
+            padding: 3px 5px;
+            border-radius: 5px;
+            background-color: #ffe000;
+            font-weight: bold;
+        }
 
         /* 主要 */
         .meminfo {
@@ -606,14 +613,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
             // 测试结论标签详情
             if (finalResult.length > 0) {
-                finalResult.forEach((result, idx) => {
-                    let resultPart = document.createElement('p');
-                    resultPart.style.marginLeft = '20px';
-                    resultPart.style.padding = '3px 5px';
-                    resultPart.style.borderRadius = '5px';
-                    resultPart.style.backgroundColor = '#ffe000';
-                    resultPart.style.fontWeight = 'bold';
-                    resultPart.textContent += result + ' ';
+                finalResult.forEach((result) => {
+                    const resultPart = document.createElement('p');
+                    resultPart.classList.add('result-highlight');
+                    resultPart.textContent = result + ' ';
                     testMessage.parentElement.append(resultPart);
                 });
             }

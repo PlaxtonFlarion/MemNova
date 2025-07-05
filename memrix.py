@@ -44,11 +44,12 @@ from engine.tinker import (
 )
 from memcore.api import Api
 from memcore import authorize
-from memcore.cubicle import DataBase
+from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.analyzer import Analyzer
+from memnova.tracer import Tracer
 from memnova import const
 
 
@@ -94,12 +95,15 @@ class Memrix(object):
             )
 
         self.total_dir: str = os.path.join(self.src_total_place, const.TOTAL_DIR)
-        self.other_dir: str = os.path.join(self.src_total_place, self.total_dir, const.SUBSET_DIR)
-        self.group_dir: str = os.path.join(self.src_total_place, self.other_dir, vault)
+        self.mem_classify_dir: str = os.path.join(self.total_dir, const.M_SUBSET_DIR)
+        self.gfx_classify_dir: str = os.path.join(self.total_dir, const.F_SUBSET_DIR)
+        self.mem_group_dir: str = os.path.join(self.mem_classify_dir, vault)
+        self.gfx_group_dir: str = os.path.join(self.gfx_classify_dir, vault)
 
-        self.db_file: str = os.path.join(self.src_total_place, self.total_dir, const.DB_FILE)
-        self.log_file: str = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{vault}.log")
-        self.team_file: str = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
+        self.db_file: str = os.path.join(self.total_dir, const.DB_FILE)
+
+        self.log_file: str = os.path.join(self.mem_group_dir, f"{const.APP_NAME}_log_{vault}.log")
+        self.team_file: str = os.path.join(self.mem_group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
 
         self.pad: str = "-" * 8
         self.memories: dict[str, typing.Union[str, int]] = {
@@ -116,7 +120,7 @@ class Memrix(object):
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
         self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-        self.dump_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
+        self.task_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
 
         self.dumped: typing.Optional["asyncio.Event"] = None
 
@@ -132,7 +136,7 @@ class Memrix(object):
         """
         异步触发内存采集任务的收尾流程。
         """
-        self.dump_close_event.set()
+        self.task_close_event.set()
 
     async def dump_task_close(self) -> None:
         """
@@ -152,12 +156,12 @@ class Memrix(object):
         logger.info(
             f"Mark={self.align.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
-        logger.info(f"{self.group_dir}")
+        logger.info(f"{self.mem_group_dir}")
 
         if self.file_insert:
-            fc = Design.build_file_tree(self.group_dir)
+            fc = Design.build_file_tree(self.mem_group_dir)
             Design.Doc.log(
-                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(self.group_dir).name}[/]"
+                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(self.mem_group_dir).name}[/]"
             )
 
         logger.info(
@@ -196,7 +200,7 @@ class Memrix(object):
                                     logger.info(f"[{key}] Unknown command: {cmds}")
 
         logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
-        self.dump_close_event.set()
+        self.task_close_event.set()
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -329,9 +333,7 @@ class Memrix(object):
             ram = Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
-                await DataBase.insert_data(
-                    db, self.file_folder, self.align.label, *maps, ram.memory_vms
-                )
+                await Cubicle.insert_mem_data(db, self.file_folder, self.align.label, *maps, ram.memory_vms)
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
@@ -370,7 +372,7 @@ class Memrix(object):
         format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
 
         self.file_insert = 0
-        self.file_folder = f"DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        self.file_folder = f"MEM_DATA_{time.strftime('%Y%m%d%H%M%S')}"
 
         logger.info(f"时间 -> {format_before_time}")
         logger.info(f"应用 -> {package}")
@@ -391,20 +393,20 @@ class Memrix(object):
             }
         await FileAssist.dump_yaml(self.team_file, scene)
 
-        if not os.path.exists(self.other_dir):
-            os.makedirs(self.other_dir, exist_ok=True)
+        if not (mem_classify_dir := Path(self.mem_classify_dir)).exists():
+            mem_classify_dir.mkdir(parents=True, exist_ok=True)
 
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
         self.dumped = asyncio.Event()
 
         async with aiosqlite.connect(self.db_file) as db:
-            await DataBase.create_table(db)
+            await Cubicle.create_mem_table(db)
             self.animation_task = asyncio.create_task(
-                self.design.memory_wave(self.memories, self.dump_close_event)
+                self.design.memory_wave(self.memories, self.task_close_event)
             )
             self.exec_start_event.set()
-            while not self.dump_close_event.is_set():
+            while not self.task_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
@@ -445,7 +447,7 @@ class Memrix(object):
 
         exec_task = asyncio.create_task(self.automatic(open_file, device, player))
 
-        await self.dump_close_event.wait()
+        await self.task_close_event.wait()
 
         exec_task.cancel()
         try:
@@ -456,14 +458,14 @@ class Memrix(object):
         await auto_dump_task
 
     # """真相快照"""
-    async def create_report(self) -> None:
+    async def create_mem_report(self) -> None:
         for file in [self.db_file, self.log_file, self.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"文件无效 {file}")
 
         async with aiosqlite.connect(self.db_file) as db:
             analyzer = Analyzer(
-                db, os.path.join(self.group_dir, f"Report_{os.path.basename(self.group_dir)}")
+                db, os.path.join(self.mem_group_dir, f"Report_{Path(self.mem_group_dir).name}")
             )
 
             team_data = await FileAssist.read_yaml(self.team_file)
@@ -509,197 +511,86 @@ class Memrix(object):
             return await analyzer.form_report(self.memory_template, **rendering)
 
     # notes: 流畅度测试引擎
-    async def frame_analyzer(self, device: "Device") -> None:
-        if not (check := await device.examine_pkg(self.focus)):
-            raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
+    async def frame_tracer(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
+        # Notes: Start from here
+        package: typing.Optional[str] = post_pkg or self.focus
 
-        if not (total_dir := os.path.join(
-            self.src_total_place, f"{const.APP_DESC}_Frame_Library", "Traces"
-        )):
-            os.makedirs(total_dir, exist_ok=True)
+        if not post_pkg and not (check := await device.examine_pkg(package)):
+            raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
-        trace_locals: str = os.path.join(
-            total_dir, f"trace_{time.strftime('%Y%m%d%H%M%S')}_{os.getpid()}.perfetto-trace"
+        logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+
+        logger.info(
+            f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
+        )
+        format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
+
+        self.file_insert = 0
+        self.file_folder = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+
+        logger.info(f"时间 -> {format_before_time}")
+        logger.info(f"应用 -> {package}")
+        logger.info(f"频率 -> {self.align.speed}")
+        logger.info(f"标签 -> {self.align.label}")
+        logger.info(f"文件 -> {self.file_folder}\n")
+
+        await self.design.summaries(
+            format_before_time, package, self.align.speed, self.align.label, self.file_folder
         )
 
-        device_folder = f"/data/local/tmp/{self.ft_file}"
-        target = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
+        if os.path.isfile(self.team_file):
+            scene = await FileAssist.read_yaml(self.team_file)
+            scene["file"].append(self.file_folder)
+        else:
+            scene = {
+                "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
+            }
+        await FileAssist.dump_yaml(self.team_file, scene)
+
+        if not (gfx_classify_dir := Path(self.gfx_classify_dir)).exists():
+            gfx_classify_dir.mkdir(parents=True, exist_ok=True)
+
+        if not (gfx_group_dir := Path(self.gfx_group_dir)).exists():
+            gfx_group_dir.mkdir(parents=True, exist_ok=True)
+
+        tracer: "Tracer" = Tracer()
+
+        trace_loc = os.path.join(
+            gfx_group_dir, f"{self.file_folder}_trace.perfetto-trace"
+        )
+
+        device_folder = f"/data/local/tmp/{Path(self.ft_file).name}"
+        target_folder = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
 
         await device.push(self.ft_file, device_folder)
-        await Terminal.cmd_line(["adb", "shell", "chmod", "777", device_folder])
+        await device.change_mode(777, device_folder)
 
         transports = await Terminal.cmd_link(
-            ["adb", "shell", f"cat {device_folder} | perfetto --txt -c - -o {target}"]
+            ["adb", "shell", "-tt", f"cat {device_folder} | perfetto --txt -c - -o {target_folder}"]
         )
 
         logger.info(f"开始采样 ...")
-        await self.dump_close_event.wait()
+        await self.task_close_event.wait()
         transports.terminate()
 
-        await device.pull(target, trace_locals)
-        loader = TraceLoader(trace_locals, self.tp_shell)
-        await loader.frame_time_line()
+        await device.pull(target_folder, trace_loc)
 
+        config = TraceProcessorConfig(self.tp_shell)
+        with TraceProcessor(trace_loc, config=config) as tp:
+            primary_frames = await tracer.extract_primary_frames(tp, package)
+            roll_ranges = await tracer.extract_roll_ranges(tp)
+            drag_ranges = await tracer.extract_drag_ranges(tp)
+            jank_ranges = await tracer.mark_consecutive_jank(primary_frames)
 
-class TraceLoader(object):
-
-    def __init__(self, trace_file: str, perfetto_shell: str):
-        self.trace_file = trace_file
-        self.perfetto_shell = perfetto_shell
-
-    def __call__(self, *args, **kwargs):
-        pass
-
-    @staticmethod
-    async def extract_raw_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
-        where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
-
-        sql = f"""
-            SELECT * FROM (
-                SELECT
-                    a.ts AS actual_ts,
-                    a.dur AS actual_dur,
-                    e.ts AS expected_ts,
-                    e.dur AS expected_dur,
-                    a.layer_name,
-                    a.surface_frame_token,
-                    p.name AS process_name,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY a.layer_name, a.surface_frame_token
-                        ORDER BY a.ts
-                    ) AS row_rank
-                FROM actual_frame_timeline_slice a
-                JOIN expected_frame_timeline_slice e ON a.cookie = e.cookie
-                LEFT JOIN process p ON a.upid = p.upid
-                {where_clause}
+        async with aiosqlite.connect(self.db_file) as db:
+            await Cubicle.create_gfx_table(db)
+            analyzer = Analyzer(
+                db, os.path.join(self.gfx_group_dir, f"Report_{Path(self.gfx_group_dir).name}")
             )
-            WHERE row_rank = 1
-            ORDER BY actual_ts
-        """
-
-        return [
-            {
-                "timestamp_ms": row.actual_ts / 1e6,
-                "duration_ms": row.actual_dur / 1e6,
-                "drop_count": (drop_count := max(0, round(row.actual_dur / int(1e9 / 60)) - 1)),
-                "is_jank": drop_count > 0,
-                "process_name": row.process_name
-            } for row in tp.query(sql)
-        ]
-
-    @staticmethod
-    async def extract_scrolling_ranges(tp: "TraceProcessor") -> list[dict]:
-        sql = """
-            SELECT ts, dur
-            FROM slice
-            WHERE name LIKE '%Scroll%' OR name LIKE '%scroll%'
-        """
-        return [
-            {"start_ts": row.ts, "end_ts": row.ts + row.dur} for row in tp.query(sql)
-        ]
-
-    @staticmethod
-    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
-        sql = """
-            SELECT ts, dur
-            FROM slice
-            WHERE name LIKE '%drag%' OR name LIKE '%Drag%'
-        """
-        return [
-            {"start_ts": row.ts, "end_ts": row.ts + row.dur} for row in tp.query(sql)
-        ]
-
-    @staticmethod
-    def extract_vsync_sf_points(tp: "TraceProcessor") -> list[dict]:
-        sql = """
-            SELECT counter.ts
-            FROM counter
-            WHERE counter.track_id IN (
-                SELECT track.id FROM track WHERE track.name = 'VSYNC-sf'
+            segment_ms = 2000
+            await analyzer.plot_multiple_segments(
+                primary_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
             )
-            ORDER BY counter.ts
-        """
-
-        result = tp.query(sql)
-        timestamps = [row["ts"] for row in result]
-
-        points = []
-        for i in range(1, len(timestamps)):
-            ts_prev = timestamps[i - 1]
-            ts_curr = timestamps[i]
-            interval_ns = ts_curr - ts_prev
-
-            # 防止除以零，并过滤异常数据
-            if interval_ns <= 0 or interval_ns > 1e9:
-                continue
-
-            fps = 1e9 / interval_ns
-            points.append({
-                "ts": ts_curr / 1e6,  # ms
-                "fps": round(fps, 2)
-            })
-
-        return points
-
-    @staticmethod
-    def extract_vsync_fps_points(tp: "TraceProcessor", track_name: str = "VSYNC-app") -> list[dict]:
-        sql = f"""
-            SELECT counter.ts FROM counter
-            WHERE counter.track_id IN (
-                SELECT track.id FROM track WHERE track.name = '{track_name}'
-            )
-            ORDER BY counter.ts
-        """
-        result = list(tp.query(sql))
-
-        fps_points = []
-        for i in range(1, len(result)):
-            prev_ts = result[i - 1]["ts"]
-            curr_ts = result[i]["ts"]
-            interval_ns = curr_ts - prev_ts
-            if interval_ns == 0:
-                continue
-            fps = round(1e9 / interval_ns, 1)
-            fps_points.append({
-                "ts": curr_ts / 1e6,  # 转为 ms
-                "fps": fps
-            })
-        return fps_points
-
-    @staticmethod
-    async def detect_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
-        jank_ranges = []
-        count = 0
-        start_ts = None
-
-        for frame in frames:
-            if frame["is_jank"]:
-                if count == 0:
-                    start_ts = frame["actual_ts"]
-                count += 1
-            else:
-                if count >= min_count:
-                    end_ts = frame["actual_ts"]
-                    jank_ranges.append({"start_ts": start_ts, "end_ts": end_ts})
-                count = 0
-                start_ts = None
-
-        if count >= min_count:
-            jank_ranges.append({"start_ts": start_ts, "end_ts": frames[-1]["actual_ts"]})
-
-        return jank_ranges
-
-    async def frame_time_line(self):
-        config = TraceProcessorConfig(self.perfetto_shell)
-        with TraceProcessor(self.trace_file, config=config) as tp:
-            frames = await self.extract_raw_frames(tp, "com.heytap.speechassist")
-            jank_ranges = await self.detect_consecutive_jank(frames)
-            scroll_ranges = await self.extract_scrolling_ranges(tp)
-            drag_ranges = await self.extract_drag_ranges(tp)
-
-            # await self.plot_frame_timeline(
-            #     frames, jank_ranges, scroll_ranges, drag_ranges
-            # )
 
 
 # """Main"""
@@ -728,7 +619,7 @@ async def main() -> typing.Optional[typing.Any]:
         if platform != "darwin":
             return None
 
-        tools_set = [kit for kit in [adb, perfetto, tp_shell, ft_file] if Path(kit).exists()]
+        tools_set = [kit for kit in [adb, perfetto, tp_shell] if Path(kit).exists()]
 
         ensure = [
             kit for kit in tools_set if not (Path(kit).stat().st_mode & stat.S_IXUSR)
@@ -824,9 +715,10 @@ async def main() -> typing.Optional[typing.Any]:
     adb = os.path.join(supports, "platform-tools", adb)
     perfetto = os.path.join(supports, "perfetto-kit", perfetto)
     tp_shell = os.path.join(supports, "perfetto-kit", tp_shell)
+
     ft_file = os.path.join(supports, "perfetto-kit", "frametime.pbtxt")
 
-    for tls in (tools := [adb, perfetto, tp_shell, ft_file]):
+    for tls in (tools := [adb, perfetto, tp_shell]):
         os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
     # notes: --- 手动同步命令 ---
@@ -915,7 +807,7 @@ async def main() -> typing.Optional[typing.Any]:
 
         signal.signal(signal.SIGINT, memrix.clean_up)
 
-        return await memrix.frame_analyzer(device)
+        return await memrix.frame_tracer(device)
 
     elif cmd_lines.storm or cmd_lines.pulse:
         if not cmd_lines.focus:
@@ -933,7 +825,7 @@ async def main() -> typing.Optional[typing.Any]:
         return await main_task
 
     elif cmd_lines.forge:
-        return await memrix.create_report()
+        return await memrix.create_mem_report()
 
     else:
         return None

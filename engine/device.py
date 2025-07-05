@@ -71,6 +71,10 @@ class Device(object):
         cmd = self.__initial + ["shell", "pm", "path", package]
         return await Terminal.cmd_line(cmd)
 
+    async def change_mode(self, mode: str | int, dst: str, *_, **__) -> None:
+        cmd = self.__initial + ["shell", "chmod", str(mode), dst]
+        return await Terminal.cmd_line(cmd)
+
     async def pid_value(self, package: str, *_, **__) -> typing.Optional["Pid"]:
         """
         查询指定包名对应的进程 PID（支持多进程）。
@@ -158,7 +162,7 @@ class Device(object):
             if (text := input_text.group()) != "''":
                 cmd = re.sub(pattern, "\'" + quote(text) + "\'", cmd)
 
-        return await Terminal.cmd_line(cmd, shell=True)
+        return await Terminal.cmd_line_shell(cmd)
 
     async def tap(self, x: int, y: int, *_, **__) -> typing.Any:
         """

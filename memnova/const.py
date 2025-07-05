@@ -34,7 +34,8 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 
 # ========【路径与资源配置】========
 TOTAL_DIR       = f"{APP_DESC}_Library"
-SUBSET_DIR      = r"Tree"
+M_SUBSET_DIR    = r"Memory_Tree"
+F_SUBSET_DIR    = r"Glossy_Tree"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"

@@ -347,7 +347,7 @@ class Design(object):
             )
 
     @staticmethod
-    async def flame_manifest() -> typing.Coroutine | None:
+    async def flame_manifest() -> None:
         """
         模拟火焰动效，启动动画。
         """
@@ -532,7 +532,7 @@ class Design(object):
 
         self.console.print(table)
 
-    async def system_disintegrate(self) -> typing.Coroutine | None:
+    async def system_disintegrate(self) -> None:
         """
         系统解体风格，收尾动画。
         """
@@ -613,7 +613,7 @@ class Design(object):
                 live.update(Text(ghost_line, style=f"bold dim {color}"))
                 await asyncio.sleep(0.01)
 
-    async def memory_wave(self, memories: dict, dump_close_event: "asyncio.Event") -> typing.Coroutine | None:
+    async def memory_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
         """
@@ -806,7 +806,7 @@ class Design(object):
 
         with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
-            while not dump_close_event.is_set():
+            while not task_close_event.is_set():
                 fade = direction == -1
                 live.update(render_grid())
                 await asyncio.sleep(0.04)

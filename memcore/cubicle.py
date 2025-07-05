@@ -8,33 +8,30 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import typing
 import asyncio
 import aiosqlite
 
 
-class DataBase(object):
+class Cubicle(object):
     """
     内存数据数据库操作类，提供异步持久化能力。
-
-    基于 aiosqlite 提供的异步接口，实现数据表创建、内存数据插入与采集结果查询。
-    所有操作基于统一结构的 memory_data 表，支持前后台筛选与图表构建数据输出。
     """
 
+    mem_data_table = "mem_data"
+    gfx_data_table = "gfx_data"
+
     @staticmethod
-    async def create_table(db: "aiosqlite.Connection") -> None:
+    async def find_data(db: "aiosqlite.Connection", sql: str) -> typing.Any:
+        async with db.execute(sql) as cursor:
+            return await cursor.fetchall()
+
+    @staticmethod
+    async def create_mem_table(db: "aiosqlite.Connection") -> None:
         """
         创建内存采样数据表，如果表不存在则自动创建。
-
-        表结构涵盖基础信息（时间戳、PID、UID）、前后台状态、内存汇总值与详细内存段字段，
-        可用于图表展示、报告分析与任务回溯。
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
         """
-
-        await db.execute('''CREATE TABLE IF NOT EXISTS memory_data (
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.mem_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -72,7 +69,7 @@ class DataBase(object):
         await db.commit()
 
     @staticmethod
-    async def insert_data(
+    async def insert_mem_data(
             db: "aiosqlite.Connection",
             data_dir: str,
             label: str,
@@ -83,34 +80,8 @@ class DataBase(object):
     ) -> None:
         """
         将一轮内存采样结果写入数据库。
-
-        参数由 `Ram` 对象构建而成，拆解为 remark（基础）、resume（汇总）、
-        memory（明细）和 vmrss（估值）四部分。
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
-
-        data_dir : str
-            当前任务的目录标识（轮次标记）。
-
-        label : str
-            当前测试任务的标签名称。
-
-        remark_map : dict
-            应用运行状态数据，如时间戳、PID、UID、Activity、是否前台等。
-
-        resume_map : dict
-            汇总内存数据，如 PSS、USS、RSS、SWAP、Graphics 等。
-
-        memory_map : dict
-            详细内存段数据，如 Native Heap、.dex、.so、Stack 等。
-
-        vmrss : dict
-            虚拟内存估值，如 VmRSS。
         """
-        await db.execute('''INSERT INTO memory_data (
+        await db.execute(f'''INSERT INTO {Cubicle.mem_data_table} (
             data_dir,
             label,
             timestamp,
@@ -181,45 +152,34 @@ class DataBase(object):
         await db.commit()
 
     @staticmethod
-    async def query_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
+    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
         """
         查询指定数据目录（轮次）下的前台与后台内存采样数据。
-
-        输出结果格式为用于图表展示的有序列表，按时间排序，字段结构如下：
-        (timestamp, rss, pss, uss, opss, activity, adj, foreground)
-
-        Parameters
-        ----------
-        db : aiosqlite.Connection
-            异步 SQLite 数据库连接对象。
-
-        data_dir : str
-            数据采样轮次标识（对应插入时的 data_dir 字段）。
-
-        Returns
-        -------
-        tuple[list, list]
-            两个列表分别为：
-            - 前台数据列表（foreground = '前台'）
-            - 后台数据列表（foreground = '后台'）
         """
-
-        async def find(sql):
-            async with db.execute(sql) as cursor:
-                return await cursor.fetchall()
-
-        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
+        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM {Cubicle.mem_data_table}
         WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
         """
-        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM memory_data
+        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM {Cubicle.mem_data_table}
         WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
         """
 
-        fg_list, bg_list = await asyncio.gather(
-            find(fg_sql), find(bg_sql)
+        fg_list, bg_list =  await asyncio.gather(
+            Cubicle.find_data(db, fg_sql), Cubicle.find_data(db, bg_sql)
         )
 
         return fg_list, bg_list
+
+    @staticmethod
+    async def create_gfx_table(db: "aiosqlite.Connection") -> None:
+        pass
+
+    @staticmethod
+    async def insert_gfx_data(db: "aiosqlite.Connection") -> None:
+        pass
+
+    @staticmethod
+    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
+        pass
 
 
 if __name__ == '__main__':
