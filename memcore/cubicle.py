@@ -171,16 +171,63 @@ class Cubicle(object):
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
-        pass
+
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_dir TEXT,
+            label TEXT,
+            timestamp INTEGER,
+            timestamp_ms REAL,
+            duration_ms REAL,
+            layer_name TEXT,
+            process_name TEXT,
+            is_jank INTEGER DEFAULT 0,
+            in_roll INTEGER DEFAULT 0,
+            in_drag INTEGER DEFAULT 0,
+            in_jank_range INTEGER DEFAULT 0)''')
+        await db.commit()
 
     @staticmethod
-    async def insert_gfx_data(db: "aiosqlite.Connection") -> None:
-        pass
+    async def insert_gfx_data(
+            db: "aiosqlite.Connection",
+            data_dir: str,
+            label: str,
+            gfx_info: dict
+    ) -> None:
+
+        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+            data_dir,
+            label,
+            timestamp_ms,
+            duration_ms,
+            layer_name,
+            process_name,
+            is_jank,
+            in_roll,
+            in_drag,
+            in_jank_range) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+                data_dir,
+                label,
+                gfx_info["timestamp_ms"],
+                gfx_info["duration_ms"],
+                gfx_info["layer_name"],
+                gfx_info["process_name"],
+                gfx_info["is_jank"],
+                gfx_info["in_roll"],
+                gfx_info["in_drag"],
+                gfx_info["in_jank_range"],
+            )
+        )
+        await db.commit()
 
     @staticmethod
-    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
-        pass
+    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
+        sql = f"""
+        SELECT timestamp_ms, duration_ms, is_jank, layer_name, process_name FROM {Cubicle.mem_data_table}
+        WHERE data_dir = '{data_dir}'
+        """
 
+        return await Cubicle.find_data(db, sql)
 
 if __name__ == '__main__':
     pass

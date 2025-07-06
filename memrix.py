@@ -49,6 +49,7 @@ from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.analyzer import Analyzer
+from memnova.reporter import Reporter
 from memnova.tracer import Tracer
 from memnova import const
 
@@ -84,28 +85,10 @@ class Memrix(object):
         self.adb: str = kwargs["adb"]
         self.perfetto: str = kwargs["perfetto"]
         self.tp_shell: str = kwargs["tp_shell"]
+
         self.ft_file: str = kwargs["ft_file"]
 
-        if self.forge:
-            vault: str = self.focus
-        else:
-            self.before_time: float = time.time()
-            vault: str = self.vault if self.vault else (
-                time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
-            )
-
-        self.total_dir: str = os.path.join(self.src_total_place, const.TOTAL_DIR)
-        self.mem_classify_dir: str = os.path.join(self.total_dir, const.M_SUBSET_DIR)
-        self.gfx_classify_dir: str = os.path.join(self.total_dir, const.F_SUBSET_DIR)
-        self.mem_group_dir: str = os.path.join(self.mem_classify_dir, vault)
-        self.gfx_group_dir: str = os.path.join(self.gfx_classify_dir, vault)
-
-        self.db_file: str = os.path.join(self.total_dir, const.DB_FILE)
-
-        self.log_file: str = os.path.join(self.mem_group_dir, f"{const.APP_NAME}_log_{vault}.log")
-        self.team_file: str = os.path.join(self.mem_group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
-
-        self.pad: str = "-" * 8
+        self.padding: str = "-" * 8
         self.memories: dict[str, typing.Union[str, int]] = {
             "exc": "*",
             "msg": "*",
@@ -138,7 +121,40 @@ class Memrix(object):
         """
         self.task_close_event.set()
 
-    async def dump_task_close(self) -> None:
+    async def refresh(
+            self,
+            package: str,
+            team_file: str,
+            team_name: str,
+            team_mark: str,
+            team_time: float
+    ) -> None:
+
+        self.file_insert = 0
+        self.file_folder = team_name
+
+        format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(team_time))
+
+        logger.info(f"时间 -> {format_before_time}")
+        logger.info(f"应用 -> {package}")
+        logger.info(f"频率 -> {self.align.speed}")
+        logger.info(f"标签 -> {self.align.label}")
+        logger.info(f"文件 -> {self.file_folder}\n")
+
+        await self.design.summaries(
+            format_before_time, package, self.align.speed, self.align.label, self.file_folder
+        )
+
+        if Path(team_file).is_file():
+            scene = await FileAssist.read_yaml(team_file)
+            scene["file"].append(self.file_folder)
+        else:
+            scene = {
+                "time": format_before_time, "mark": team_mark, "file": [self.file_folder]
+            }
+        await FileAssist.dump_yaml(team_file, scene)
+
+    async def dump_task_close(self, before_time: float, group_dir: str) -> None:
         """
         关闭内存采样任务，释放资源并触发报告生成。
         """
@@ -152,55 +168,24 @@ class Memrix(object):
         if self.animation_task:
             await self.animation_task
 
-        time_cost = (time.time() - self.before_time) / 60
+        time_cost = (time.time() - before_time) / 60
         logger.info(
             f"Mark={self.align.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
-        logger.info(f"{self.mem_group_dir}")
+        logger.info(f"{group_dir}")
 
         if self.file_insert:
-            fc = Design.build_file_tree(self.mem_group_dir)
+            fc = Design.build_file_tree(group_dir)
             Design.Doc.log(
-                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(self.mem_group_dir).name}[/]"
+                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(group_dir).name}[/]"
             )
 
         logger.info(
-            f"^*{self.pad} {const.APP_DESC} Engine Close {self.pad}*^"
+            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
         )
 
         Design.console.print()
         await self.design.system_disintegrate()
-
-    async def automatic(self, open_file: dict, device: "Device", player: "Player"):
-        logger.info(f"^*{self.pad} Exec Start {self.pad}*^")
-
-        for outer in range(open_file.get("loopers", 1)):
-            for index, mission in enumerate(open_file.get("mission", [])):
-
-                    for key, value in mission.items():
-                        for inner in range(value.get("loopers", 1)):
-                            for step in value.get("command", []):
-
-                                cmds = step.get("cmds", "")
-                                vals = step.get("vals", [])
-                                args = step.get("args", [])
-                                kwds = step.get("kwds", {})
-
-                                target = player if cmds == "audio_player" else device
-
-                                self.memories.update({"exc": f"{cmds} → {vals}, {args}, {kwds}"})
-
-                                if callable(func := getattr(target, cmds, None)):
-                                    try:
-                                        logger.info(f"[{key}] Step {cmds} → {vals}, {args}, {kwds}")
-                                        await func(*vals, *args, **kwds)
-                                    except Exception as e:
-                                        logger.info(f"[{key}] Failed {cmds}: {e}")
-                                else:
-                                    logger.info(f"[{key}] Unknown command: {cmds}")
-
-        logger.info(f"^*{self.pad} Exec Close {self.pad}*^")
-        self.task_close_event.set()
 
     # """记忆风暴"""
     async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
@@ -358,49 +343,31 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        # Notes: Start from here
-        package: typing.Optional[str] = post_pkg or self.focus
+        # Notes: ========== Start from here ==========
+        package = post_pkg or self.focus
 
         if not post_pkg and not (check := await device.examine_pkg(package)):
             raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
-        logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        reporter = Reporter(self.src_total_place, self.vault, const.M_SUBSET_DIR)
+
+        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
         logger.info(
-            f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
-        )
-        format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
-
-        self.file_insert = 0
-        self.file_folder = f"MEM_DATA_{time.strftime('%Y%m%d%H%M%S')}"
-
-        logger.info(f"时间 -> {format_before_time}")
-        logger.info(f"应用 -> {package}")
-        logger.info(f"频率 -> {self.align.speed}")
-        logger.info(f"标签 -> {self.align.label}")
-        logger.info(f"文件 -> {self.file_folder}\n")
-
-        await self.design.summaries(
-            format_before_time, package, self.align.speed, self.align.label, self.file_folder
+            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        if os.path.isfile(self.team_file):
-            scene = await FileAssist.read_yaml(self.team_file)
-            scene["file"].append(self.file_folder)
-        else:
-            scene = {
-                "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
-            }
-        await FileAssist.dump_yaml(self.team_file, scene)
+        team_name = f"MEM_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        await self.refresh(
+            package, reporter.team_file, team_name, device.serial, reporter.before_time
+        )
 
-        if not (mem_classify_dir := Path(self.mem_classify_dir)).exists():
-            mem_classify_dir.mkdir(parents=True, exist_ok=True)
-
+        # Notes: ========== 启动工具 ==========
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
         self.dumped = asyncio.Event()
 
-        async with aiosqlite.connect(self.db_file) as db:
+        async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.create_mem_table(db)
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.task_close_event)
@@ -410,10 +377,43 @@ class Memrix(object):
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
-        await self.dump_task_close()
+        await self.dump_task_close(reporter.before_time, reporter.group_dir)
 
     # """巡航引擎"""
     async def exec_task_start(self, device: "Device") -> None:
+
+        async def automatic() -> None:
+            logger.info(f"^*{self.padding} Exec Start {self.padding}*^")
+
+            for outer in range(open_file.get("loopers", 1)):
+                for index, mission in enumerate(open_file.get("mission", [])):
+
+                    for key, value in mission.items():
+                        for inner in range(value.get("loopers", 1)):
+                            for step in value.get("command", []):
+
+                                cmds = step.get("cmds", "")
+                                vals = step.get("vals", [])
+                                args = step.get("args", [])
+                                kwds = step.get("kwds", {})
+
+                                target = player if cmds == "audio_player" else device
+
+                                self.memories.update({"exc": f"{cmds} → {vals}, {args}, {kwds}"})
+
+                                if callable(func := getattr(target, cmds, None)):
+                                    try:
+                                        logger.info(f"[{key}] Step {cmds} → {vals}, {args}, {kwds}")
+                                        await func(*vals, *args, **kwds)
+                                    except Exception as e:
+                                        logger.info(f"[{key}] Failed {cmds}: {e}")
+                                else:
+                                    logger.info(f"[{key}] Unknown command: {cmds}")
+
+            logger.info(f"^*{self.padding} Exec Close {self.padding}*^")
+            self.task_close_event.set()
+
+        # Notes: ========== Start from here ==========
         try:
             open_file = await FileAssist.read_json(self.focus)
 
@@ -426,49 +426,59 @@ class Memrix(object):
             if not (_ := open_file.get(self.align.group, [])):
                 raise ValueError(f"脚本文件为空，未找到字段: {self.align.group}")
 
-        except (FileNotFoundError, TypeError, ValueError, json.JSONDecodeError) as e:
-            raise MemrixError(e)
+        except (FileNotFoundError, TypeError, ValueError, json.JSONDecodeError) as e_:
+            raise MemrixError(e_)
 
         if not (check := await device.examine_pkg(package)):
             raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
         try:
             await device.automator_activation()
-        except (u2exc.DeviceError, u2exc.ConnectError) as e:
-            raise MemrixError(e)
+        except (u2exc.DeviceError, u2exc.ConnectError) as e_:
+            raise MemrixError(e_)
 
         allowed_extra_task = asyncio.create_task(Api.formatting())
-        auto_dump_task = asyncio.create_task(self.dump_task_start(device, package))
+
+        if self.storm:
+            function = self.dump_task_start
+        elif self.sleek:
+            function = self.frame_tracer
+        else:
+            raise MemrixError("<UNK>")
+
+        auto_exec_task = asyncio.create_task(function(device, package))
 
         await self.exec_start_event.wait()
 
         allowed_extra = await allowed_extra_task or [const.WAVERS]
         player: "Player" = Player(self.src_opera_place, allowed_extra)
 
-        exec_task = asyncio.create_task(self.automatic(open_file, device, player))
+        automatic_task = asyncio.create_task(automatic())
 
         await self.task_close_event.wait()
 
-        exec_task.cancel()
+        automatic_task.cancel()
         try:
-            await exec_task
+            await automatic_task
         except asyncio.CancelledError:
             logger.info(f"Automated task completed ...")
 
-        await auto_dump_task
+        await auto_exec_task
 
     # """真相快照"""
     async def create_mem_report(self) -> None:
-        for file in [self.db_file, self.log_file, self.team_file]:
+        reporter = Reporter(self.src_total_place, self.focus, const.M_SUBSET_DIR)
+
+        for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"文件无效 {file}")
 
-        async with aiosqlite.connect(self.db_file) as db:
+        async with aiosqlite.connect(reporter.db_file) as db:
             analyzer = Analyzer(
-                db, os.path.join(self.mem_group_dir, f"Report_{Path(self.mem_group_dir).name}")
+                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
 
-            team_data = await FileAssist.read_yaml(self.team_file)
+            team_data = await FileAssist.read_yaml(reporter.team_file)
             if not (memory_data_list := team_data["file"]):
                 raise MemrixError(f"No data scenario {memory_data_list} ...")
 
@@ -510,53 +520,32 @@ class Memrix(object):
             }
             return await analyzer.form_report(self.memory_template, **rendering)
 
-    # notes: 流畅度测试引擎
+    # Notes: 流畅度测试
     async def frame_tracer(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
-        # Notes: Start from here
-        package: typing.Optional[str] = post_pkg or self.focus
+        # Notes: ========== Start from here ==========
+        package = post_pkg or self.focus
 
         if not post_pkg and not (check := await device.examine_pkg(package)):
             raise MemrixError(f"应用名称不存在 {package} -> {check}")
 
-        logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        reporter = Reporter(self.src_total_place, self.vault, const.F_SUBSET_DIR)
+
+        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
         logger.info(
-            f"^*{self.pad} {const.APP_DESC} Engine Start {self.pad}*^"
-        )
-        format_before_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
-
-        self.file_insert = 0
-        self.file_folder = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
-
-        logger.info(f"时间 -> {format_before_time}")
-        logger.info(f"应用 -> {package}")
-        logger.info(f"频率 -> {self.align.speed}")
-        logger.info(f"标签 -> {self.align.label}")
-        logger.info(f"文件 -> {self.file_folder}\n")
-
-        await self.design.summaries(
-            format_before_time, package, self.align.speed, self.align.label, self.file_folder
+            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        if os.path.isfile(self.team_file):
-            scene = await FileAssist.read_yaml(self.team_file)
-            scene["file"].append(self.file_folder)
-        else:
-            scene = {
-                "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
-            }
-        await FileAssist.dump_yaml(self.team_file, scene)
+        team_name = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        await self.refresh(
+            package, reporter.team_file, team_name, device.serial, reporter.before_time
+        )
 
-        if not (gfx_classify_dir := Path(self.gfx_classify_dir)).exists():
-            gfx_classify_dir.mkdir(parents=True, exist_ok=True)
-
-        if not (gfx_group_dir := Path(self.gfx_group_dir)).exists():
-            gfx_group_dir.mkdir(parents=True, exist_ok=True)
-
+        # Notes: ========== 启动工具 ==========
         tracer: "Tracer" = Tracer()
 
         trace_loc = os.path.join(
-            gfx_group_dir, f"{self.file_folder}_trace.perfetto-trace"
+            reporter.group_dir, f"{self.file_folder}_trace.perfetto-trace"
         )
 
         device_folder = f"/data/local/tmp/{Path(self.ft_file).name}"
@@ -582,10 +571,10 @@ class Memrix(object):
             drag_ranges = await tracer.extract_drag_ranges(tp)
             jank_ranges = await tracer.mark_consecutive_jank(primary_frames)
 
-        async with aiosqlite.connect(self.db_file) as db:
+        async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.create_gfx_table(db)
             analyzer = Analyzer(
-                db, os.path.join(self.gfx_group_dir, f"Report_{Path(self.gfx_group_dir).name}")
+                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
             segment_ms = 2000
             await analyzer.plot_multiple_segments(
@@ -636,7 +625,7 @@ async def main() -> typing.Optional[typing.Any]:
         ):
             logger.debug(f"Authorize: {resp}")
 
-    # Notes: Start from here
+    # Notes: ========== Start from here ==========
     Design.startup_logo()
 
     # 解析命令行参数
@@ -666,7 +655,7 @@ async def main() -> typing.Optional[typing.Any]:
     else:
         raise MemrixError(f"{const.APP_DESC} compatible with {const.APP_NAME} command")
 
-    # notes: --- 路径初始化 ---
+    # Notes: ========== 路径初始化 ==========
     src_templates = os.path.join(mx_work, const.SCHEMATIC, const.TEMPLATES).format()
 
     turbo = os.path.join(mx_work, const.SCHEMATIC, const.SUPPORTS).format()
@@ -694,7 +683,7 @@ async def main() -> typing.Optional[typing.Any]:
     if cmd_lines.align:
         return await previewing()
 
-    # notes: --- 授权流程 ---
+    # Notes: ========== 授权流程 ==========
     lic_file = Path(src_opera_place) / const.LIC_FILE
 
     if apply_code := cmd_lines.apply:
@@ -702,7 +691,7 @@ async def main() -> typing.Optional[typing.Any]:
 
     await authorize.verify_license(lic_file)
 
-    # notes: --- 工具路径设置 ---
+    # Notes: ========== 工具路径设置 ==========
     if platform == "win32":
         supports = os.path.join(turbo, "Windows").format()
         adb, perfetto, tp_shell = "adb.exe", "perfetto.exe", "trace_processor_shell.exe"
@@ -721,10 +710,10 @@ async def main() -> typing.Optional[typing.Any]:
     for tls in (tools := [adb, perfetto, tp_shell]):
         os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
-    # notes: --- 手动同步命令 ---
+    # Notes: ========== 同步命令 ==========
     # ......
 
-    # notes: --- 模板与工具检查 ---
+    # Notes: ========== 模板与工具检查 ==========
     memory_template = os.path.join(src_templates, "memory.html")
 
     # 检查每个模板文件是否存在，如果缺失则显示错误信息并退出程序
@@ -742,7 +731,7 @@ async def main() -> typing.Optional[typing.Any]:
         if not shutil.which((tls_name := os.path.basename(tls))):
             raise MemrixError(f"{const.APP_DESC} missing files {tls_name}")
 
-    # notes: --- 配置与启动 ---
+    # Notes: ========== 配置与启动 ==========
 
     # 远程全局配置
     global_config_task = asyncio.create_task(Api.remote_config())
