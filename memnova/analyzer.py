@@ -444,11 +444,12 @@ class Analyzer(object):
         plots = []
 
         for idx, segment in enumerate(segments, start=1):
-            x_start, x_close = segment[0]["timestamp_ms"], segment[1]["timestamp_ms"],
+            x_start, x_close = segment[0]["timestamp_ms"], segment[1]["timestamp_ms"]
+            padding = max((x_close - x_start) * 0.01, 100)
             p = await self.plot_frame_analysis(
                 frames=segment,
-                x_start=x_start,
-                x_close=x_close,
+                x_start=x_start - padding,
+                x_close=x_close + padding,
                 roll_ranges=roll_ranges,
                 drag_ranges=drag_ranges,
                 jank_ranges=jank_ranges,
