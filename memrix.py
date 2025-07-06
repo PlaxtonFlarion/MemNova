@@ -159,14 +159,17 @@ class Memrix(object):
         关闭内存采样任务，释放资源并触发报告生成。
         """
         if self.dumped and not self.dumped.is_set():
-            logger.info(f"等待任务结束 ...")
+            logger.info(f"等待采样任务结束 ...")
             try:
                 await asyncio.wait_for(self.dumped.wait(), timeout=3)
             except asyncio.TimeoutError:
-                logger.info("任务超时结束 ...")
+                logger.info("采样任务超时结束 ...")
 
         if self.animation_task:
-            await self.animation_task
+            try:
+                await asyncio.wait_for(self.animation_task, timeout=3)
+            except asyncio.TimeoutError:
+                pass
 
         time_cost = (time.time() - before_time) / 60
         logger.info(
