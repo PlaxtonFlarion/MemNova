@@ -16,6 +16,7 @@ import typing
 import asyncio
 import aiofiles
 import aiosqlite
+import statistics
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -325,7 +326,40 @@ class Analyzer(object):
         return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
 
     @staticmethod
-    async def split_frames_by_time(frames: list[dict], segment_ms: int = 5000) -> list[list[dict]]:
+    async def score_segment(
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            fps_key: str
+    ) -> typing.Optional[float]:
+
+        if len(frames) < 5:
+            return None
+
+        if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
+            return None
+
+        jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
+        jank_score = min(jank_total / duration, 1.0)
+
+        threshold_ms = 1000 / 60  # 可适配设备帧率
+        latency_score = sum(1 for f in frames if f["duration_ms"] > threshold_ms) / len(frames)
+
+        fps_values = [f.get(fps_key) for f in frames if f.get(fps_key)]
+        if len(fps_values) >= 2:
+            fps_std = statistics.stdev(fps_values)
+            fps_score = min(fps_std / 10, 1.0)  # 可调参数
+        else:
+            fps_score = 0
+
+        motion_total = sum(r["end_ts"] - r["start_ts"] for r in roll_ranges + drag_ranges)
+        motion_score = 1.0 if motion_total >= 500 else motion_total / 500
+
+        return round(jank_score * 0.4 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.2, 3)
+
+    @staticmethod
+    async def split_frames_by_time(frames: list[dict], segment_ms: int) -> list[list[dict]]:
         if not frames:
             return []
 
@@ -364,7 +398,7 @@ class Analyzer(object):
             x_range=Range1d(x_start, x_close),
             x_axis_label="时间 (ms)",
             y_axis_label="帧耗时 (ms)",
-            height=500,
+            height=700,
             sizing_mode="stretch_width",
             tools="pan,wheel_zoom,box_zoom,reset,save",
             toolbar_location="above"
@@ -401,8 +435,8 @@ class Analyzer(object):
         # 背景区间：滑动
         for rng in roll_ranges or []:
             p.add_layout(BoxAnnotation(
-                left=rng["start_ts"] / 1e6,
-                right=rng["end_ts"] / 1e6,
+                left=rng["start_ts"],
+                right=rng["end_ts"],
                 fill_color="#ADD8E6",
                 fill_alpha=0.3
             ))
@@ -410,8 +444,8 @@ class Analyzer(object):
         # 背景区间：拖拽
         for rng in drag_ranges or []:
             p.add_layout(BoxAnnotation(
-                left=rng["start_ts"] / 1e6,
-                right=rng["end_ts"] / 1e6,
+                left=rng["start_ts"],
+                right=rng["end_ts"],
                 fill_color="#FFA500",
                 fill_alpha=0.25
             ))
@@ -419,8 +453,8 @@ class Analyzer(object):
         # 背景区间：连续掉帧
         for rng in jank_ranges or []:
             p.add_layout(BoxAnnotation(
-                left=rng["start_ts"] / 1e6,
-                right=rng["end_ts"] / 1e6,
+                left=rng["start_ts"],
+                right=rng["end_ts"],
                 fill_color="#FF0000",
                 fill_alpha=0.15
             ))
@@ -438,14 +472,60 @@ class Analyzer(object):
             jank_ranges: list[dict],
             segment_ms: int,
             data_dir: str
-    ) -> dict:
+    ) -> typing.Optional[dict]:
 
-        segments = await self.split_frames_by_time(frames, segment_ms=segment_ms)
-        plots = []
+        async def quality_label(score: float) -> dict:
+            if score >= 0.85:
+                return {
+                    "level": "A+",
+                    "color": "#00B050",  # 绿色
+                    "label": "极其流畅，无明显波动"
+                }
+            elif score >= 0.7:
+                return {
+                    "level": "A",
+                    "color": "#92D050",  # 浅绿
+                    "label": "流畅稳定，仅偶尔波动"
+                }
+            elif score >= 0.55:
+                return {
+                    "level": "B",
+                    "color": "#FFFF00",  # 黄色
+                    "label": "有部分抖动，整体尚可"
+                }
+            elif score >= 0.4:
+                return {
+                    "level": "C",
+                    "color": "#FFC000",  # 橙色
+                    "label": "波动明显，体验一般"
+                }
+            elif score >= 0.25:
+                return {
+                    "level": "D",
+                    "color": "#FF6600",  # 深橙
+                    "label": "卡顿较多，影响操作"
+                }
+            else:
+                return {
+                    "level": "E",
+                    "color": "#C00000",  # 红色
+                    "label": "严重卡顿，建议优化"
+                }
 
-        for idx, segment in enumerate(segments, start=1):
-            x_start, x_close = segment[0]["timestamp_ms"], segment[1]["timestamp_ms"]
-            padding = max((x_close - x_start) * 0.01, 100)
+        segment_list = await self.split_frames_by_time(frames, segment_ms)
+        plot_list = []
+
+        for idx, segment in enumerate(segment_list, start=1):
+            x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
+            padding = (x_close - x_start) * 0.05
+
+            seg_score = await self.score_segment(
+                segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+            )
+            if seg_score is None:
+                continue
+            seg_title = await quality_label(seg_score)
+
             p = await self.plot_frame_analysis(
                 frames=segment,
                 x_start=x_start - padding,
@@ -454,14 +534,19 @@ class Analyzer(object):
                 drag_ranges=drag_ranges,
                 jank_ranges=jank_ranges,
             )
-            p.title.text = f"帧分析片段 {idx}"
-            plots.append(p)
+            range_id = f"Frame Range {idx:02}"
+            p.title.text = f"[{range_id}] - [{seg_title['level']}] {seg_title['label']}"
+            p.title.text_color = seg_title["color"]
+            plot_list.append(p)
+
+        if not plot_list:
+            return None
 
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
         file_path = os.path.join(group, f"{data_dir}.html")
         output_file(file_path)
-        save(column(*plots, sizing_mode="stretch_width"))
+        save(column(*plot_list, sizing_mode="stretch_width"))
 
         return {
             f"frame_analysis_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))

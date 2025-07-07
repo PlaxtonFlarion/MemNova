@@ -67,14 +67,18 @@ class Memrix(object):
 
     __remote: dict = {}
 
-    def __init__(self, remote: dict, *args, **kwargs):
+    def __init__(self, wires: list, level: str, power: int, remote: dict, *args, **kwargs):
         """
         初始化核心控制器，配置运行模式、路径结构、分析状态与动画资源。
         """
+        self.wires = wires  # 命令参数
+        self.level = level  # 日志级别
+        self.power = power  # 最大进程
+
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.sleek, self.storm, self.pulse, self.forge, *_ = args
-        _, _, _, _, self.focus, self.vault, self.watch, *_ = args
+        _, _, _, _, self.focus, self.vault, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -98,7 +102,7 @@ class Memrix(object):
             "foreground": 0,
             "background": 0
         }
-        self.design: "Design" = Design(self.watch)
+        self.design: "Design" = Design(self.level)
 
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
@@ -525,6 +529,15 @@ class Memrix(object):
 
     # Notes: 流畅度测试
     async def frame_tracer(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
+
+        async def input_stream() -> None:
+            async for line in transports.stdout:
+                logger.info(line.decode(const.CHARSET).strip())
+
+        async def error_stream() -> None:
+            async for line in transports.stderr:
+                logger.info(line.decode(const.CHARSET).strip())
+
         # Notes: ========== Start from here ==========
         package = post_pkg or self.focus
 
@@ -551,38 +564,51 @@ class Memrix(object):
             reporter.group_dir, f"{self.file_folder}_trace.perfetto-trace"
         )
 
-        device_folder = f"/data/local/tmp/{Path(self.ft_file).name}"
+        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
 
         await device.push(self.ft_file, device_folder)
         await device.change_mode(777, device_folder)
 
-        transports = await Terminal.cmd_link(
-            ["adb", "shell", "-tt", f"cat {device_folder} | perfetto --txt -c - -o {target_folder}"]
-        )
+        transports = await device.perfetto_start(device_folder, target_folder)
+        _ = asyncio.create_task(input_stream())
+        _ = asyncio.create_task(error_stream())
 
         logger.info(f"开始采样 ...")
         await self.task_close_event.wait()
-        transports.terminate()
+        await device.perfetto_close()
+        logger.info(f"结束采样 ...")
 
+        logger.info(f"拉取样本 ...")
         await device.pull(target_folder, trace_loc)
 
+        logger.info(f"分析样本 ...")
         config = TraceProcessorConfig(self.tp_shell)
         with TraceProcessor(trace_loc, config=config) as tp:
-            primary_frames = await tracer.extract_primary_frames(tp, package)
+            if not (raw_frames := await tracer.extract_primary_frames(tp, package)):
+                raise MemrixError(f"<UNK> -> {tp}")
+
+            vsync_sys = await Tracer.extract_vsync_sys_points(tp)
+            vsync_app = await Tracer.extract_vsync_app_points(tp)
+
+            await tracer.annotate_fps(raw_frames, vsync_sys, vsync_app)
+
             roll_ranges = await tracer.extract_roll_ranges(tp)
             drag_ranges = await tracer.extract_drag_ranges(tp)
-            jank_ranges = await tracer.mark_consecutive_jank(primary_frames)
+            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)
 
+        start_time = time.time()
+        logger.info(f"渲染报告 ...")
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.create_gfx_table(db)
             analyzer = Analyzer(
                 db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
-            segment_ms = 2000
+            segment_ms = 5000
             await analyzer.plot_multiple_segments(
                 primary_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
             )
+        logger.info(f"渲染完成 {time.time() - start_time:.2f} s")
 
 
 # """Main"""
@@ -628,6 +654,21 @@ async def main() -> typing.Optional[typing.Any]:
         ):
             logger.debug(f"Authorize: {resp}")
 
+    async def arithmetic(function: "typing.Callable") -> None:
+        """
+        执行通用异步任务函数。
+        """
+        if not cmd_lines.focus:
+            raise MemrixError(f"--focus 参数不能为空 ...")
+
+        manage = Manage(adb)
+        if not (device := await manage.operate_device(cmd_lines.imply)):
+            raise MemrixError(f"没有连接设备 ...")
+
+        signal.signal(signal.SIGINT, memrix.clean_up)
+
+        return await function(device)
+
     # Notes: ========== Start from here ==========
     Design.startup_logo()
 
@@ -636,8 +677,11 @@ async def main() -> typing.Optional[typing.Any]:
     cmd_lines = parser.parse_cmd
 
     # 如果没有提供命令行参数，则显示帮助文档，并退出程序
-    if len(sys.argv) == 1:
+    if len(system_parameter_list := sys.argv) == 1:
         return parser.parse_engine.print_help()
+
+    # 获取命令行参数（去掉第一个参数，即脚本名称）
+    wires = system_parameter_list[1:]
 
     # 获取当前操作系统平台和应用名称
     platform = sys.platform.strip().lower()
@@ -678,7 +722,7 @@ async def main() -> typing.Optional[typing.Any]:
     ):
         os.makedirs(src_total_place, exist_ok=True)
 
-    Active.active(watch := "INFO" if cmd_lines.watch else "WARNING")
+    Active.active(level := "INFO" if cmd_lines.watch else "WARNING")
 
     align_file = os.path.join(initial_source, const.SRC_OPERA_PLACE, const.ALIGN)
     align = Align(align_file)
@@ -743,10 +787,11 @@ async def main() -> typing.Optional[typing.Any]:
 
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
     logger.info(f"操作系统: {platform}")
+    logger.info(f"核心数量: {(power := os.cpu_count())}")
     logger.info(f"应用名称: {software}")
     logger.info(f"系统路径: {sys_symbol}")
     logger.info(f"环境变量: {env_symbol}")
-    logger.info(f"日志等级: {watch}")
+    logger.info(f"日志等级: {level}")
     logger.info(f"工具目录: {turbo}")
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}\n")
 
@@ -773,7 +818,7 @@ async def main() -> typing.Optional[typing.Any]:
 
     positions = (
         cmd_lines.sleek, cmd_lines.storm, cmd_lines.pulse, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.vault, cmd_lines.watch
+        cmd_lines.focus, cmd_lines.vault
     )
     keywords = {
         "src_opera_place": src_opera_place,
@@ -787,38 +832,16 @@ async def main() -> typing.Optional[typing.Any]:
     }
     remote = await global_config_task
 
-    memrix = Memrix(remote, *positions, **keywords)
+    memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
     if cmd_lines.sleek:
-        if not cmd_lines.focus:
-            raise MemrixError(f"--focus 参数不能为空 ...")
-
-        manage = Manage(adb)
-        if not (device := await manage.operate_device(cmd_lines.imply)):
-            raise MemrixError(f"没有连接设备 ...")
-
-        signal.signal(signal.SIGINT, memrix.clean_up)
-
-        return await memrix.frame_tracer(device)
-
-    elif cmd_lines.storm or cmd_lines.pulse:
-        if not cmd_lines.focus:
-            raise MemrixError(f"--focus 参数不能为空 ...")
-
-        manage = Manage(adb)
-        if not (device := await manage.operate_device(cmd_lines.imply)):
-            raise MemrixError(f"没有连接设备 ...")
-
-        signal.signal(signal.SIGINT, memrix.clean_up)
-
-        main_task = getattr(
-            memrix, "dump_task_start" if cmd_lines.storm else "exec_task_start"
-        )(device)
-        return await main_task
-
+        return await arithmetic(memrix.frame_tracer)
+    elif cmd_lines.storm:
+        return await arithmetic(memrix.dump_task_start)
+    elif cmd_lines.pulse:
+        return arithmetic(memrix.exec_task_start)
     elif cmd_lines.forge:
         return await memrix.create_mem_report()
-
     else:
         return None
 

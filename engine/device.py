@@ -71,8 +71,16 @@ class Device(object):
         cmd = self.__initial + ["shell", "pm", "path", package]
         return await Terminal.cmd_line(cmd)
 
-    async def change_mode(self, mode: str | int, dst: str, *_, **__) -> None:
+    async def change_mode(self, mode: str | int, dst: str, *_, **__) -> typing.Any:
         cmd = self.__initial + ["shell", "chmod", str(mode), dst]
+        return await Terminal.cmd_line(cmd)
+
+    async def perfetto_start(self, src: str, dst: str, *_, **__) -> "asyncio.subprocess.Process":
+        cmd = self.__initial + ["shell", "perfetto", "--txt", "-c", src, "-o", dst, "--background"]
+        return await Terminal.cmd_link(cmd)
+
+    async def perfetto_close(self, *_, **__) -> typing.Any:
+        cmd = self.__initial + ["shell", "pkill", "-l", "SIGINT", "perfetto"]
         return await Terminal.cmd_line(cmd)
 
     async def pid_value(self, package: str, *_, **__) -> typing.Optional["Pid"]:
