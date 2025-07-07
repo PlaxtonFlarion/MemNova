@@ -26,14 +26,17 @@ class Tracer(object):
                     e.ts AS expected_ts,
                     e.dur AS expected_dur,
                     a.layer_name,
-                    a.surface_frame_token,
                     p.name AS process_name,
+                    a.surface_frame_token,
+                    a.present_type,
+                    a.gpu_composition,
+                    a.on_time_finish,
                     ROW_NUMBER() OVER (
                         PARTITION BY a.layer_name, a.surface_frame_token
                         ORDER BY a.ts
                     ) AS row_rank
                 FROM actual_frame_timeline_slice a
-                JOIN expected_frame_timeline_slice e
+                JOIN expected_frame_timeline_slice e ON a.surface_frame_token = e.surface_frame_token
                 LEFT JOIN process p ON a.upid = p.upid
                 {where_clause}
             )
@@ -48,7 +51,10 @@ class Tracer(object):
                 "drop_count": (drop_count := max(0, round(row.actual_dur / int(1e9 / 60)) - 1)),
                 "is_jank": drop_count > 0,
                 "layer_name": row.layer_name,
-                "process_name": row.process_name
+                "process_name": row.process_name,
+                "frame_type": row.present_type or "Unknown",
+                "gpu_composition": bool(row.gpu_composition),
+                "on_time_finish": bool(row.on_time_finish),
             } for row in tp.query(sql)
         ]
 

@@ -388,9 +388,12 @@ class Analyzer(object):
             ("时间", "@timestamp_ms ms"),
             ("耗时", "@duration_ms ms"),
             ("掉帧", "@is_jank"),
+            ("类型", "@frame_type"),
+            ("GPU合成", "@gpu_composition"),
+            ("按时呈现", "@on_time_finish"),
+            ("FPS系统", "@fps_sys"),
+            ("FPS应用", "@fps_app"),
             ("图层", "@layer_name"),
-            ("系统FPS", "@fps_sys"),
-            ("应用FPS", "@fps_app")
         ]))
 
         # 16.67ms 阈值线
