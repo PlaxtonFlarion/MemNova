@@ -41,30 +41,6 @@ from memnova import const
 
 
 class Analyzer(object):
-    """
-    分析器类，用于生成内存测试报告，包括统计图表绘制与 HTML 页面渲染。
-
-    该类负责读取采集数据库中的内存数据，提取前台与后台运行阶段的指标曲线，
-    通过 Bokeh 绘制可交互图表，并基于 Jinja2 模板渲染完整的 HTML 报告页面。
-
-    适用于批量测试后的数据分析与可视化场景。
-
-    Parameters
-    ----------
-    db : aiosqlite.Connection
-        已连接的异步 SQLite 数据库对象，包含内存采集结果表。
-
-    download : str
-        报告输出路径，所有生成的 HTML 图表与页面文件将保存至该目录。
-
-    Attributes
-    ----------
-    db : aiosqlite.Connection
-        采集数据数据库连接对象，供后续查询与分析调用。
-
-    download : str
-        报告输出路径，包含图表文件与最终报告 HTML 文件。
-    """
 
     def __init__(self, db: "aiosqlite.Connection", download: str):
         self.db = db
@@ -87,12 +63,6 @@ class Analyzer(object):
 
         **kwargs :
             关键字参数，作为模板渲染上下文传入。
-
-        Notes
-        -----
-        - 模板必须为合法 Jinja2 文件，包含可注入变量。
-        - 输出文件编码遵循系统预设常量。
-        - 模板与数据解耦，支持自定义报告样式与结构。
         """
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
@@ -360,9 +330,6 @@ class Analyzer(object):
 
     @staticmethod
     async def split_frames_by_time(frames: list[dict], segment_ms: int) -> list[list[dict]]:
-        if not frames:
-            return []
-
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
         segments = []
         start_ts = frames[0]["timestamp_ms"]
@@ -382,19 +349,17 @@ class Analyzer(object):
             frames: list[dict],
             x_start: int | float,
             x_close: int | float,
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
+            roll_ranges: typing.Optional[list[dict]],
+            drag_ranges: typing.Optional[list[dict]],
             jank_ranges: list[dict]
     ) -> typing.Any:
 
-        for f in frames:
-            f["color"] = "#FF4D4D" if f.get("is_jank") else "#32CD32"
+        for frame in frames:
+            frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
-        df = pd.DataFrame(frames)
-        source = ColumnDataSource(df)
+        source = ColumnDataSource(pd.DataFrame(frames))
 
         p = figure(
-            title="帧耗时分析图",
             x_range=Range1d(x_start, x_close),
             x_axis_label="时间 (ms)",
             y_axis_label="帧耗时 (ms)",
@@ -423,7 +388,9 @@ class Analyzer(object):
             ("时间", "@timestamp_ms ms"),
             ("耗时", "@duration_ms ms"),
             ("掉帧", "@is_jank"),
-            ("图层", "@layer_name")
+            ("图层", "@layer_name"),
+            ("系统FPS", "@fps_sys"),
+            ("应用FPS", "@fps_app")
         ]))
 
         # 16.67ms 阈值线
@@ -474,7 +441,7 @@ class Analyzer(object):
             data_dir: str
     ) -> typing.Optional[dict]:
 
-        async def quality_label(score: float) -> dict:
+        def quality_label(score: float) -> dict:
             if score >= 0.85:
                 return {
                     "level": "A+",
@@ -513,7 +480,8 @@ class Analyzer(object):
                 }
 
         segment_list = await self.split_frames_by_time(frames, segment_ms)
-        plot_list = []
+
+        conspiracy = []
 
         for idx, segment in enumerate(segment_list, start=1):
             x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
@@ -524,29 +492,28 @@ class Analyzer(object):
             )
             if seg_score is None:
                 continue
-            seg_title = await quality_label(seg_score)
+            labels = quality_label(seg_score)
 
             p = await self.plot_frame_analysis(
                 frames=segment,
                 x_start=x_start - padding,
                 x_close=x_close + padding,
-                roll_ranges=roll_ranges,
-                drag_ranges=drag_ranges,
+                roll_ranges=None,
+                drag_ranges=None,
                 jank_ranges=jank_ranges,
             )
-            range_id = f"Frame Range {idx:02}"
-            p.title.text = f"[{range_id}] - [{seg_title['level']}] {seg_title['label']}"
-            p.title.text_color = seg_title["color"]
-            plot_list.append(p)
+            p.title.text = f"[Frame Range {idx:02}] - [{labels['level']}] {labels['label']}"
+            p.title.text_color = labels["color"]
+            conspiracy.append(p)
 
-        if not plot_list:
+        if not conspiracy:
             return None
 
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
         file_path = os.path.join(group, f"{data_dir}.html")
         output_file(file_path)
-        save(column(*plot_list, sizing_mode="stretch_width"))
+        save(column(*conspiracy, sizing_mode="stretch_width"))
 
         return {
             f"frame_analysis_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))

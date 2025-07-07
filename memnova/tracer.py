@@ -160,13 +160,22 @@ class Tracer(object):
         return jank_ranges
 
     @staticmethod
-    async def annotate_fps(frames: list[dict], vsync_sys: list[dict], vsync_app: list[dict]) -> None:
-        ts_key, fps_key, max_delta_ms = "ts", "fps", 50.0
+    async def annotate_frames(
+        frames: list[dict],
+        roll_ranges: list[dict],
+        drag_ranges: list[dict],
+        jank_ranges: list[dict],
+        vsync_sys: list[dict],
+        vsync_app: list[dict]
+    ) -> None:
 
-        async def build_index(vsync_list: list[dict], key: str) -> list[float]:
-            return [v[key] for v in vsync_list]
+        max_delta_ms = 50.0
 
-        async def find_nearest(ts: float, ts_list: list[float], vsync_list: list[dict]) -> float | None:
+        def in_any_range(ts: float, ranges: list[dict]) -> bool:
+            return any(r["start_ts"] <= ts <= r["end_ts"] for r in ranges)
+
+        def find_nearest(ts: float, vsync_list: list[dict]) -> float | None:
+            ts_list = [v["ts"] for v in vsync_list]
             if not vsync_list or not ts_list:
                 return None
             pos = bisect_left(ts_list, ts)
@@ -175,16 +184,16 @@ class Tracer(object):
                 candidates.append(vsync_list[pos])
             if pos > 0:
                 candidates.append(vsync_list[pos - 1])
-            nearest = min(candidates, key=lambda v: abs(v[ts_key] - ts))
-            return nearest[fps_key] if abs(nearest[ts_key] - ts) <= max_delta_ms else None
-
-        vsync_sys_ts = await build_index(vsync_sys, ts_key)
-        vsync_app_ts = await build_index(vsync_app, ts_key)
+            nearest = min(candidates, key=lambda v: abs(v["ts"] - ts))
+            return nearest["fps"] if abs(nearest["ts"] - ts) <= max_delta_ms else None
 
         for f in frames:
             timestamp_ms = f["timestamp_ms"]
-            f["fps_sys"] = await find_nearest(timestamp_ms, vsync_sys_ts, vsync_sys)
-            f["fps_app"] = await find_nearest(timestamp_ms, vsync_app_ts, vsync_app)
+            f["in_roll"] = in_any_range(timestamp_ms, roll_ranges)
+            f["in_drag"] = in_any_range(timestamp_ms, drag_ranges)
+            f["in_jank"] = in_any_range(timestamp_ms, jank_ranges)
+            f["fps_sys"] = find_nearest(timestamp_ms, vsync_sys)
+            f["fps_app"] = find_nearest(timestamp_ms, vsync_app)
 
 
 if __name__ == '__main__':

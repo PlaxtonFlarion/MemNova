@@ -586,16 +586,19 @@ class Memrix(object):
         config = TraceProcessorConfig(self.tp_shell)
         with TraceProcessor(trace_loc, config=config) as tp:
             if not (raw_frames := await tracer.extract_primary_frames(tp, package)):
-                raise MemrixError(f"<UNK> -> {tp}")
+                raise MemrixError(f"没有有效样本 ...")
 
-            vsync_sys = await Tracer.extract_vsync_sys_points(tp)
-            vsync_app = await Tracer.extract_vsync_app_points(tp)
+            vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
+            vsync_app = await Tracer.extract_vsync_app_points(tp)  # 应用FPS
 
-            await tracer.annotate_fps(raw_frames, vsync_sys, vsync_app)
+            roll_ranges = await tracer.extract_roll_ranges(tp)  # 滑动区间
+            drag_ranges = await tracer.extract_drag_ranges(tp)  # 拖拽区间
 
-            roll_ranges = await tracer.extract_roll_ranges(tp)
-            drag_ranges = await tracer.extract_drag_ranges(tp)
-            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)
+            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)  # 连续丢帧
+
+            await tracer.annotate_frames(
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
+            )
 
         start_time = time.time()
         logger.info(f"渲染报告 ...")
@@ -606,7 +609,7 @@ class Memrix(object):
             )
             segment_ms = 5000
             await analyzer.plot_multiple_segments(
-                primary_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
             )
         logger.info(f"渲染完成 {time.time() - start_time:.2f} s")
 
