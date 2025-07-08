@@ -171,7 +171,6 @@ class Cubicle(object):
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
-
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
@@ -181,6 +180,9 @@ class Cubicle(object):
             duration_ms REAL,
             layer_name TEXT,
             process_name TEXT,
+            frame_type TEXT,
+            gpu_composition INTEGER DEFAULT 0,
+            on_time_finish INTEGER DEFAULT 0,
             is_jank INTEGER DEFAULT 0,
             in_roll INTEGER DEFAULT 0,
             in_drag INTEGER DEFAULT 0,
@@ -192,26 +194,35 @@ class Cubicle(object):
             db: "aiosqlite.Connection",
             data_dir: str,
             label: str,
+            timestamp: str,
             gfx_info: dict
     ) -> None:
 
         await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
             data_dir,
             label,
+            timestamp,
             timestamp_ms,
             duration_ms,
             layer_name,
             process_name,
+            frame_type,
+            gpu_composition,
+            on_time_finish,
             is_jank,
             in_roll,
             in_drag,
-            in_jank_range) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            in_jank_range) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
+                timestamp,
                 gfx_info["timestamp_ms"],
                 gfx_info["duration_ms"],
                 gfx_info["layer_name"],
                 gfx_info["process_name"],
+                gfx_info["frame_type"],
+                gfx_info["gpu_composition"],
+                gfx_info["on_time_finish"],
                 gfx_info["is_jank"],
                 gfx_info["in_roll"],
                 gfx_info["in_drag"],
@@ -223,10 +234,23 @@ class Cubicle(object):
     @staticmethod
     async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
-        SELECT timestamp_ms, duration_ms, is_jank, layer_name, process_name FROM {Cubicle.mem_data_table}
+        SELECT
+            timestamp_ms,
+            duration_ms,
+            is_jank,
+            layer_name,
+            process_name,
+            frame_type,
+            gpu_composition,
+            on_time_finish,
+            is_jank,
+            in_roll,
+            in_drag,
+            in_jank_range
+        FROM {Cubicle.mem_data_table}
         WHERE data_dir = '{data_dir}'
+        ORDER BY timestamp_ms ASC
         """
-
         return await Cubicle.find_data(db, sql)
 
 if __name__ == '__main__':

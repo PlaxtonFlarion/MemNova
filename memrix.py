@@ -12,7 +12,6 @@
 import os
 import re
 import sys
-import json
 import stat
 import time
 import typing
@@ -22,7 +21,6 @@ import asyncio
 
 # ====[ 第三方库 ]====
 import aiosqlite
-import uiautomator2.exceptions as u2exc
 
 # ====[ from: 内置模块 ]====
 from pathlib import Path
@@ -37,7 +35,6 @@ from perfetto.trace_processor import (
 # ====[ from: 本地模块 ]====
 from engine.device import Device
 from engine.manage import Manage
-from engine.medias import Player
 from engine.terminal import Terminal
 from engine.tinker import (
     Active, Ram, FileAssist, ToolKit, MemrixError
@@ -55,12 +52,7 @@ from memnova import const
 
 
 class Memrix(object):
-    """
-    Memrix 核心控制类，用于协调内存采集（记忆风暴）、自动化测试（巡航引擎）和报告生成（真相快照）。
-
-    类实例在初始化时根据运行模式自动构建工作路径、配置数据库与日志文件，
-    并提供事件同步机制以支持异步任务的协同关闭。
-    """
+    """Memrix"""
 
     file_insert: typing.Optional[int] = 0
     file_folder: typing.Optional[str] = ""
@@ -77,8 +69,8 @@ class Memrix(object):
 
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
-        self.sleek, self.storm, self.pulse, self.forge, *_ = args
-        _, _, _, _, self.focus, self.vault, *_ = args
+        self.storm, self.sleek, self.forge, *_ = args
+        _, _, _, self.focus, self.vault, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -106,9 +98,7 @@ class Memrix(object):
 
         self.animation_task: typing.Optional["asyncio.Task"] = None
 
-        self.exec_start_event: typing.Optional["asyncio.Event"] = asyncio.Event()
         self.task_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
-
         self.dumped: typing.Optional["asyncio.Event"] = None
 
     @property
@@ -119,10 +109,7 @@ class Memrix(object):
     def remote(self, value: dict) -> None:
         self.__remote = value
 
-    def clean_up(self, *_, **__) -> None:
-        """
-        异步触发内存采集任务的收尾流程。
-        """
+    def task_clean_up(self, *_, **__) -> None:
         self.task_close_event.set()
 
     async def refresh(
@@ -158,10 +145,7 @@ class Memrix(object):
             }
         await FileAssist.dump_yaml(team_file, scene)
 
-    async def dump_task_close(self, before_time: float, group_dir: str) -> None:
-        """
-        关闭内存采样任务，释放资源并触发报告生成。
-        """
+    async def mem_dump_stop(self, reporter: "Reporter") -> None:
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待采样任务结束 ...")
             try:
@@ -175,16 +159,16 @@ class Memrix(object):
             except asyncio.TimeoutError:
                 pass
 
-        time_cost = (time.time() - before_time) / 60
+        time_cost = (time.time() - reporter.before_time) / 60
         logger.info(
             f"Mark={self.align.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
-        logger.info(f"{group_dir}")
+        logger.info(f"{reporter.group_dir}")
 
         if self.file_insert:
-            fc = Design.build_file_tree(group_dir)
+            fc = Design.build_file_tree(reporter.group_dir)
             Design.Doc.log(
-                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(group_dir).name}[/]"
+                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(reporter.group_dir).name}[/]"
             )
 
         logger.info(
@@ -194,14 +178,17 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
+    async def gfx_dump_stop(self, reporter: "Reporter") -> None:
+        pass
+
     # """记忆风暴"""
-    async def dump_task_start(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
+    async def mem_dump_task(self, device: "Device") -> None:
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
-            if not (memory := await device.memory_info(package)):
+            if not (memory := await device.memory_info(self.focus)):
                 return None
 
-            logger.info(f"Dump -> [{pid}] - [{package}]")
+            logger.info(f"Dump -> [{pid}] - [{self.focus}]")
             resume_map: dict = {}
             memory_map: dict = {}
             memory_vms: dict = {}
@@ -242,7 +229,7 @@ class Memrix(object):
 
             dump_start_time = time.time()
 
-            if not (app_pid := await device.pid_value(package)):
+            if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
                     "msg": (msg := f"Process -> {app_pid}"),
@@ -272,7 +259,7 @@ class Memrix(object):
 
             adj, act = current_info_list
 
-            uid = uid if (uid := await device.uid_value(package)) else 0
+            uid = uid if (uid := await device.uid_value(self.focus)) else 0
 
             remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
 
@@ -280,7 +267,7 @@ class Memrix(object):
                 "uid": uid, "adj": adj, "act": act
             })
             remark_map.update({
-                "frg": "前台" if package in act else "前台" if int(adj) <= 0 else "后台"
+                "frg": "前台" if self.focus in act else "前台" if int(adj) <= 0 else "后台"
             })
 
             state = "foreground" if remark_map["frg"] == "前台" else "background"
@@ -351,10 +338,8 @@ class Memrix(object):
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
         # Notes: ========== Start from here ==========
-        package = post_pkg or self.focus
-
-        if not post_pkg and not (check := await device.examine_pkg(package)):
-            raise MemrixError(f"应用名称不存在 {package} -> {check}")
+        if not (check := await device.examine_pkg(self.focus)):
+            raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
         reporter = Reporter(self.src_total_place, self.vault, const.M_SUBSET_DIR)
 
@@ -366,7 +351,7 @@ class Memrix(object):
 
         team_name = f"MEM_DATA_{time.strftime('%Y%m%d%H%M%S')}"
         await self.refresh(
-            package, reporter.team_file, team_name, device.serial, reporter.before_time
+            self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
 
         # Notes: ========== 启动工具 ==========
@@ -376,101 +361,100 @@ class Memrix(object):
 
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.create_mem_table(db)
+
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.task_close_event)
             )
-            self.exec_start_event.set()
+
             while not self.task_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
-        await self.dump_task_close(reporter.before_time, reporter.group_dir)
+        await self.mem_dump_stop(reporter)
 
-    # """巡航引擎"""
-    async def exec_task_start(self, device: "Device") -> None:
+    # """帧影流光"""
+    async def gfx_dump_task(self, device: "Device") -> None:
 
-        async def automatic() -> None:
-            logger.info(f"^*{self.padding} Exec Start {self.padding}*^")
+        async def input_stream() -> None:
+            async for line in transports.stdout:
+                logger.info(line.decode(const.CHARSET).strip())
 
-            for outer in range(open_file.get("loopers", 1)):
-                for index, mission in enumerate(open_file.get("mission", [])):
-
-                    for key, value in mission.items():
-                        for inner in range(value.get("loopers", 1)):
-                            for step in value.get("command", []):
-
-                                cmds = step.get("cmds", "")
-                                vals = step.get("vals", [])
-                                args = step.get("args", [])
-                                kwds = step.get("kwds", {})
-
-                                target = player if cmds == "audio_player" else device
-
-                                self.memories.update({"exc": f"{cmds} → {vals}, {args}, {kwds}"})
-
-                                if callable(func := getattr(target, cmds, None)):
-                                    try:
-                                        logger.info(f"[{key}] Step {cmds} → {vals}, {args}, {kwds}")
-                                        await func(*vals, *args, **kwds)
-                                    except Exception as e:
-                                        logger.info(f"[{key}] Failed {cmds}: {e}")
-                                else:
-                                    logger.info(f"[{key}] Unknown command: {cmds}")
-
-            logger.info(f"^*{self.padding} Exec Close {self.padding}*^")
-            self.task_close_event.set()
+        async def error_stream() -> None:
+            async for line in transports.stderr:
+                logger.info(line.decode(const.CHARSET).strip())
 
         # Notes: ========== Start from here ==========
-        try:
-            open_file = await FileAssist.read_json(self.focus)
+        if not (check := await device.examine_pkg(self.focus)):
+            raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-            if not (_ := int(open_file.get("loopers", 0))):
-                raise ValueError("循环次数为空")
+        reporter = Reporter(self.src_total_place, self.vault, const.F_SUBSET_DIR)
 
-            if not (package := open_file.get("package", "").strip()):
-                raise ValueError("应用名称为空")
+        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
-            if not (_ := open_file.get(self.align.group, [])):
-                raise ValueError(f"脚本文件为空，未找到字段: {self.align.group}")
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
+        )
 
-        except (FileNotFoundError, TypeError, ValueError, json.JSONDecodeError) as e_:
-            raise MemrixError(e_)
+        team_name = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        await self.refresh(
+            self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
+        )
 
-        if not (check := await device.examine_pkg(package)):
-            raise MemrixError(f"应用名称不存在 {package} -> {check}")
+        # Notes: ========== 启动工具 ==========
+        tracer: "Tracer" = Tracer()
 
-        try:
-            await device.automator_activation()
-        except (u2exc.DeviceError, u2exc.ConnectError) as e_:
-            raise MemrixError(e_)
+        trace_loc = os.path.join(
+            reporter.group_dir, f"{self.file_folder}_trace.perfetto-trace"
+        )
 
-        allowed_extra_task = asyncio.create_task(Api.formatting())
+        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
+        target_folder = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
 
-        if self.storm:
-            function = self.dump_task_start
-        elif self.sleek:
-            function = self.frame_tracer
-        else:
-            raise MemrixError("<UNK>")
+        await device.push(self.ft_file, device_folder)
+        await device.change_mode(777, device_folder)
 
-        auto_exec_task = asyncio.create_task(function(device, package))
+        transports = await device.perfetto_start(device_folder, target_folder)
+        _ = asyncio.create_task(input_stream())
+        _ = asyncio.create_task(error_stream())
 
-        await self.exec_start_event.wait()
-
-        allowed_extra = await allowed_extra_task or [const.WAVERS]
-        player: "Player" = Player(self.src_opera_place, allowed_extra)
-
-        automatic_task = asyncio.create_task(automatic())
-
+        logger.info(f"开始采样 ...")
         await self.task_close_event.wait()
+        await device.perfetto_close()
+        logger.info(f"结束采样 ...")
 
-        automatic_task.cancel()
-        try:
-            await automatic_task
-        except asyncio.CancelledError:
-            logger.info(f"Automated task completed ...")
+        logger.info(f"拉取样本 ...")
+        await device.pull(target_folder, trace_loc)
 
-        await auto_exec_task
+        logger.info(f"分析样本 ...")
+        config = TraceProcessorConfig(self.tp_shell)
+        with TraceProcessor(trace_loc, config=config) as tp:
+            if not (raw_frames := await tracer.extract_primary_frames(tp, self.focus)):
+                raise MemrixError(f"没有有效样本 ...")
+
+            vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
+            vsync_app = await Tracer.extract_vsync_app_points(tp)  # 应用FPS
+
+            roll_ranges = await tracer.extract_roll_ranges(tp)  # 滑动区间
+            drag_ranges = await tracer.extract_drag_ranges(tp)  # 拖拽区间
+
+            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)  # 连续丢帧
+
+            await tracer.annotate_frames(
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
+            )
+
+        start_time = time.time()
+        logger.info(f"渲染报告 ...")
+        async with aiosqlite.connect(reporter.db_file) as db:
+            await Cubicle.create_gfx_table(db)
+            analyzer = Analyzer(
+                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
+            )
+            segment_ms = 5000
+            await analyzer.plot_multiple_segments(
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
+            )
+        logger.info(f"渲染完成 {time.time() - start_time:.2f} s")
 
     # """真相快照"""
     async def create_mem_report(self) -> None:
@@ -527,92 +511,6 @@ class Memrix(object):
             }
             return await analyzer.form_report(self.memory_template, **rendering)
 
-    # Notes: 流畅度测试
-    async def frame_tracer(self, device: "Device", post_pkg: typing.Optional[str] = None) -> None:
-
-        async def input_stream() -> None:
-            async for line in transports.stdout:
-                logger.info(line.decode(const.CHARSET).strip())
-
-        async def error_stream() -> None:
-            async for line in transports.stderr:
-                logger.info(line.decode(const.CHARSET).strip())
-
-        # Notes: ========== Start from here ==========
-        package = post_pkg or self.focus
-
-        if not post_pkg and not (check := await device.examine_pkg(package)):
-            raise MemrixError(f"应用名称不存在 {package} -> {check}")
-
-        reporter = Reporter(self.src_total_place, self.vault, const.F_SUBSET_DIR)
-
-        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
-
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
-        )
-
-        team_name = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
-        await self.refresh(
-            package, reporter.team_file, team_name, device.serial, reporter.before_time
-        )
-
-        # Notes: ========== 启动工具 ==========
-        tracer: "Tracer" = Tracer()
-
-        trace_loc = os.path.join(
-            reporter.group_dir, f"{self.file_folder}_trace.perfetto-trace"
-        )
-
-        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        target_folder = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
-
-        await device.push(self.ft_file, device_folder)
-        await device.change_mode(777, device_folder)
-
-        transports = await device.perfetto_start(device_folder, target_folder)
-        _ = asyncio.create_task(input_stream())
-        _ = asyncio.create_task(error_stream())
-
-        logger.info(f"开始采样 ...")
-        await self.task_close_event.wait()
-        await device.perfetto_close()
-        logger.info(f"结束采样 ...")
-
-        logger.info(f"拉取样本 ...")
-        await device.pull(target_folder, trace_loc)
-
-        logger.info(f"分析样本 ...")
-        config = TraceProcessorConfig(self.tp_shell)
-        with TraceProcessor(trace_loc, config=config) as tp:
-            if not (raw_frames := await tracer.extract_primary_frames(tp, package)):
-                raise MemrixError(f"没有有效样本 ...")
-
-            vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
-            vsync_app = await Tracer.extract_vsync_app_points(tp)  # 应用FPS
-
-            roll_ranges = await tracer.extract_roll_ranges(tp)  # 滑动区间
-            drag_ranges = await tracer.extract_drag_ranges(tp)  # 拖拽区间
-
-            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)  # 连续丢帧
-
-            await tracer.annotate_frames(
-                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
-            )
-
-        start_time = time.time()
-        logger.info(f"渲染报告 ...")
-        async with aiosqlite.connect(reporter.db_file) as db:
-            await Cubicle.create_gfx_table(db)
-            analyzer = Analyzer(
-                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
-            )
-            segment_ms = 5000
-            await analyzer.plot_multiple_segments(
-                raw_frames, roll_ranges, drag_ranges, jank_ranges, segment_ms, self.file_folder
-            )
-        logger.info(f"渲染完成 {time.time() - start_time:.2f} s")
-
 
 # """Main"""
 async def main() -> typing.Optional[typing.Any]:
@@ -668,7 +566,7 @@ async def main() -> typing.Optional[typing.Any]:
         if not (device := await manage.operate_device(cmd_lines.imply)):
             raise MemrixError(f"没有连接设备 ...")
 
-        signal.signal(signal.SIGINT, memrix.clean_up)
+        signal.signal(signal.SIGINT, memrix.task_clean_up)
 
         return await function(device)
 
@@ -820,7 +718,7 @@ async def main() -> typing.Optional[typing.Any]:
     await align.load_align()
 
     positions = (
-        cmd_lines.sleek, cmd_lines.storm, cmd_lines.pulse, cmd_lines.forge,
+        cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
         cmd_lines.focus, cmd_lines.vault
     )
     keywords = {
@@ -837,14 +735,15 @@ async def main() -> typing.Optional[typing.Any]:
 
     memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
-    if cmd_lines.sleek:
-        return await arithmetic(memrix.frame_tracer)
-    elif cmd_lines.storm:
-        return await arithmetic(memrix.dump_task_start)
-    elif cmd_lines.pulse:
-        return arithmetic(memrix.exec_task_start)
+    if cmd_lines.storm:
+        return await arithmetic(memrix.mem_dump_task)
+
+    elif cmd_lines.sleek:
+        return await arithmetic(memrix.gfx_dump_task)
+
     elif cmd_lines.forge:
         return await memrix.create_mem_report()
+
     else:
         return None
 

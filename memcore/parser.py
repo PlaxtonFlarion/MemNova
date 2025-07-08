@@ -48,16 +48,6 @@ class Parser(object):
         )
         major_group = mutually_exclusive.add_mutually_exclusive_group()
 
-        # todo
-        major_group.add_argument(
-            "--sleek", action="store_true",
-            help=textwrap.dedent(f'''\
-                \033[1;34m^*流畅度*^\033[0m
-                -------------------------
-                - 流畅度
-            ''')
-        )
-
         major_group.add_argument(
             "--storm", action="store_true",
             help=textwrap.dedent(f'''\
@@ -71,15 +61,11 @@ class Parser(object):
             ''')
         )
         major_group.add_argument(
-            "--pulse", action="store_true",
+            "--sleek", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m^*巡航引擎*^\033[0m
+                \033[1;34m^*z帧影流光*^\033[0m
                 -------------------------
-                - 启动 **巡航引擎模式**，读取指定的 **JSON** 文件，根据其中定义的关键步骤，执行 **UI** 自动化操作。
-                - **Memrix** 会在执行过程中使用 **异步协程机制**，持续实时检测内存状态，确保测试流程与内存监控同步进行。
-                - **JSON** 脚本需符合自动化指令格式规范（如点击、滑动、输入、等待等），可结合 **UI** 控制引擎使用。
-                - 该命令适用于复杂场景模拟、自动化行为验证、压力场景下的内存异常捕捉等任务。
-                - 手动中断（Ctrl+C）。
+                - 流畅度
 
             ''')
         )

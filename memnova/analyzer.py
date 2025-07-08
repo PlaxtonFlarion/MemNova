@@ -47,23 +47,6 @@ class Analyzer(object):
         self.download = download
 
     async def form_report(self, template: str, *args, **kwargs) -> None:
-        """
-        渲染最终 HTML 报告页面，并保存至下载目录。
-
-        使用 Jinja2 模板引擎将传入的统计结果、图表路径等数据注入 HTML 模板中。
-        输出文件名以 `Inform_时间戳.html` 命名，存放在 `self.download` 指定目录。
-
-        Parameters
-        ----------
-        template : str
-            HTML 模板文件的绝对路径。
-
-        *args :
-            位置参数，传递给 Jinja2 模板。
-
-        **kwargs :
-            关键字参数，作为模板渲染上下文传入。
-        """
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -82,59 +65,8 @@ class Analyzer(object):
         Design.build_file_tree(html_file)
 
     async def draw_memory(self, data_dir: str) -> dict[str, str]:
-        """
-        生成指定数据目录下的前台与后台内存曲线图（HTML 格式），并返回关键统计结果。
-
-        本方法将从数据库中提取对应轮次的数据，分别绘制前台（fg）与后台（bg）曲线图，
-        每张图均包含：
-        - PSS 曲线
-        - 峰值 / 均值标记点与标注线
-        - RSS / USS 数据悬浮提示
-        - 当前 Activity 与 UID 优先级信息
-        - 可隐藏图例、平滑颜色渐变、平均带宽区间标识
-
-        Parameters
-        ----------
-        data_dir : str
-            数据目录标识（即本轮采集数据的标记，用于生成报告路径和图表命名）。
-
-        Returns
-        -------
-        dict[str, str]
-            包含以下键的字典：
-            - fg_max / bg_max：PSS 峰值（MB）
-            - fg_avg / bg_avg：PSS 均值（MB）
-            - fg_loc / bg_loc：图表文件相对路径
-            - minor_title：本轮任务的标识标题
-        """
 
         async def draw(file_name: str, data_list: list[tuple]) -> dict:
-            """
-            绘制指定数据列表的内存曲线图（PSS），并保存为交互式 HTML 文件。
-
-            图表使用 Bokeh 构建，展示内存随时间变化的趋势线，并附带峰值、均值标记，
-            支持自定义颜色、图例折叠、悬浮提示、横向辅助线等视觉信息。
-
-            Parameters
-            ----------
-            file_name : str
-                图表类型标识（如 "fg" 或 "bg"），用于文件命名与图例标识。
-
-            data_list : list[tuple]
-                从数据库中提取的原始内存数据，每项包含：
-                (timestamp, rss, pss, uss, opss, activity, adj, foreground)
-
-            Returns
-            -------
-            dict
-                图表渲染后的统计信息字典，包含：
-                - {file_name}_max : str
-                    当前数据中的 PSS 峰值（单位 MB）
-                - {file_name}_avg : str
-                    当前数据中的 PSS 平均值（单位 MB）
-                - {file_name}_loc : str
-                    图表文件的相对路径（用于最终报告整合）
-            """
             if not data_list:
                 return {}
 
@@ -296,39 +228,6 @@ class Analyzer(object):
         return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
 
     @staticmethod
-    async def score_segment(
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            fps_key: str
-    ) -> typing.Optional[float]:
-
-        if len(frames) < 5:
-            return None
-
-        if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
-            return None
-
-        jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
-        jank_score = min(jank_total / duration, 1.0)
-
-        threshold_ms = 1000 / 60  # 可适配设备帧率
-        latency_score = sum(1 for f in frames if f["duration_ms"] > threshold_ms) / len(frames)
-
-        fps_values = [f.get(fps_key) for f in frames if f.get(fps_key)]
-        if len(fps_values) >= 2:
-            fps_std = statistics.stdev(fps_values)
-            fps_score = min(fps_std / 10, 1.0)  # 可调参数
-        else:
-            fps_score = 0
-
-        motion_total = sum(r["end_ts"] - r["start_ts"] for r in roll_ranges + drag_ranges)
-        motion_score = 1.0 if motion_total >= 500 else motion_total / 500
-
-        return round(jank_score * 0.4 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.2, 3)
-
-    @staticmethod
     async def split_frames_by_time(frames: list[dict], segment_ms: int) -> list[list[dict]]:
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
         segments = []
@@ -343,6 +242,57 @@ class Analyzer(object):
             cur_start = cur_end  # 保证不重叠
 
         return segments
+
+    @staticmethod
+    async def score_segment(
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            fps_key: str
+    ) -> typing.Optional[float]:
+
+        if len(frames) < 5:
+            return None
+
+        if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
+            return None
+
+        # 🟩 Jank 比例
+        jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
+        jank_score = 1.0 - min(jank_total / duration, 1.0)
+
+        # 🟩 帧延迟：超过理想帧时长的占比（如16.67ms）
+        ideal_frame_time = 1000 / 60
+        over_threshold = sum(1 for f in frames if f["duration_ms"] > ideal_frame_time)
+        latency_score = 1.0 - over_threshold / len(frames)
+
+        # 🟩 FPS 波动越大越扣分；越稳定越高分
+        fps_values = [f.get(fps_key) for f in frames if f.get(fps_key)]
+        if len(fps_values) >= 2:
+            fps_std = statistics.stdev(fps_values)
+            fps_stability = max(1.0 - min(fps_std / 10, 1.0), 0.0)
+        else:
+            fps_stability = 1.0  # 缺失帧率不扣分
+
+        # 🔸 额外考虑平均FPS较低的情况
+        fps_avg = sum(fps_values) / len(fps_values) if fps_values else 60
+        fps_penalty = min(fps_avg / 60, 1.0)
+        fps_score = fps_stability * fps_penalty
+
+        # 🟩 有滑动/拖拽越多说明有交互，不能因为空白区域得高分
+        motion_total = sum(r["end_ts"] - r["start_ts"] for r in roll_ranges + drag_ranges)
+        motion_score = min(motion_total / duration, 1.0)
+
+        # ✅ 综合得分：越高越流畅
+        final_score = (
+            jank_score * 0.4 +
+            latency_score * 0.2 +
+            fps_score * 0.2 +
+            motion_score * 0.2
+        )
+
+        return round(final_score, 3)
 
     @staticmethod
     async def plot_frame_analysis(
@@ -448,37 +398,37 @@ class Analyzer(object):
             if score >= 0.85:
                 return {
                     "level": "A+",
-                    "color": "#00B050",  # 绿色
+                    "color": "#007E33",  # 深绿
                     "label": "极其流畅，无明显波动"
                 }
             elif score >= 0.7:
                 return {
                     "level": "A",
-                    "color": "#92D050",  # 浅绿
+                    "color": "#3FAD00",  # 草绿
                     "label": "流畅稳定，仅偶尔波动"
                 }
             elif score >= 0.55:
                 return {
                     "level": "B",
-                    "color": "#FFFF00",  # 黄色
+                    "color": "#F4B400",  # 鲜黄
                     "label": "有部分抖动，整体尚可"
                 }
             elif score >= 0.4:
                 return {
                     "level": "C",
-                    "color": "#FFC000",  # 橙色
+                    "color": "#FF8C00",  # 深橙
                     "label": "波动明显，体验一般"
                 }
             elif score >= 0.25:
                 return {
                     "level": "D",
-                    "color": "#FF6600",  # 深橙
+                    "color": "#E04B00",  # 红橙
                     "label": "卡顿较多，影响操作"
                 }
             else:
                 return {
                     "level": "E",
-                    "color": "#C00000",  # 红色
+                    "color": "#B00020",  # 深红
                     "label": "严重卡顿，建议优化"
                 }
 
