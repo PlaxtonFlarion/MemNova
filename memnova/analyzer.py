@@ -46,7 +46,7 @@ class Analyzer(object):
         self.db = db
         self.download = download
 
-    async def form_report(self, template: str, *args, **kwargs) -> None:
+    async def make_report(self, template: str, *args, **kwargs) -> None:
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -76,7 +76,7 @@ class Analyzer(object):
                 return {}
 
             data = {
-                "x": [datetime.strptime(t, "%Y-%m-%d %H:%M:%S") for t in timestamp],
+                "x": [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamp],
                 "y": pss,
                 "rss": rss,
                 "uss": uss,
@@ -228,22 +228,6 @@ class Analyzer(object):
         return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
 
     @staticmethod
-    async def split_frames_by_time(frames: list[dict], segment_ms: int) -> list[list[dict]]:
-        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
-        segments = []
-        start_ts = frames[0]["timestamp_ms"]
-        close_ts = frames[-1]["timestamp_ms"]
-
-        cur_start = start_ts
-        while cur_start < close_ts:
-            cur_end = cur_start + segment_ms
-            if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
-                segments.append(seg)
-            cur_start = cur_end  # 保证不重叠
-
-        return segments
-
-    @staticmethod
     async def score_segment(
             frames: list[dict],
             roll_ranges: list[dict],
@@ -295,7 +279,7 @@ class Analyzer(object):
         return round(final_score, 3)
 
     @staticmethod
-    async def plot_frame_analysis(
+    async def plot_analysis(
             frames: list[dict],
             x_start: int | float,
             x_close: int | float,
@@ -384,15 +368,22 @@ class Analyzer(object):
 
         return p
 
-    async def plot_multiple_segments(
-            self,
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            segment_ms: int,
-            data_dir: str
-    ) -> typing.Optional[dict]:
+    async def plot_segments(self, data_dir: str) -> typing.Optional[dict]:
+
+        def split_frames_by_time(frames: list[dict], segment_ms: int = 5000) -> list[list[dict]]:
+            frames = sorted(frames, key=lambda f: f["timestamp_ms"])
+            segments = []
+            start_ts = frames[0]["timestamp_ms"]
+            close_ts = frames[-1]["timestamp_ms"]
+
+            cur_start = start_ts
+            while cur_start < close_ts:
+                cur_end = cur_start + segment_ms
+                if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
+                    segments.append(seg)
+                cur_start = cur_end
+
+            return segments
 
         def quality_label(score: float) -> dict:
             if score >= 0.85:
@@ -432,7 +423,11 @@ class Analyzer(object):
                     "label": "严重卡顿，建议优化"
                 }
 
-        segment_list = await self.split_frames_by_time(frames, segment_ms)
+        frame_data, *_ = await Cubicle.query_gfx_data(self.db, data_dir)
+        raw_frames, *_, roll_ranges, drag_ranges, jank_ranges = frame_data
+        os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
+
+        segment_list = split_frames_by_time(raw_frames)
 
         conspiracy = []
 
@@ -447,7 +442,7 @@ class Analyzer(object):
                 continue
             labels = quality_label(seg_score)
 
-            p = await self.plot_frame_analysis(
+            p = await self.plot_analysis(
                 frames=segment,
                 x_start=x_start - padding,
                 x_close=x_close + padding,
@@ -462,14 +457,13 @@ class Analyzer(object):
         if not conspiracy:
             return None
 
-        os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
-
         file_path = os.path.join(group, f"{data_dir}.html")
         output_file(file_path)
         save(column(*conspiracy, sizing_mode="stretch_width"))
 
         return {
-            f"frame_analysis_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+            "frame_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path)),
+            "minor_title": data_dir
         }
 
 

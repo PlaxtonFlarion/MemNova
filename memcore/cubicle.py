@@ -176,17 +176,12 @@ class Cubicle(object):
             data_dir TEXT,
             label TEXT,
             timestamp INTEGER,
-            timestamp_ms REAL,
-            duration_ms REAL,
-            layer_name TEXT,
-            process_name TEXT,
-            frame_type TEXT,
-            gpu_composition INTEGER DEFAULT 0,
-            on_time_finish INTEGER DEFAULT 0,
-            is_jank INTEGER DEFAULT 0,
-            in_roll INTEGER DEFAULT 0,
-            in_drag INTEGER DEFAULT 0,
-            in_jank_range INTEGER DEFAULT 0)''')
+            raw_frames TEXT,
+            vsync_sys TEXT,
+            vsync_app TEXT,
+            roll_ranges TEXT,
+            drag_ranges TEXT,
+            jank_ranges TEXT)''')
         await db.commit()
 
     @staticmethod
@@ -216,17 +211,12 @@ class Cubicle(object):
                 data_dir,
                 label,
                 timestamp,
-                gfx_info["timestamp_ms"],
-                gfx_info["duration_ms"],
-                gfx_info["layer_name"],
-                gfx_info["process_name"],
-                gfx_info["frame_type"],
-                gfx_info["gpu_composition"],
-                gfx_info["on_time_finish"],
-                gfx_info["is_jank"],
-                gfx_info["in_roll"],
-                gfx_info["in_drag"],
-                gfx_info["in_jank_range"],
+                gfx_info["raw_frames"],
+                gfx_info["vsync_sys"],
+                gfx_info["vsync_app"],
+                gfx_info["roll_ranges"],
+                gfx_info["drag_ranges"],
+                gfx_info["jank_ranges"]
             )
         )
         await db.commit()
@@ -235,21 +225,14 @@ class Cubicle(object):
     async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
         SELECT
-            timestamp_ms,
-            duration_ms,
-            is_jank,
-            layer_name,
-            process_name,
-            frame_type,
-            gpu_composition,
-            on_time_finish,
-            is_jank,
-            in_roll,
-            in_drag,
-            in_jank_range
+            raw_frames,
+            vsync_sys,
+            vsync_app,
+            roll_ranges,
+            drag_ranges,
+            jank_ranges
         FROM {Cubicle.mem_data_table}
         WHERE data_dir = '{data_dir}'
-        ORDER BY timestamp_ms ASC
         """
         return await Cubicle.find_data(db, sql)
 

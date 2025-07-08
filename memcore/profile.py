@@ -28,9 +28,6 @@ class Align(object):
             "speed": 1.0,
             "label": "应用名称"
         },
-        "Script": {
-            "group": "mission"
-        },
         "Report": {
             "fg_max": 0.0,
             "fg_avg": 0.0,
@@ -63,13 +60,6 @@ class Align(object):
         当前测试任务的标签或名称，用于日志与报告标注。
         """
         return self.aligns["Memory"]["label"]
-
-    @property
-    def group(self):
-        """
-        JSON 自动化脚本中任务组字段名。
-        """
-        return self.aligns["Script"]["group"]
 
     @property
     def fg_max(self):
@@ -120,10 +110,6 @@ class Align(object):
     @label.setter
     def label(self, value: typing.Any):
         self.aligns["Memory"]["label"] = value
-
-    @group.setter
-    def group(self, value: typing.Any):
-        self.aligns["Script"]["group"] = value
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):

@@ -704,8 +704,7 @@ class Design(object):
                 sc = "#AF87FF"
 
             return textwrap.dedent(f"""\
-                [bold #EEEEEE][{brand}::EXC] [bold #FFD75F]{memories['exc']}[/]
-                [{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
+                [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
                 [{brand}::STT] [bold {sc}]{memories['stt'].upper()}[/]
                 [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
                 [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
