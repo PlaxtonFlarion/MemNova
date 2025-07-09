@@ -11,7 +11,9 @@
 
 import os
 import time
+import typing
 from pathlib import Path
+from memcore.profile import Align
 from memnova import const
 
 
@@ -34,6 +36,85 @@ class Reporter(object):
         self.db_file = os.path.join(self.total_dir, const.DB_FILE)
         self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{vault}.log")
         self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
+
+    @staticmethod
+    def mem_rendition(align: "Align" , team_data: dict, report_list: list[dict]) -> dict:
+
+        def mean_of_field(field: str) -> typing.Optional[float]:
+            values = [float(i[field]) for i in report_list if field in i]
+            return sum(values) / len(values) if values else None
+
+        fg_final = {
+            "前台峰值": (avg_fg_max := mean_of_field("fg_max")),
+            "前台均值": (avg_fg_avg := mean_of_field("fg_avg")),
+        }
+        bg_final = {
+            "后台峰值": (avg_bg_max := mean_of_field("bg_max")),
+            "后台均值": (avg_bg_avg := mean_of_field("bg_avg")),
+        }
+
+        conclusion = []
+        if avg_fg_max and avg_fg_max > align.fg_max:
+            conclusion.append("前台峰值超标")
+        if avg_fg_avg and avg_fg_avg > align.fg_avg:
+            conclusion.append("前台均值超标")
+        if avg_bg_max and avg_bg_max > align.bg_max:
+            conclusion.append("后台峰值超标")
+        if avg_bg_avg and avg_bg_avg > align.bg_avg:
+            conclusion.append("后台均值超标")
+        expiry = ["Fail"] if conclusion else ["Pass"]
+
+        return {
+            "title": f"{const.APP_DESC} Information",
+            "headline": align.headline,
+            "major_summary_items": [
+                {
+                    "label": "测试时间",
+                    "value": [team_data["time"]],
+                },
+                {
+                    "label": "测试结论",
+                    "value": expiry + conclusion,
+                },
+                {
+                    "label": "参考标准",
+                    "value": [
+                        f"FG-MAX: {align.fg_max:.2f} MB",
+                        f"FG-AVG: {align.fg_avg:.2f} MB",
+                        f"BG-MAX: {align.bg_max:.2f} MB",
+                        f"BG-AVG: {align.bg_avg:.2f} MB",
+                    ]
+                },
+                {
+                    "label": "准出标准",
+                    "value": [align.criteria]
+                }
+            ],
+            "minor_summary_items": [
+                [f"{k}: {v} MB" for k, v in fg_final.items() if v],
+                [f"{k}: {v} MB" for k, v in bg_final.items() if v],
+            ],
+            "report_list": report_list
+        }
+
+    @staticmethod
+    def gfx_rendition(align: "Align" , team_data: dict, report_list: list[dict]) -> dict:
+
+        return {
+            "title": f"{const.APP_DESC} Information",
+            "headline": align.headline,
+            "major_summary_items": [
+                {
+                    "label": "测试时间",
+                    "value": [team_data["time"]],
+                },
+                {
+                    "label": "准出标准",
+                    "value": [align.criteria]
+                }
+            ],
+            "report_list": report_list
+        }
 
 
 if __name__ == '__main__':

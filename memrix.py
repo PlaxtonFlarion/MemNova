@@ -405,8 +405,11 @@ class Memrix(object):
         # Notes: ========== 启动工具 ==========
         tracer: "Tracer" = Tracer()
 
+        if not (traces := Path(reporter.group_dir) / "Traces").exists():
+            traces.mkdir(parents=True, exist_ok=True)
+
         trace_loc = os.path.join(
-            reporter.group_dir, f"{self.file_folder}_trace.perfetto-trace"
+            traces, f"{self.file_folder}_trace.perfetto-trace"
         )
 
         device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
