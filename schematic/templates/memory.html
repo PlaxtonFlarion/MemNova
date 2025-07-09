@@ -156,24 +156,25 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }
-        .fg-link, .bg-link {
+
+        .access {
             display: flex;
             color: #ffee00;
             text-decoration: none;
             border-radius: 20px;
             background-image: linear-gradient(45deg, #8baaaa 0%, #ae8b9c 100%);
         }
-        .fg-link:hover, .bg-link:hover {
+        .access:hover {
             color: aquamarine;
             cursor: pointer;
         }
-        .fg-link:active, .bg-link:active {
+        .access:active {
             transform: scale(0.9);
         }
-        .fg-link:visited, .bg-link:visited {
+        .access:visited {
             color: aquamarine;
         }
-        .fg-link:visited:hover, .bg-link:visited:hover {
+        .access:visited:hover {
             color: rgb(255, 255, 255);
         }
 
@@ -391,14 +392,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             <div class="fg-detail">
                 <p class="fg-max">FG-MAX: {{ res.fg_max }} MB</p>
                 <p class="fg-avg">FG-AVG: {{ res.fg_avg }} MB</p>
-                <a class="fg-link" href="{{ res.fg_loc }}" target="_blank">查看详情</a>
+                <a class="access" href="{{ res.fg_loc }}" target="_blank">查看详情</a>
             </div>
             {% endif %}
             {% if res.bg_loc %}
             <div class="bg-detail">
                 <p class="bg-max">BG-MAX: {{ res.bg_max }} MB</p>
                 <p class="bg-avg">BG-AVG: {{ res.bg_avg }} MB</p>
-                <a class="bg-link" href="{{ res.bg_loc }}" target="_blank">查看详情</a>
+                <a class="access" href="{{ res.bg_loc }}" target="_blank">查看详情</a>
             </div>
             {% endif %}
         </div>
@@ -466,21 +467,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             });
         }
 
-        // 前台数据链接
-        var fgLink = document.querySelectorAll('.fg-link');
-        if (fgLink) {
-            fgLink.forEach((link, idx) => {
-                link.addEventListener('click', function(e) {
-                    showLoadingAnimation();
-                });
-            });
-        }
-
-        // 后台数据链接
-        var bgLink = document.querySelectorAll('.bg-link');
-        if (bgLink) {
-            bgLink.forEach((link, idx) => {
-                link.addEventListener('click', function(e) {
+        // 数据链接
+        var accessPage = document.querySelectorAll('.access');
+        if (accessPage) {
+            accessPage.forEach((page, idx) => {
+                page.addEventListener('click', function(e) {
                     showLoadingAnimation();
                 });
             });

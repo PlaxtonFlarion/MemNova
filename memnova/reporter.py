@@ -70,7 +70,7 @@ class Reporter(object):
             "major_summary_items": [
                 {
                     "label": "测试时间",
-                    "value": [team_data["time"]],
+                    "value": [team_data.get("time", "Unknown")]
                 },
                 {
                     "label": "测试结论",
