@@ -90,7 +90,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         /* 主要 */
-        .meminfo {
+        .information {
             display: flex;
             border-radius: 20px;
             margin: 0 30px 20px 30px;
@@ -99,7 +99,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 5px 5px 15px rgb(0 0 0 / 30%);
             background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
         }
-        .meminfo:hover {
+        .information:hover {
             box-shadow: 5px 5px 15px rgb(0 0 0 / 50%);
             transform: scale(1.01);
             transition: transform 0.3s ease;
@@ -268,13 +268,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0px 0px 10px rgb(203, 80, 42);
         }
 
-        .test-time, .test-message, .test-reference, .test-standard {
-            display: flex;
-            align-items: center;
-        }
-        .test-time p, .test-message p, .test-reference p, .test-standard p {
-            margin: 5px 0 5px 5px;
-        }
+        /* 时间 */
         #time {
             margin-right: 10px;
             font-weight: bold;
@@ -282,7 +276,16 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 5px;
             background-image: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%);
         }
-        .test-time p:first-child, .test-message p:first-child, .test-reference p:first-child, .test-standard p:first-child {
+
+        .test-time, .test-message, .test-reference, .test-standard {
+            display: flex;
+            align-items: center;
+        }
+        .test-time p, .test-message p, .test-reference p, .test-standard p {
+            margin: 5px 0 5px 5px;
+        }
+
+        .schema {
             white-space: nowrap;
             margin-right: 10px;
             font-weight: bold;
@@ -335,22 +338,22 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <div class="summary-container">
         <div id="major-summary">
             <div class="test-time">
-                <p>测试时间</p>
+                <p class="schema">测试时间</p>
                 <p id="time">{{ major.time }}</p>
             </div>
             <div class="test-message">
-                <p>测试结论</p>
+                <p class="schema">测试结论</p>
                 <p></p>
             </div>
             <div class="test-reference">
-                <p>参考标准</p>
+                <p class="schema">参考标准</p>
                 <p class="refer" data-standard-fg-max="{{ level.fg_max }}">FG-MAX: {{ level.fg_max }} MB</p>
                 <p class="refer" data-standard-fg-avg="{{ level.fg_avg }}">FG-AVG: {{ level.fg_avg }} MB</p>
                 <p class="refer" data-standard-bg-max="{{ level.bg_max }}">BG-MAX: {{ level.bg_max }} MB</p>
                 <p class="refer" data-standard-bg-avg="{{ level.bg_avg }}">BG-AVG: {{ level.bg_avg }} MB</p>
             </div>
             <div class="test-standard">
-                <p>准出标准</p>
+                <p class="schema">准出标准</p>
                 <p>{{ major.criteria }}</p>
             </div>
         </div>
@@ -378,7 +381,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
     <!--主要信息显示-->
     {% for res in report_list %}
-    <div class="meminfo">
+    <div class="information">
         <div class="minor-title">
             <h2>{{ res.minor_title }}</h2>
         </div>
@@ -439,48 +442,48 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         var fgCopyButton = document.getElementById('fg-copy');
         if (fgCopyButton) {
             fgCopyButton.addEventListener('click', function(e) {
-            copied({
-                detailSelector: '.fg-detail',
-                maxSelector: '.fg-max',
-                avgSelector: '.fg-avg',
-                maxRegex: fgMaxRegex,
-                avgRegex: fgAvgRegex
+                copied({
+                    detailSelector: '.fg-detail',
+                    maxSelector: '.fg-max',
+                    avgSelector: '.fg-avg',
+                    maxRegex: fgMaxRegex,
+                    avgRegex: fgAvgRegex
+                });
             });
-        });
         }
 
         // 复制后台数据
         var bgCopyButton = document.getElementById('bg-copy');
         if (bgCopyButton) {
             bgCopyButton.addEventListener('click', function(e) {
-            copied({
-                detailSelector: '.bg-detail',
-                maxSelector: '.bg-max',
-                avgSelector: '.bg-avg',
-                maxRegex: bgMaxRegex,
-                avgRegex: bgAvgRegex
+                copied({
+                    detailSelector: '.bg-detail',
+                    maxSelector: '.bg-max',
+                    avgSelector: '.bg-avg',
+                    maxRegex: bgMaxRegex,
+                    avgRegex: bgAvgRegex
+                });
             });
-        });
         }
 
         // 前台数据链接
         var fgLink = document.querySelectorAll('.fg-link');
         if (fgLink) {
             fgLink.forEach((link, idx) => {
-            link.addEventListener('click', function(e) {
-                showLoadingAnimation();
+                link.addEventListener('click', function(e) {
+                    showLoadingAnimation();
+                });
             });
-        });
         }
 
         // 后台数据链接
         var bgLink = document.querySelectorAll('.bg-link');
         if (bgLink) {
             bgLink.forEach((link, idx) => {
-            link.addEventListener('click', function(e) {
-                showLoadingAnimation();
+                link.addEventListener('click', function(e) {
+                    showLoadingAnimation();
+                });
             });
-        });
         }
 
         // 复制
@@ -579,7 +582,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             }
 
             // 绘制圆形标签
-            let checkMemoryInfo = document.querySelectorAll('.meminfo');
+            let checkMemoryInfo = document.querySelectorAll('.information');
             checkMemoryInfo.forEach((memoryInfo, idx) => {
                 let fgSerial = Array.from(memoryInfo.querySelectorAll('.fg-detail p'));
                 let bgSerial = Array.from(memoryInfo.querySelectorAll('.bg-detail p'));

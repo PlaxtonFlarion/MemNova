@@ -489,25 +489,35 @@ class Memrix(object):
             if not (report_list := asyncio.gather(*(analyzer.draw_memory(d) for d in data_list))):
                 raise MemrixError(f"No data scenario {report_list} ...")
 
-            # 计算多组数据前台峰值
-            avg_fg_max_values = [float(i["fg_max"]) for i in report_list if "fg_max" in i]
-            avg_fg_max = f"{sum(avg_fg_max_values) / len(avg_fg_max_values):.2f}" if avg_fg_max_values else None
-            # 计算多组数据前台均值
-            avg_fg_avg_values = [float(i["fg_avg"]) for i in report_list if "fg_avg" in i]
-            avg_fg_avg = f"{sum(avg_fg_avg_values) / len(avg_fg_avg_values):.2f}" if avg_fg_avg_values else None
+            def mean_of_field(field: str) -> typing.Optional[float]:
+                values = [float(i[field]) for i in report_list if field in i]
+                return sum(values) / len(values) if values else None
 
-            # 计算多组数据后台峰值
-            avg_bg_max_values = [float(i["bg_max"]) for i in report_list if "bg_max" in i]
-            avg_bg_max = f"{sum(avg_bg_max_values) / len(avg_bg_max_values):.2f}" if avg_bg_max_values else None
-            # 计算多组数据后台均值
-            avg_bg_avg_values = [float(i["bg_avg"]) for i in report_list if "bg_avg" in i]
-            avg_bg_avg = f"{sum(avg_bg_avg_values) / len(avg_bg_avg_values):.2f}" if avg_bg_avg_values else None
+            fg_final = {
+                "前台峰值": (avg_fg_max := mean_of_field("fg_max")),
+                "前台均值": (avg_fg_avg := mean_of_field("fg_avg")),
+            }
+            bg_final = {
+                "后台峰值": (avg_bg_max := mean_of_field("bg_max")),
+                "后台均值": (avg_bg_avg := mean_of_field("bg_avg")),
+            }
+
+            conclusion = []
+            if avg_fg_max and avg_fg_max > self.align.fg_max:
+                conclusion.append("前台峰值超标")
+            if avg_fg_avg and avg_fg_avg > self.align.fg_avg:
+                conclusion.append("前台均值超标")
+            if avg_bg_max and avg_bg_max > self.align.bg_max:
+                conclusion.append("后台峰值超标")
+            if avg_bg_avg and avg_bg_avg > self.align.bg_avg:
+                conclusion.append("后台均值超标")
+            expiry = ["Fail"] if conclusion else ["Pass"]
 
             rendition = {
                 "title": f"{const.APP_DESC} Information",
                 "headline": self.align.headline,
                 "major": {
-                    "time": team_data["time"],
+                    "time": team_data.get("time", "Unknown"),
                     "criteria": self.align.criteria,
                 },
                 "level": {
@@ -517,10 +527,10 @@ class Memrix(object):
                     "bg_avg": f"{self.align.bg_avg:.2f}",
                 },
                 "average": {
-                    "avg_fg_max": avg_fg_max,
-                    "avg_fg_avg": avg_fg_avg,
-                    "avg_bg_max": avg_bg_max,
-                    "avg_bg_avg": avg_bg_avg,
+                    "avg_fg_max": f"{avg_fg_max:.2f}",
+                    "avg_fg_avg": f"{avg_fg_avg:.2f}",
+                    "avg_bg_max": f"{avg_bg_max:.2f}",
+                    "avg_bg_avg": f"{avg_bg_avg:.2f}",
                 },
                 "report_list": report_list
             }
