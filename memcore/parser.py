@@ -24,8 +24,8 @@ class Parser(object):
     def __init__(self):
         custom_made_usage = f"""\
         --------------------------------------------
-        \033[1;35m{const.APP_NAME}\033[0m --storm --focus <com.example.application> --imply <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --pulse --focus <file.path> --imply <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --storm --focus <com.example.app> --imply <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --sleek --focus <com.example.app> --imply <device.serial>
         \033[1;35m{const.APP_NAME}\033[0m --forge --focus <file.name>
         \033[1;35m{const.APP_NAME}\033[0m --align
         """

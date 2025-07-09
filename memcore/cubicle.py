@@ -227,12 +227,7 @@ class Cubicle(object):
     async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
         SELECT
-            raw_frames,
-            vsync_sys,
-            vsync_app,
-            roll_ranges,
-            drag_ranges,
-            jank_ranges
+            raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges
         FROM {Cubicle.gfx_data_table}
         WHERE data_dir = '{data_dir}'
         """

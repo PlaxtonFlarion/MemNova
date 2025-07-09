@@ -97,25 +97,6 @@ class Reporter(object):
             "report_list": report_list
         }
 
-    @staticmethod
-    def gfx_rendition(align: "Align" , team_data: dict, report_list: list[dict]) -> dict:
-
-        return {
-            "title": f"{const.APP_DESC} Information",
-            "headline": align.headline,
-            "major_summary_items": [
-                {
-                    "label": "测试时间",
-                    "value": [team_data["time"]],
-                },
-                {
-                    "label": "准出标准",
-                    "value": [align.criteria]
-                }
-            ],
-            "report_list": report_list
-        }
-
 
 if __name__ == '__main__':
     pass

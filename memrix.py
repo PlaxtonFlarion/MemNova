@@ -505,44 +505,26 @@ class Memrix(object):
 
             rendition = {
                 "title": f"{const.APP_DESC} Information",
+                "headline": self.align.headline,
                 "major": {
                     "time": team_data["time"],
-                    "headline": self.align.headline,
                     "criteria": self.align.criteria,
                 },
                 "level": {
-                    "fg_max": f"{self.align.fg_max:.2f}", "fg_avg": f"{self.align.fg_avg:.2f}",
-                    "bg_max": f"{self.align.bg_max:.2f}", "bg_avg": f"{self.align.bg_avg:.2f}",
+                    "fg_max": f"{self.align.fg_max:.2f}",
+                    "fg_avg": f"{self.align.fg_avg:.2f}",
+                    "bg_max": f"{self.align.bg_max:.2f}",
+                    "bg_avg": f"{self.align.bg_avg:.2f}",
                 },
                 "average": {
-                    "avg_fg_max": avg_fg_max, "avg_fg_avg": avg_fg_avg,
-                    "avg_bg_max": avg_bg_max, "avg_bg_avg": avg_bg_avg,
+                    "avg_fg_max": avg_fg_max,
+                    "avg_fg_avg": avg_fg_avg,
+                    "avg_bg_max": avg_bg_max,
+                    "avg_bg_avg": avg_bg_avg,
                 },
                 "report_list": report_list
             }
             return await analyzer.make_report(self.memory_template, **rendition)
-
-    async def create_gfx_report(self) -> None:
-        reporter = Reporter(self.src_total_place, self.focus, const.F_SUBSET_DIR)
-
-        for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
-            if not Path(file).is_file():
-                raise MemrixError(f"文件无效 {file}")
-
-        async with aiosqlite.connect(reporter.db_file) as db:
-            analyzer = Analyzer(
-                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
-            )
-
-            team_data = await FileAssist.read_yaml(reporter.team_file)
-            if not (data_list := team_data["file"]):
-                raise MemrixError(f"No data scenario {data_list} ...")
-
-            start_time = time.time()
-            logger.info(f"渲染报告 ...")
-            if not (report_list := asyncio.gather(*(analyzer.plot_segments(d) for d in data_list))):
-                raise MemrixError(f"No data scenario {report_list} ...")
-            logger.info(f"渲染完成 {time.time() - start_time:.2f} s")
 
 
 # """Main"""

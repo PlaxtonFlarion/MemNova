@@ -18,12 +18,12 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <title>{{ title }}</title>
     <style>
         /* 标题容器 */
-        #title-container {
+        #headline-container {
             display: flex;
             justify-content: center;
         }
         /* 标题 */
-        #major-title {
+        #headline {
             font-size: 2.5em;
             color: rgb(90, 90, 90);
             padding: 10px 20px;
@@ -36,7 +36,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             transition: all 0.3s ease-in-out;
         }
         /* 标题悬浮 */
-        #major-title:hover {
+        #headline:hover {
             transform: scale(1.05);
             cursor: grab;
         }
@@ -51,7 +51,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background-image: linear-gradient(to top, #fff1eb 0%, #ace0f9 100%);
         }
         /* 摘要 */
-        #test-summary, #test-display {
+        #major-summary, #minor-summary {
             display: block;
         }
 
@@ -327,13 +327,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 </head>
 <body>
     <!--标题-->
-    <div id="title-container">
-        <h1 id="major-title">{{ major.headline }}</h1>
+    <div id="headline-container">
+        <h1 id="headline">{{ headline }}</h1>
     </div>
 
     <!--摘要信息显示1-->
     <div class="summary-container">
-        <div id="test-summary">
+        <div id="major-summary">
             <div class="test-time">
                 <p>测试时间</p>
                 <p id="time">{{ major.time }}</p>
@@ -358,7 +358,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
     <!--摘要信息显示2-->
     <div class="summary-container">
-        <div id="test-display">
+        <div id="minor-summary">
             {% if average.avg_fg_max and average.avg_fg_avg %}
             <div class="results-info">
                 <p class="fg-final">前台峰值: {{ average.avg_fg_max }} MB</p>
