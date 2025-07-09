@@ -10,6 +10,7 @@
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 import os
+import json
 import random
 import string
 import typing
@@ -425,6 +426,10 @@ class Analyzer(object):
 
         frame_data, *_ = await Cubicle.query_gfx_data(self.db, data_dir)
         raw_frames, *_, roll_ranges, drag_ranges, jank_ranges = frame_data
+        raw_frames = json.loads(raw_frames)
+        roll_ranges = json.loads(roll_ranges)
+        drag_ranges = json.loads(drag_ranges)
+        jank_ranges = json.loads(jank_ranges)
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
 
         segment_list = split_frames_by_time(raw_frames)

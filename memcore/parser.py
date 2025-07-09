@@ -143,6 +143,15 @@ class Parser(object):
 
             ''')
         )
+        minor_group.add_argument(
+            "--title", type=str, default=None,
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*标题*^\033[0m
+                -------------------------
+                - 标题
+
+            ''')
+        )
 
         extra_group = self.__parse_engine.add_argument_group(
             title="\033[1m^* 观象引擎 *^\033[0m",

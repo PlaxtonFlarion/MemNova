@@ -156,10 +156,17 @@ class Cubicle(object):
         """
         查询指定数据目录（轮次）下的前台与后台内存采样数据。
         """
-        fg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM {Cubicle.mem_data_table}
+        fg_sql = f"""
+        SELECT
+            timestamp, rss, pss, uss, opss, activity, adj, foreground
+        FROM {Cubicle.mem_data_table}
         WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
         """
-        bg_sql = f"""SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground FROM {Cubicle.mem_data_table}
+
+        bg_sql = f"""
+        SELECT
+            timestamp, rss, pss, uss, opss, activity, adj, foreground
+        FROM {Cubicle.mem_data_table}
         WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
         """
 
@@ -197,17 +204,12 @@ class Cubicle(object):
             data_dir,
             label,
             timestamp,
-            timestamp_ms,
-            duration_ms,
-            layer_name,
-            process_name,
-            frame_type,
-            gpu_composition,
-            on_time_finish,
-            is_jank,
-            in_roll,
-            in_drag,
-            in_jank_range) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            raw_frames,
+            vsync_sys,
+            vsync_app,
+            roll_ranges,
+            drag_ranges,
+            jank_ranges) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
                 timestamp,
@@ -231,7 +233,7 @@ class Cubicle(object):
             roll_ranges,
             drag_ranges,
             jank_ranges
-        FROM {Cubicle.mem_data_table}
+        FROM {Cubicle.gfx_data_table}
         WHERE data_dir = '{data_dir}'
         """
         return await Cubicle.find_data(db, sql)

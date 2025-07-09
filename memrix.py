@@ -14,6 +14,7 @@ import re
 import sys
 import stat
 import time
+import json
 import typing
 import signal
 import shutil
@@ -70,7 +71,7 @@ class Memrix(object):
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.vault, *_ = args
+        _, _, _, self.focus, self.vault, self.title, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -311,7 +312,9 @@ class Memrix(object):
             ram = Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
-                await Cubicle.insert_mem_data(db, self.file_folder, self.align.label, *maps, ram.memory_vms)
+                await Cubicle.insert_mem_data(
+                    db, self.file_folder, self.align.label, *maps, ram.memory_vms
+                )
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
@@ -444,12 +447,12 @@ class Memrix(object):
 
         gfx_time = time.strftime("%Y-%m-%d %H:%M:%S")
         gfx_info = {
-            "raw_frames": raw_frames,
-            "vsync_sys": vsync_sys,
-            "vsync_app": vsync_app,
-            "roll_ranges": roll_ranges,
-            "drag_ranges": drag_ranges,
-            "jank_ranges": jank_ranges,
+            "raw_frames": json.dumps(raw_frames),
+            "vsync_sys": json.dumps(vsync_sys),
+            "vsync_app": json.dumps(vsync_app),
+            "roll_ranges": json.dumps(roll_ranges),
+            "drag_ranges": json.dumps(drag_ranges),
+            "jank_ranges": json.dumps(jank_ranges),
         }
         logger.info(f"存储样本 ...")
         async with aiosqlite.connect(reporter.db_file) as db:
@@ -746,7 +749,7 @@ async def main() -> typing.Optional[typing.Any]:
 
     positions = (
         cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.vault
+        cmd_lines.focus, cmd_lines.vault, cmd_lines.title,
     )
     keywords = {
         "src_opera_place": src_opera_place,
