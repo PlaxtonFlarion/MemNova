@@ -19,6 +19,7 @@ import typing
 import signal
 import shutil
 import asyncio
+import secrets
 
 # ====[ 第三方库 ]====
 import aiosqlite
@@ -111,6 +112,21 @@ class Memrix(object):
 
     def task_clean_up(self, *_, **__) -> None:
         self.task_close_event.set()
+
+    async def watcher(self) -> None:
+        logger.info(f"Token: {(token := f'{const.APP_DESC}.{secrets.token_hex(8)}')}")
+
+        async def handler(reader: "asyncio.StreamReader", writer: "asyncio.StreamWriter") -> None:
+            if (await reader.read(100)).decode().strip() == token:
+                self.task_close_event.set()
+            writer.close()
+            await writer.wait_closed()
+
+        server = await asyncio.start_server(handler, host="127.0.0.1", port=8765)
+        async with server:
+            await self.task_close_event.wait()
+            server.close()
+            await server.wait_closed()
 
     async def refresh(
             self,
@@ -359,20 +375,19 @@ class Memrix(object):
         # Notes: ========== 启动工具 ==========
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
-        self.dumped = asyncio.Event()
-
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.create_mem_table(db)
-
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.task_close_event)
             )
-
+            watcher = asyncio.create_task(self.watcher())
+            self.dumped = asyncio.Event()
             while not self.task_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
         await self.mem_dump_stop(reporter)
+        await watcher
 
     # """帧影流光"""
     async def gfx_dump_task(self, device: "Device") -> None:
@@ -417,6 +432,8 @@ class Memrix(object):
 
         await device.push(self.ft_file, device_folder)
         await device.change_mode(777, device_folder)
+
+        watcher = asyncio.create_task(self.watcher())
 
         transports = await device.perfetto_start(device_folder, target_folder)
         _ = asyncio.create_task(input_stream())
@@ -469,6 +486,8 @@ class Memrix(object):
             )
             await analyzer.plot_segments(self.file_folder)
 
+        await watcher
+
     # """真相快照"""
     async def create_mem_report(self) -> None:
         reporter = Reporter(self.src_total_place, self.focus, const.M_SUBSET_DIR)
@@ -486,7 +505,7 @@ class Memrix(object):
             if not (data_list := team_data["file"]):
                 raise MemrixError(f"No data scenario {data_list} ...")
 
-            if not (report_list := asyncio.gather(*(analyzer.draw_memory(d) for d in data_list))):
+            if not (report_list := await asyncio.gather(*(analyzer.draw_memory(d) for d in data_list))):
                 raise MemrixError(f"No data scenario {report_list} ...")
 
             def mean_of_field(field: str) -> typing.Optional[float]:

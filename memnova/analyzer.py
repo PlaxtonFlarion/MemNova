@@ -371,7 +371,7 @@ class Analyzer(object):
 
     async def plot_segments(self, data_dir: str) -> typing.Optional[dict]:
 
-        def split_frames_by_time(frames: list[dict], segment_ms: int = 5000) -> list[list[dict]]:
+        def split_frames_by_time(frames: list[dict], segment_ms: int = 30000) -> list[list[dict]]:
             frames = sorted(frames, key=lambda f: f["timestamp_ms"])
             segments = []
             start_ts = frames[0]["timestamp_ms"]
