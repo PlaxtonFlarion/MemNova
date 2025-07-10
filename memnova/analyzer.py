@@ -211,11 +211,31 @@ class Analyzer(object):
             output_file(file_path)
             save(p)
 
-            return {
-                f"{file_name}_max": f"{float(max_value):.2f}",
-                f"{file_name}_avg": f"{float(avg_value):.2f}",
-                f"{file_name}_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+            mem_display = {
+                "fg": {
+                    "tags": [
+                        {
+                            "fields": [
+                                {"label": "前台峰值", "value": f"{float(max_value):.2f}", "unit": "MB"},
+                                {"label": "前台均值", "value": f"{float(avg_value):.2f}", "unit": "MB"}
+                            ],
+                            "link": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+                        }
+                    ]
+                },
+                "bg": {
+                    "tags": [
+                        {
+                            "fields": [
+                                {"label": "后台峰值", "value": f"{float(max_value):.2f}", "unit": "MB"},
+                                {"label": "后台均值", "value": f"{float(avg_value):.2f}", "unit": "MB"}
+                            ],
+                            "link": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+                        }
+                    ]
+                }
             }
+            return mem_display.get(file_name.lower())
 
         fg_list, bg_list = await Cubicle.query_mem_data(self.db, data_dir)
         os.makedirs(group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True)
@@ -226,7 +246,7 @@ class Analyzer(object):
 
         logger.info(f"{data_dir} Handler Done ...")
 
-        return fg_data_dict | bg_data_dict | {"minor_title": data_dir}
+        return fg_data_dict | bg_data_dict | {"subtitle": data_dir}
 
     @staticmethod
     async def score_segment(
@@ -466,9 +486,30 @@ class Analyzer(object):
         output_file(file_path)
         save(column(*conspiracy, sizing_mode="stretch_width"))
 
+        io_display = {
+            "subtitle": data_dir,
+            "tags": [
+                {
+                    "fields": [
+                        {"label": "平均延迟", "value": "5.2", "unit": "MS"},
+                        {"label": "最大延迟", "value": "8.3", "unit": "MS"}
+                    ],
+                    "link": "https://example.com/io"
+                }
+            ]
+        }
+
         return {
-            "frame_loc": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path)),
-            "minor_title": data_dir
+            "subtitle": data_dir,
+            "tags": [
+                {
+                    "fields": [
+                        {"label": "平均帧", "value": "56", "unit": "FPS"},
+                        {"label": "掉帧率", "value": "11", "unit": "%"}
+                    ],
+                    "link": os.path.join(const.SUMMARY, data_dir, os.path.basename(file_path))
+                }
+            ]
         }
 
 

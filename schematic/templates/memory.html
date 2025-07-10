@@ -106,7 +106,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             transition: transform 0.3s ease;
         }
 
-        .minor-title {
+        .subtitle {
             width: 35%;
             text-align: center;
         }
@@ -115,11 +115,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             width: 100%;
         }
 
-        .fg-detail, .bg-detail {
+        .tag-detail {
             display: flex;
             justify-content: flex-end;
         }
-        .fg-detail a, .bg-detail a, .fg-max, .fg-avg, .bg-max, .bg-avg {
+        .tag-detail a, .tag-line {
             width: 20%;
             margin: 5px;
             padding: 3px 8px;
@@ -128,32 +128,21 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             justify-content: center;
             text-align: center;
         }
-        .fg-max, .fg-avg, .bg-max, .bg-avg {
+        .tag-line {
             background-image: linear-gradient(to top, #d5d4d0 0%, #d5d4d0 1%, #eeeeec 31%, #efeeec 75%, #e9e9e7 100%);
             border-radius: 20px;
-        }
-        .fg-max, .bg-max {
-            color: #df4b11;
-        }
-        .fg-avg, .bg-avg {
             color: #0b92ec;
         }
-        .fg-max:hover, .bg-max:hover {
-            background: rgb(236, 79, 6);
-            transition: background 0.5s ease;
-            cursor: grab;
-            color: #fdfcfb;
-        }
-        .fg-avg:hover, .bg-avg:hover{
+        .tag-line:hover {
             background: rgb(6, 202, 236);
             transition: background 0.5s ease;
             cursor: grab;
             color: #fdfcfb;
         }
-        .fg-max.pass:hover, .fg-avg.pass:hover, .bg-max.pass:hover, .bg-avg.pass:hover {
+        .tag-line.pass:hover {
             background: #2fe70a;
         }
-        .fg-max:active, .fg-avg:active, .bg-max:active, .bg-avg:active {
+        .tag-line:active {
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }
@@ -184,18 +173,18 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         /* 复制标签 */
-        #fg-copy, #bg-copy {
+        .fg-copy, .bg-copy {
             border-radius: 5px;
             margin: 6px 10px 6px 10px;
             padding: 5px 10px;
             font-weight: bold;
             background: #cfe608;
         }
-        #fg-copy:hover, #bg-copy:hover {
+        .fg-copy:hover, .bg-copy:hover {
             cursor: pointer;
             background: #e6cf08;
         }
-        #fg-copy:active, #bg-copy:active {
+        .fg-copy:active, .bg-copy:active {
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }
@@ -258,7 +247,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 50%;
             width: 30px;
             height: 30px;
-            margin: 0 0 0 20px;
             aspect-ratio: 1 / 1;
         }
         .seal-pass-item {
@@ -279,11 +267,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background-image: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%);
         }
 
-        .test-time, .test-message, .test-reference, .test-standard {
+        .message {
             display: flex;
             align-items: center;
         }
-        .test-time p, .test-message p, .test-reference p, .test-standard p {
+        .message p {
             margin: 5px 0 5px 5px;
         }
 
@@ -337,72 +325,61 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </div>
 
     <!--摘要信息显示1-->
+    {% if major_summary_items %}
     <div class="summary-container">
         <div id="major-summary">
-            <div class="test-time">
-                <p class="schema">测试时间</p>
-                <p id="time">{{ major.time }}</p>
+            {% for item in major_summary_items %}
+            <div class="message">
+                <p class="schema">{{ item.label }}</p>
+                {% for i in item.value %}
+                    <p>{{ i }}</p>
+                {% endfor %}
             </div>
-            <div class="test-message">
-                <p class="schema">测试结论</p>
-                <p></p>
-            </div>
-            <div class="test-reference">
-                <p class="schema">参考标准</p>
-                <p class="refer" data-standard-fg-max="{{ level.fg_max }}">FG-MAX: {{ level.fg_max }} MB</p>
-                <p class="refer" data-standard-fg-avg="{{ level.fg_avg }}">FG-AVG: {{ level.fg_avg }} MB</p>
-                <p class="refer" data-standard-bg-max="{{ level.bg_max }}">BG-MAX: {{ level.bg_max }} MB</p>
-                <p class="refer" data-standard-bg-avg="{{ level.bg_avg }}">BG-AVG: {{ level.bg_avg }} MB</p>
-            </div>
-            <div class="test-standard">
-                <p class="schema">准出标准</p>
-                <p>{{ major.criteria }}</p>
-            </div>
+            {% endfor %}
         </div>
     </div>
+    {% endif %}
 
     <!--摘要信息显示2-->
+    {% if minor_summary_items %}
     <div class="summary-container">
         <div id="minor-summary">
-            {% if average.avg_fg_max and average.avg_fg_avg %}
+            {% for item in minor_summary_items %}
+            {% if item.value %}
             <div class="results-info">
-                <p class="fg-final">前台峰值: {{ average.avg_fg_max }} MB</p>
-                <p class="fg-final">前台均值: {{ average.avg_fg_avg }} MB</p>
-                <button id="fg-copy">Copy</button>
+                {% for i in item.value %}
+                    <p>{{ i }}</p>
+                {% endfor %}
+                <button class="{{ item.class }}">Copy</button>
             </div>
             {% endif %}
-            {% if average.avg_bg_max and average.avg_bg_avg %}
-            <div class="results-info">
-                <p class="bg-final">后台峰值: {{ average.avg_bg_max }} MB</p>
-                <p class="bg-final">后台均值: {{ average.avg_bg_avg }} MB</p>
-                <button id="bg-copy">Copy</button>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
     </div>
+    {% endif %}
 
     <!--主要信息显示-->
     {% for res in report_list %}
     <div class="information">
-        <div class="minor-title">
-            <h2>{{ res.minor_title }}</h2>
+        <div class="subtitle">
+            <h2>{{ res.subtitle }}</h2>
         </div>
         <div class="seal"></div>
         <div class="details">
-            {% if res.fg_loc %}
-            <div class="fg-detail">
-                <p class="fg-max">FG-MAX: {{ res.fg_max }} MB</p>
-                <p class="fg-avg">FG-AVG: {{ res.fg_avg }} MB</p>
-                <a class="access" href="{{ res.fg_loc }}" target="_blank">查看详情</a>
+            {% for tag in res.tags %}
+            <div class="tag-detail">
+                {% for field in tag.fields %}
+                    <p
+                        data-label="{{ field.label }}"
+                        data-value="{{ field.value }}"
+                        class="tag-line"
+                    >
+                        {{ field.label }}: {{ field.value }} {{ field.unit }}
+                    </p>
+                {% endfor %}
+                <a class="access" href="{{ tag.link }}" target="_blank">查看详情</a>
             </div>
-            {% endif %}
-            {% if res.bg_loc %}
-            <div class="bg-detail">
-                <p class="bg-max">BG-MAX: {{ res.bg_max }} MB</p>
-                <p class="bg-avg">BG-AVG: {{ res.bg_avg }} MB</p>
-                <a class="access" href="{{ res.bg_loc }}" target="_blank">查看详情</a>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
     </div>
     {% endfor %}
@@ -420,52 +397,55 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </div>
 
     <script>
-        var fgMaxRegex = /FG-MAX:\s*([\d\.]+)\s*MB/;
-        var fgAvgRegex = /FG-AVG:\s*([\d\.]+)\s*MB/;
-        var bgMaxRegex = /BG-MAX:\s*([\d\.]+)\s*MB/;
-        var bgAvgRegex = /BG-AVG:\s*([\d\.]+)\s*MB/;
+        // 复制数据
+        function bindCopyButton(selector, labelKeyword, tagIndex) {
+            const buttons = document.querySelectorAll(selector);
+            const tagDetails = document.querySelectorAll('.tag-detail');
 
-        var fgMaxTotal = document.querySelectorAll('.results-info > p:nth-child(1)')[0];
-        var fgAvgTotal = document.querySelectorAll('.results-info > p:nth-child(2)')[0];
-        var bgMaxTotal = document.querySelectorAll('.results-info > p:nth-child(1)')[1];
-        var bgAvgTotal = document.querySelectorAll('.results-info > p:nth-child(2)')[1];
+            buttons.forEach((btn, idx) => {
+                btn.addEventListener('click', function () {
+                    const container = tagDetails[tagIndex ?? idx];  // 对应 tag-detail 区块
+                    if (!container) return;
 
-        var fgMaxGroup = document.querySelectorAll('.test-reference .refer')[0]
-        var fgAvgGroup = document.querySelectorAll('.test-reference .refer')[1]
-        var bgMaxGroup = document.querySelectorAll('.test-reference .refer')[2]
-        var bgAvgGroup = document.querySelectorAll('.test-reference .refer')[3]
+                    const fields = [...container.querySelectorAll('.tag-line')];
+                    const max = fields.find(p =>
+                        p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("MAX")
+                    );
+                    const avg = fields.find(p =>
+                        p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("AVG")
+                    );
 
-        var fgMaxStandard = parseFloat(fgMaxGroup.getAttribute('data-standard-fg-max'));
-        var fgAvgStandard = parseFloat(fgAvgGroup.getAttribute('data-standard-fg-avg'));
-        var bgMaxStandard = parseFloat(bgMaxGroup.getAttribute('data-standard-bg-max'));
-        var bgAvgStandard = parseFloat(bgAvgGroup.getAttribute('data-standard-bg-avg'));
-
-        // 复制前台数据
-        var fgCopyButton = document.getElementById('fg-copy');
-        if (fgCopyButton) {
-            fgCopyButton.addEventListener('click', function(e) {
-                copied({
-                    detailSelector: '.fg-detail',
-                    maxSelector: '.fg-max',
-                    avgSelector: '.fg-avg',
-                    maxRegex: fgMaxRegex,
-                    avgRegex: fgAvgRegex
+                    if (max && avg) {
+                        const formatted = `${max.dataset.value}\t${avg.dataset.value}`;
+                        navigator.clipboard.writeText(formatted).then(() => {
+                            showNotification(labelKeyword + ' 数据已复制到剪贴板');
+                        }).catch(err => console.error('复制失败', err));
+                    }
                 });
             });
         }
 
-        // 复制后台数据
-        var bgCopyButton = document.getElementById('bg-copy');
-        if (bgCopyButton) {
-            bgCopyButton.addEventListener('click', function(e) {
-                copied({
-                    detailSelector: '.bg-detail',
-                    maxSelector: '.bg-max',
-                    avgSelector: '.bg-avg',
-                    maxRegex: bgMaxRegex,
-                    avgRegex: bgAvgRegex
-                });
-            });
+
+        bindCopyButton('.fg-copy', 'FG', 0);  // 第一个 tag-detail 是前台
+        bindCopyButton('.bg-copy', 'BG', 1);  // 第二个 tag-detail 是后台
+
+        function showNotification(msg) {
+            const note = document.getElementById('notification');
+            note.textContent = msg;
+            note.style.display = 'block';
+            setTimeout(() => {
+                note.style.display = 'none';
+            }, 1000);
+        }
+
+        // 显示通知
+        function showNotification(msg) {
+            const note = document.getElementById('notification');
+            note.textContent = msg;
+            note.style.display = 'block';
+            setTimeout(() => {
+                note.style.display = 'none';
+            }, 1000);
         }
 
         // 数据链接
@@ -478,186 +458,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             });
         }
 
-        // 复制
-        function copied(options) {
-            const {
-                detailSelector,
-                maxSelector,
-                avgSelector,
-                maxRegex,
-                avgRegex
-            } = options;
-
-            let ds = document.querySelectorAll(detailSelector);
-            const results = [];
-
-            ds.forEach(d => {
-                const maxText = d.querySelector(maxSelector).textContent;
-                const avgText = d.querySelector(avgSelector).textContent;
-
-                const maxMatch = maxText.match(maxRegex);
-                const avgMatch = avgText.match(avgRegex);
-
-                if (maxMatch && avgMatch) {
-                    const data = {max: maxMatch[1], avg: avgMatch[1]};
-                    results.push(data);
-                }
-            });
-
-            const formattedResults = results.map(data => `${data.max}\t${data.avg}`).join('\n');
-            navigator.clipboard.writeText(formattedResults).then(function() {
-                const notification = document.getElementById('notification');
-                notification.textContent = '数据已复制到剪贴板';
-                notification.style.display = 'block';
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                }, 1000);
-            }).catch(err => {
-                console.error('复制失败', err);
-            });
-        }
-
         // 监听加载事件
         document.addEventListener("DOMContentLoaded", function() {
             showLoadingAnimation();
         });
-
-        // 监听加载事件
-        window.addEventListener("load", function() {
-            calculation();
-        });
-
-        // 计算全部结果
-        function calculation () {
-            let fgMax = document.querySelectorAll('.fg-max');
-            let fgAvg = document.querySelectorAll('.fg-avg');
-            let bgMax = document.querySelectorAll('.bg-max');
-            let bgAvg = document.querySelectorAll('.bg-avg');
-
-            fgMaxVision = exhibit(fgMax, 'FG-峰值', fgMaxRegex);
-            fgAvgVision = exhibit(fgAvg, 'FG-均值', fgAvgRegex);
-            bgMaxVision = exhibit(bgMax, 'BG-峰值', bgMaxRegex);
-            bgAvgVision = exhibit(bgAvg, 'BG-均值', bgAvgRegex);
-
-            finalResult = [];
-
-            if (fgMaxVision > 0 && fgMaxVision <= fgMaxStandard) {
-                fgMaxTotal.classList.add('pass');
-            } else if (fgMaxVision > 0 && fgMaxVision >= fgMaxStandard) {
-                finalResult.push('FG-峰值超标');
-            }
-
-            if (fgAvgVision > 0 && fgAvgVision <= fgAvgStandard) {
-                fgAvgTotal.classList.add('pass');
-            } else if (fgAvgVision > 0 && fgAvgVision >= fgAvgStandard) {
-                finalResult.push('FG-均值超标');
-            }
-
-            if (bgMaxVision > 0 && bgMaxVision <= bgMaxStandard) {
-                bgMaxTotal.classList.add('pass');
-            } else if (bgMaxVision > 0 && bgMaxVision >= bgMaxStandard) {
-                finalResult.push('BG-峰值超标');
-            }
-
-            if (bgAvgVision > 0 && bgAvgVision <= bgAvgStandard) {
-                bgAvgTotal.classList.add('pass');
-            } else if (bgAvgVision > 0 && bgAvgVision >= bgAvgStandard) {
-                finalResult.push('BG-均值超标');
-            }
-
-            if (fgMaxVision <= 0 || fgAvgVision <= 0) {
-                if (fgCopyButton) fgCopyButton.style.pointerEvents = 'none';
-            }
-
-            if (bgMaxVision <= 0 || bgAvgVision <= 0) {
-                if (bgCopyButton) bgCopyButton.style.pointerEvents = 'none';
-            }
-
-            // 绘制圆形标签
-            let checkMemoryInfo = document.querySelectorAll('.information');
-            checkMemoryInfo.forEach((memoryInfo, idx) => {
-                let fgSerial = Array.from(memoryInfo.querySelectorAll('.fg-detail p'));
-                let bgSerial = Array.from(memoryInfo.querySelectorAll('.bg-detail p'));
-                let totalSerial = fgSerial.length + bgSerial.length
-                let fgPass = Array.from(memoryInfo.querySelectorAll('.fg-detail p[class*="pass"]'));
-                let bgPass = Array.from(memoryInfo.querySelectorAll('.bg-detail p[class*="pass"]'));
-                let totalPass = fgPass.length + bgPass.length;
-
-                let memorySeal = memoryInfo.querySelector('.seal');
-                if (totalPass === totalSerial) {
-                    memorySeal.classList.add('seal-pass-item');
-                } else {
-                    memorySeal.classList.add('seal-fail-item');
-                }
-            });
-
-            // 测试结论标签
-            let testPass = Array.from(document.querySelectorAll('.results-info p[class*="pass"]'));
-            let fgFinalList = Array.from(document.querySelectorAll('.fg-final'));
-            let bgFinalList = Array.from(document.querySelectorAll('.bg-final'));
-            let resultFinal = fgFinalList.length + bgFinalList.length
-
-            let testMessage = document.querySelector('.test-message p:last-child');
-            if (testPass.length === resultFinal) {
-                testMessage.textContent = 'Pass';
-                testMessage.classList.add('test-pass-tag');
-            } else {
-                testMessage.textContent = 'Fail';
-                testMessage.classList.add('test-fail-tag');
-            }
-
-            // 测试结论标签详情
-            if (finalResult.length > 0) {
-                finalResult.forEach((result) => {
-                    const resultPart = document.createElement('p');
-                    resultPart.classList.add('result-highlight');
-                    resultPart.textContent = result + ' ';
-                    testMessage.parentElement.append(resultPart);
-                });
-            }
-        }
-
-        // 展示每组的结果
-        function exhibit(foreList, foreName, foreReg) {
-            valueArray = [];
-            foreList.forEach((f, idx) => {
-                let value = f.textContent.match(foreReg)[1];
-                if (f.textContent.includes('FG-MAX') && parseFloat(value) <= fgMaxStandard) {
-                    f.classList.add('pass');
-                }
-
-                if (f.textContent.includes('FG-AVG') && parseFloat(value) <= fgAvgStandard){
-                    f.classList.add('pass');
-                }
-
-                if (f.textContent.includes('BG-MAX') && parseFloat(value) <= bgMaxStandard) {
-                    f.classList.add('pass');
-                }
-
-                if (f.textContent.includes('BG-AVG') && parseFloat(value) <= bgAvgStandard) {
-                    f.classList.add('pass');
-                }
-
-                valueArray.push(value);
-
-                f.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('parse')) {
-                        e.target.classList.remove('parse');
-                    } else {
-                        e.target.classList.add('parse');
-                    }
-                });
-            });
-
-            return valueArray.length > 0 ? calculationArray(valueArray) : 0.00;
-        }
-
-        // 计算一组数据
-        function calculationArray(strArray) {
-            let floatArray = strArray.map(parseFloat);
-            let sum = floatArray.reduce((acc, curr) => acc + curr, 0);
-            return (sum / floatArray.length).toFixed(2);
-        }
 
         // 加载动画
         function showLoadingAnimation() {

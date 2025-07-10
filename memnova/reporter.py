@@ -91,8 +91,14 @@ class Reporter(object):
                 }
             ],
             "minor_summary_items": [
-                [f"{k}: {v} MB" for k, v in fg_final.items() if v],
-                [f"{k}: {v} MB" for k, v in bg_final.items() if v],
+                {
+                    "value": [f"{k}: {v} MB" for k, v in fg_final.items() if v],
+                    "class": "fg-copy"
+                },
+                {
+                    "value": [f"{k}: {v} MB" for k, v in bg_final.items() if v],
+                    "class": "bg-copy"
+                }
             ],
             "report_list": report_list
         }
