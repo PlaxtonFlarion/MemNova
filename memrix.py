@@ -543,7 +543,7 @@ class Memrix(object):
             case const.STORM_TREE_DIR:
                 folder, method, render = const.STORM_TREE_DIR, "plot_mem_segments", "mem_rendition"
             case const.LEAKS_TREE_DIR:
-                folder, method, render = const.STORM_TREE_DIR, "plot_mem_segments", "mem_rendition"
+                folder, method, render = const.LEAKS_TREE_DIR, "plot_mem_segments", "mem_rendition"
             case const.SLEEK_TREE_DIR:
                 folder, method, render = const.SLEEK_TREE_DIR, "plot_gfx_segments", "gfx_rendition"
             case _:
