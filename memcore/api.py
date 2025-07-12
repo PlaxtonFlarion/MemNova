@@ -10,15 +10,12 @@
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 import re
-import json
 import typing
-import asyncio
 from pathlib import Path
 from loguru import logger
 from engine.channel import (
     Channel, Messenger
 )
-from engine.tinker import FileAssist
 from memcore import authorize
 from memnova import const
 

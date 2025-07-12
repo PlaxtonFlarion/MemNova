@@ -345,14 +345,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <div class="summary-container">
         <div id="minor-summary">
             {% for item in minor_summary_items %}
-            {% if item.value %}
-            <div class="results-info">
-                {% for i in item.value %}
-                    <p>{{ i }}</p>
-                {% endfor %}
-                <button class="{{ item.class }}">Copy</button>
-            </div>
-            {% endif %}
+                {% if item.value %}
+                <div class="results-info">
+                    {% for i in item.value %}
+                        <p>{{ i }}</p>
+                    {% endfor %}
+                    <button class="{{ item.class }}">Copy</button>
+                </div>
+                {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -369,12 +369,8 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             {% for tag in res.tags %}
             <div class="tag-detail">
                 {% for field in tag.fields %}
-                    <p
-                        data-label="{{ field.label }}"
-                        data-value="{{ field.value }}"
-                        class="tag-line"
-                    >
-                        {{ field.label }}: {{ field.value }} {{ field.unit }}
+                    <p data-label="{{ field.label }}" data-value="{{ field.value }}" class="tag-line">
+                        {{ field.label }} {{ field.value }} {{ field.unit }}
                     </p>
                 {% endfor %}
                 <a class="access" href="{{ tag.link }}" target="_blank">查看详情</a>
@@ -425,7 +421,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             });
         }
 
-
         bindCopyButton('.fg-copy', 'FG', 0);  // 第一个 tag-detail 是前台
         bindCopyButton('.bg-copy', 'BG', 1);  // 第二个 tag-detail 是后台
 
@@ -460,7 +455,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         // 监听加载事件
         document.addEventListener("DOMContentLoaded", function() {
+            // 加载动画
             showLoadingAnimation();
+            // 绑定所有 .tag-line 的点击事件
+            document.querySelectorAll('.tag-line').forEach(function (el) {
+                el.addEventListener('click', function () {
+                    el.classList.toggle('parse');
+                });
+            });
         });
 
         // 加载动画

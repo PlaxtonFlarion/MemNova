@@ -94,7 +94,7 @@ class FileAssist(object):
             cmd = ["notepad++"] if shutil.which("notepad++") else ["Notepad"]
         else:
             cmd = ["open", "-W", "-a", "TextEdit"]
-        return await Terminal.cmd_line(cmd + [file], timeout=False)
+        return await Terminal.cmd_line(cmd + [file])
 
     @staticmethod
     async def read_yaml(file: str) -> dict:

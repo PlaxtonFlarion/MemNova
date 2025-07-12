@@ -11,7 +11,6 @@
 import os
 import asyncio
 from pathlib import Path
-from loguru import logger
 from memcore.api import Api
 from memnova import const
 

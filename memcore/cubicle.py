@@ -17,7 +17,7 @@ class Cubicle(object):
     """
     内存数据数据库操作类，提供异步持久化能力。
     """
-
+    joint_table = "joint_table"
     mem_data_table = "mem_data"
     gfx_data_table = "gfx_data"
 
@@ -27,10 +27,44 @@ class Cubicle(object):
             return await cursor.fetchall()
 
     @staticmethod
+    async def create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.joint_table} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_dir TEXT,
+            title TEXT)''')
+        await db.commit()
+
+    @staticmethod
+    async def insert_joint_data(
+            db: "aiosqlite.Connection",
+            data_dir,
+            title
+    ):
+        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+            data_dir,
+            title) VALUES (?, ?)''', (
+                data_dir,
+                title
+            )
+        )
+        await db.commit()
+
+    @staticmethod
+    async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
+        sql = f"""
+        SELECT
+            data_dir, title
+        FROM {Cubicle.gfx_data_table}
+        WHERE data_dir = '{data_dir}'
+        """
+        return await Cubicle.find_data(db, sql)
+
+    @staticmethod
     async def create_mem_table(db: "aiosqlite.Connection") -> None:
         """
         创建内存采样数据表，如果表不存在则自动创建。
         """
+        await Cubicle.create_joint_table(db)
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.mem_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
@@ -178,6 +212,7 @@ class Cubicle(object):
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
+        await Cubicle.create_joint_table(db)
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,

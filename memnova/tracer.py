@@ -167,12 +167,12 @@ class Tracer(object):
 
     @staticmethod
     async def annotate_frames(
-        frames: list[dict],
-        roll_ranges: list[dict],
-        drag_ranges: list[dict],
-        jank_ranges: list[dict],
-        vsync_sys: list[dict],
-        vsync_app: list[dict]
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            vsync_sys: list[dict],
+            vsync_app: list[dict]
     ) -> None:
 
         max_delta_ms = 50.0

@@ -47,7 +47,7 @@ from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
-from memnova.analyzer import Analyzer
+from memnova.painter import Painter
 from memnova.reporter import Reporter
 from memnova.tracer import Tracer
 from memnova import const
@@ -76,7 +76,7 @@ class Memrix(object):
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
-        self.memory_template: str = kwargs["memory_template"]
+        self.unity_template: str = kwargs["unity_template"]
 
         self.align: "Align" = kwargs["align"]
 
@@ -195,7 +195,14 @@ class Memrix(object):
         await self.design.system_disintegrate()
 
     async def gfx_dump_stop(self, reporter: "Reporter") -> None:
-        pass
+        _ = reporter
+
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
+        )
+
+        Design.console.print()
+        await self.design.system_disintegrate()
 
     # """记忆风暴"""
     async def mem_dump_task(self, device: "Device") -> None:
@@ -376,7 +383,12 @@ class Memrix(object):
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
         async with aiosqlite.connect(reporter.db_file) as db:
-            await Cubicle.create_mem_table(db)
+            await asyncio.gather(
+                Cubicle.create_mem_table(db), Cubicle.create_joint_table(db)
+            )
+            joint_task = asyncio.create_task(
+                Cubicle.insert_joint_data(db, self.file_folder, self.title)
+            )
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.task_close_event)
             )
@@ -387,6 +399,7 @@ class Memrix(object):
                 await asyncio.sleep(self.align.speed)
 
         await self.mem_dump_stop(reporter)
+        await joint_task
         await watcher
 
     # """帧影流光"""
@@ -476,84 +489,54 @@ class Memrix(object):
         }
         logger.info(f"存储样本 ...")
         async with aiosqlite.connect(reporter.db_file) as db:
-            await Cubicle.create_gfx_table(db)
+            await asyncio.gather(
+                Cubicle.create_gfx_table(db), Cubicle.create_joint_table(db)
+            )
+            joint_task = asyncio.create_task(
+                Cubicle.insert_joint_data(db, self.file_folder, self.title)
+            )
             await Cubicle.insert_gfx_data(
                 db, self.file_folder, self.align.label, gfx_time, gfx_info
             )
 
-            analyzer = Analyzer(
-                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
-            )
-            await analyzer.plot_segments(self.file_folder)
-
+        await self.gfx_dump_stop(reporter)
+        await joint_task
         await watcher
 
     # """真相快照"""
-    async def create_mem_report(self) -> None:
-        reporter = Reporter(self.src_total_place, self.focus, const.M_SUBSET_DIR)
+    async def observation(self) -> None:
+        if not (target_dir := Path(self.src_total_place) / self.focus).exists():
+            raise MemrixError(f"Target directory {target_dir} does not exist ...")
+
+        match (parent_dir := target_dir.parent.name):
+            case const.M_SUBSET_DIR:
+                folder, method, render = const.M_SUBSET_DIR, "plot_mem_segments", "mem_rendition"
+            case const.F_SUBSET_DIR:
+                folder, method, render = const.F_SUBSET_DIR, "plot_gfx_segments", "gfx_rendition"
+            case _:
+                raise MemrixError(f"Unsupported directory type: {parent_dir} ...")
+
+        reporter = Reporter(self.src_total_place, self.focus, folder)
 
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"文件无效 {file}")
 
         async with aiosqlite.connect(reporter.db_file) as db:
-            analyzer = Analyzer(
+            painter = Painter(
                 db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
 
             team_data = await FileAssist.read_yaml(reporter.team_file)
-            if not (data_list := team_data["file"]):
+            if not (data_list := team_data.get("file")):
                 raise MemrixError(f"No data scenario {data_list} ...")
 
-            if not (report_list := await asyncio.gather(*(analyzer.draw_memory(d) for d in data_list))):
+            if not (report_list := await asyncio.gather(*(getattr(painter, method)(d) for d in data_list))):
                 raise MemrixError(f"No data scenario {report_list} ...")
 
-            def mean_of_field(field: str) -> typing.Optional[float]:
-                values = [float(i[field]) for i in report_list if field in i]
-                return sum(values) / len(values) if values else None
+            rendition = getattr(reporter, render)(self.align, team_data, report_list)
 
-            fg_final = {
-                "前台峰值": (avg_fg_max := mean_of_field("fg_max")),
-                "前台均值": (avg_fg_avg := mean_of_field("fg_avg")),
-            }
-            bg_final = {
-                "后台峰值": (avg_bg_max := mean_of_field("bg_max")),
-                "后台均值": (avg_bg_avg := mean_of_field("bg_avg")),
-            }
-
-            conclusion = []
-            if avg_fg_max and avg_fg_max > self.align.fg_max:
-                conclusion.append("前台峰值超标")
-            if avg_fg_avg and avg_fg_avg > self.align.fg_avg:
-                conclusion.append("前台均值超标")
-            if avg_bg_max and avg_bg_max > self.align.bg_max:
-                conclusion.append("后台峰值超标")
-            if avg_bg_avg and avg_bg_avg > self.align.bg_avg:
-                conclusion.append("后台均值超标")
-            expiry = ["Fail"] if conclusion else ["Pass"]
-
-            rendition = {
-                "title": f"{const.APP_DESC} Information",
-                "headline": self.align.headline,
-                "major": {
-                    "time": team_data.get("time", "Unknown"),
-                    "criteria": self.align.criteria,
-                },
-                "level": {
-                    "fg_max": f"{self.align.fg_max:.2f}",
-                    "fg_avg": f"{self.align.fg_avg:.2f}",
-                    "bg_max": f"{self.align.bg_max:.2f}",
-                    "bg_avg": f"{self.align.bg_avg:.2f}",
-                },
-                "average": {
-                    "avg_fg_max": f"{avg_fg_max:.2f}",
-                    "avg_fg_avg": f"{avg_fg_avg:.2f}",
-                    "avg_bg_max": f"{avg_bg_max:.2f}",
-                    "avg_bg_avg": f"{avg_bg_avg:.2f}",
-                },
-                "report_list": report_list
-            }
-            return await analyzer.make_report(self.memory_template, **rendition)
+            return await reporter.make_report(self.unity_template, painter.download, **rendition)
 
 
 # """Main"""
@@ -702,14 +685,11 @@ async def main() -> typing.Optional[typing.Any]:
     for tls in (tools := [adb, perfetto, tp_shell]):
         os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
-    # Notes: ========== 同步命令 ==========
-    # ......
-
     # Notes: ========== 模板与工具检查 ==========
-    memory_template = os.path.join(src_templates, "memory.html")
+    unity_template = os.path.join(src_templates, "unity_template.html")
 
     # 检查每个模板文件是否存在，如果缺失则显示错误信息并退出程序
-    for tmp in (temps := [memory_template]):
+    for tmp in (temps := [unity_template]):
         if os.path.isfile(tmp) and os.path.basename(tmp).endswith(".html"):
             continue
         tmp_name = os.path.basename(tmp)
@@ -768,7 +748,7 @@ async def main() -> typing.Optional[typing.Any]:
     keywords = {
         "src_opera_place": src_opera_place,
         "src_total_place": src_total_place,
-        "memory_template": memory_template,
+        "unity_template": unity_template,
         "align": align,
         "adb": adb,
         "perfetto": perfetto,
@@ -786,7 +766,7 @@ async def main() -> typing.Optional[typing.Any]:
         return await arithmetic(memrix.gfx_dump_task)
 
     elif cmd_lines.forge:
-        return await memrix.create_mem_report()
+        return await memrix.observation()
 
     else:
         return None
