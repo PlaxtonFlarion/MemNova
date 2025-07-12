@@ -52,10 +52,10 @@ class Cubicle(object):
     @staticmethod
     async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
-        SELECT
-            data_dir, title
-        FROM {Cubicle.gfx_data_table}
-        WHERE data_dir = '{data_dir}'
+            SELECT
+                data_dir, title
+            FROM {Cubicle.gfx_data_table}
+            WHERE data_dir = '{data_dir}'
         """
         return await Cubicle.find_data(db, sql)
 
@@ -186,29 +186,40 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list, list]:
+    async def query_mem_data(
+            db: "aiosqlite.Connection",
+            data_dir: str,
+            union: bool = False
+    ) -> typing.Union[tuple[list[tuple], list[tuple]], list[tuple]]:
         """
         查询指定数据目录（轮次）下的前台与后台内存采样数据。
         """
+        if union:
+            sql =f"""
+                SELECT
+                    timestamp, rss, pss, uss, opss, activity, adj, foreground
+                FROM {Cubicle.mem_data_table}
+                WHERE data_dir = '{data_dir}' and pss != ''
+                ORDER BY timestamp ASC
+            """
+
+            return await Cubicle.find_data(db, sql)
+
         fg_sql = f"""
-        SELECT
-            timestamp, rss, pss, uss, opss, activity, adj, foreground
-        FROM {Cubicle.mem_data_table}
-        WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
+            SELECT
+                timestamp, rss, pss, uss, opss, activity, adj, foreground
+            FROM {Cubicle.mem_data_table}
+            WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
         """
 
         bg_sql = f"""
-        SELECT
-            timestamp, rss, pss, uss, opss, activity, adj, foreground
-        FROM {Cubicle.mem_data_table}
-        WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
+            SELECT
+                timestamp, rss, pss, uss, opss, activity, adj, foreground
+            FROM {Cubicle.mem_data_table}
+            WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
         """
 
-        fg_list, bg_list =  await asyncio.gather(
-            Cubicle.find_data(db, fg_sql), Cubicle.find_data(db, bg_sql)
-        )
-
-        return fg_list, bg_list
+        return await asyncio.gather(Cubicle.find_data(db, fg_sql), Cubicle.find_data(db, bg_sql))
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
@@ -261,10 +272,10 @@ class Cubicle(object):
     @staticmethod
     async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
-        SELECT
-            raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges
-        FROM {Cubicle.gfx_data_table}
-        WHERE data_dir = '{data_dir}'
+            SELECT
+                raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges
+            FROM {Cubicle.gfx_data_table}
+            WHERE data_dir = '{data_dir}'
         """
         return await Cubicle.find_data(db, sql)
 

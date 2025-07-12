@@ -71,6 +71,14 @@ class Device(object):
         cmd = self.__initial + ["shell", "pm", "path", package]
         return await Terminal.cmd_line(cmd)
 
+    async def dump_heap(self, package: str, dst: str, *_, **__) -> typing.Any:
+        cmd = self.__initial + ["shell", "am", "dumpheap", package, dst]
+        return await Terminal.cmd_line(cmd)
+
+    async def remove(self, dst: str, *_, **__) -> typing.Any:
+        cmd = self.__initial + ["shell", "rm", dst]
+        return await Terminal.cmd_line(cmd)
+
     async def change_mode(self, mode: str | int, dst: str, *_, **__) -> typing.Any:
         cmd = self.__initial + ["shell", "chmod", str(mode), dst]
         return await Terminal.cmd_line(cmd)

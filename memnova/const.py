@@ -34,8 +34,9 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 
 # ========【路径与资源配置】========
 TOTAL_DIR       = f"{APP_DESC}_Library"
-M_SUBSET_DIR    = r"MEM_Tree"
-F_SUBSET_DIR    = r"GFX_Tree"
+STORM_TREE_DIR  = r"Storm_Tree"
+LEAKS_TREE_DIR  = r"Leaks_Tree"
+SLEEK_TREE_DIR  = r"Sleek_Tree"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"

@@ -61,9 +61,18 @@ class Parser(object):
             ''')
         )
         major_group.add_argument(
+            "--leaks", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;34m^*内存泄露*^\033[0m
+                -------------------------
+                - 内存泄露
+
+            ''')
+        )
+        major_group.add_argument(
             "--sleek", action="store_true",
             help=textwrap.dedent(f'''\
-                \033[1;34m^*z帧影流光*^\033[0m
+                \033[1;34m^*帧影流光*^\033[0m
                 -------------------------
                 - 流畅度
 
@@ -110,6 +119,15 @@ class Parser(object):
             description=textwrap.dedent(f'''\
                 \033[1;32m参数兼容\033[0m
             '''),
+        )
+        minor_group.add_argument(
+            "--hprof", type=str, default=None,
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*Hprof*^\033[0m
+                -------------------------
+                - Hprof
+
+            ''')
         )
         minor_group.add_argument(
             "--focus", type=str, default=None,

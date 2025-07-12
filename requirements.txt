@@ -78,3 +78,11 @@ Nuitka              ==2.7          # Python → C 打包器
 # Notes: 开发环境依赖
 perfetto            ==0.13.1
 protobuf            ==6.31.1
+
+matplotlib          ==3.10.3
+cycler              ==0.12.1
+fonttools           ==4.58.5
+kiwisolver          ==1.4.8
+pyparsing           ==3.2.3
+
+scipy               ==1.16.0

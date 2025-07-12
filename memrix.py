@@ -48,6 +48,7 @@ from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.painter import Painter
+from memnova.templater import Templater
 from memnova.reporter import Reporter
 from memnova.tracer import Tracer
 from memnova import const
@@ -71,8 +72,8 @@ class Memrix(object):
 
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
-        self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.vault, self.title, *_ = args
+        self.storm, self.leaks, self.sleek, self.forge, *_ = args
+        _, _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -127,6 +128,16 @@ class Memrix(object):
             await self.task_close_event.wait()
             server.close()
             await server.wait_closed()
+
+    async def profile(self, device: "Device", heaped: typing.Union["Path", str]) -> None:
+        max_file = 0
+        while self.task_close_event.is_set() or max_file >= 10:
+            target = f"/data/local/temp/Hprof_{time.strftime('%Y%m%d%H%M%S')}.hprof"
+            await device.dump_heap(self.focus, target)
+            await device.pull(target, str(heaped))
+            await device.remove(target)
+            max_file += 1
+            await asyncio.sleep(180)
 
     async def refresh(
             self,
@@ -245,9 +256,6 @@ class Memrix(object):
             return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}
 
         async def flash_memory_launch() -> None:
-            """
-            执行一轮完整的内存采集任务流程（包括应用状态 & 多进程内存分析）。
-            """
             self.dumped.clear()
 
             dump_start_time = time.time()
@@ -366,7 +374,9 @@ class Memrix(object):
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-        reporter = Reporter(self.src_total_place, self.vault, const.M_SUBSET_DIR)
+        reporter = Reporter(
+            self.src_total_place, self.vault, const.STORM_TREE_DIR if self.storm else const.LEAKS_TREE_DIR
+        )
 
         logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
@@ -374,7 +384,8 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"MEM_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        prefix = "STORM" if self.storm else "LEAKS"
+        team_name = f"{prefix}_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         await self.refresh(
             self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
@@ -382,25 +393,41 @@ class Memrix(object):
         # Notes: ========== 启动工具 ==========
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
+        if not (heaped := Path(reporter.group_dir) / "Heaped").exists():
+            heaped.mkdir(parents=True, exist_ok=True)
+        if not (images := Path(reporter.group_dir) / "Images").exists():
+            images.mkdir(parents=True, exist_ok=True)
+
         async with aiosqlite.connect(reporter.db_file) as db:
             await asyncio.gather(
                 Cubicle.create_mem_table(db), Cubicle.create_joint_table(db)
             )
-            joint_task = asyncio.create_task(
-                Cubicle.insert_joint_data(db, self.file_folder, self.title)
-            )
+            await Cubicle.insert_joint_data(db, self.file_folder, self.title)
+
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, self.task_close_event)
             )
             watcher = asyncio.create_task(self.watcher())
+
+            heap_profile_task = None
+            if self.leaks and self.hprof:
+                heap_profile_task = asyncio.create_task(self.profile(device, heaped))
+
             self.dumped = asyncio.Event()
             while not self.task_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
-        await self.mem_dump_stop(reporter)
-        await joint_task
+            if self.leaks:
+                head = f"{subtitle}_{now_format}" if (subtitle := self.title) else self.file_folder
+                image_loc = os.path.join(images, f"{head}_image.png")
+                mem_union_list = await Cubicle.query_mem_data(db, self.file_folder, union=True)
+                await Painter.draw_memory_enhanced(mem_union_list, str(images / image_loc))
+
+        if heap_profile_task:
+            await heap_profile_task
         await watcher
+        await self.mem_dump_stop(reporter)
 
     # """帧影流光"""
     async def gfx_dump_task(self, device: "Device") -> None:
@@ -417,7 +444,7 @@ class Memrix(object):
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-        reporter = Reporter(self.src_total_place, self.vault, const.F_SUBSET_DIR)
+        reporter = Reporter(self.src_total_place, self.vault, const.SLEEK_TREE_DIR)
 
         logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
@@ -425,7 +452,7 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"GFX_DATA_{time.strftime('%Y%m%d%H%M%S')}"
+        team_name = f"SLEEK_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         await self.refresh(
             self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
@@ -435,13 +462,15 @@ class Memrix(object):
 
         if not (traces := Path(reporter.group_dir) / "Traces").exists():
             traces.mkdir(parents=True, exist_ok=True)
+        if not (images := Path(reporter.group_dir) / "Images").exists():
+            images.mkdir(parents=True, exist_ok=True)
 
-        trace_loc = os.path.join(
-            traces, f"{self.file_folder}_trace.perfetto-trace"
-        )
+        head = f"{subtitle}_{now_format}" if (subtitle := self.title) else self.file_folder
+        trace_loc = os.path.join(traces, f"{head}_trace.perfetto-trace")
+        image_loc = os.path.join(images, f"{head}_image.png")
 
         device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        target_folder = f"/data/misc/perfetto-traces/trace_{time.strftime('%Y%m%d%H%M%S')}.perfetto-trace"
+        target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
 
         await device.push(self.ft_file, device_folder)
         await device.change_mode(777, device_folder)
@@ -477,6 +506,9 @@ class Memrix(object):
             await tracer.annotate_frames(
                 raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
             )
+            await Painter.draw_frame_timeline(
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app, str(images / image_loc)
+            )
 
         gfx_time = time.strftime("%Y-%m-%d %H:%M:%S")
         gfx_info = {
@@ -487,21 +519,20 @@ class Memrix(object):
             "drag_ranges": json.dumps(drag_ranges),
             "jank_ranges": json.dumps(jank_ranges),
         }
+
         logger.info(f"存储样本 ...")
         async with aiosqlite.connect(reporter.db_file) as db:
             await asyncio.gather(
                 Cubicle.create_gfx_table(db), Cubicle.create_joint_table(db)
             )
-            joint_task = asyncio.create_task(
-                Cubicle.insert_joint_data(db, self.file_folder, self.title)
-            )
+            await Cubicle.insert_joint_data(db, self.file_folder, self.title)
             await Cubicle.insert_gfx_data(
                 db, self.file_folder, self.align.label, gfx_time, gfx_info
             )
 
-        await self.gfx_dump_stop(reporter)
-        await joint_task
         await watcher
+        await self.gfx_dump_stop(reporter)
+
 
     # """真相快照"""
     async def observation(self) -> None:
@@ -509,10 +540,12 @@ class Memrix(object):
             raise MemrixError(f"Target directory {target_dir} does not exist ...")
 
         match (parent_dir := target_dir.parent.name):
-            case const.M_SUBSET_DIR:
-                folder, method, render = const.M_SUBSET_DIR, "plot_mem_segments", "mem_rendition"
-            case const.F_SUBSET_DIR:
-                folder, method, render = const.F_SUBSET_DIR, "plot_gfx_segments", "gfx_rendition"
+            case const.STORM_TREE_DIR:
+                folder, method, render = const.STORM_TREE_DIR, "plot_mem_segments", "mem_rendition"
+            case const.LEAKS_TREE_DIR:
+                folder, method, render = const.STORM_TREE_DIR, "plot_mem_segments", "mem_rendition"
+            case const.SLEEK_TREE_DIR:
+                folder, method, render = const.SLEEK_TREE_DIR, "plot_gfx_segments", "gfx_rendition"
             case _:
                 raise MemrixError(f"Unsupported directory type: {parent_dir} ...")
 
@@ -523,7 +556,7 @@ class Memrix(object):
                 raise MemrixError(f"文件无效 {file}")
 
         async with aiosqlite.connect(reporter.db_file) as db:
-            painter = Painter(
+            templater = Templater(
                 db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
 
@@ -531,12 +564,12 @@ class Memrix(object):
             if not (data_list := team_data.get("file")):
                 raise MemrixError(f"No data scenario {data_list} ...")
 
-            if not (report_list := await asyncio.gather(*(getattr(painter, method)(d) for d in data_list))):
+            if not (report_list := await asyncio.gather(*(getattr(templater, method)(d) for d in data_list))):
                 raise MemrixError(f"No data scenario {report_list} ...")
 
             rendition = getattr(reporter, render)(self.align, team_data, report_list)
 
-            return await reporter.make_report(self.unity_template, painter.download, **rendition)
+            return await reporter.make_report(self.unity_template, templater.download, **rendition)
 
 
 # """Main"""
@@ -742,8 +775,8 @@ async def main() -> typing.Optional[typing.Any]:
     await align.load_align()
 
     positions = (
-        cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.vault, cmd_lines.title,
+        cmd_lines.storm, cmd_lines.leaks, cmd_lines.sleek, cmd_lines.forge,
+        cmd_lines.focus, cmd_lines.vault, cmd_lines.title, cmd_lines.hprof,
     )
     keywords = {
         "src_opera_place": src_opera_place,
@@ -759,7 +792,7 @@ async def main() -> typing.Optional[typing.Any]:
 
     memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
-    if cmd_lines.storm:
+    if cmd_lines.storm or cmd_lines.leaks:
         return await arithmetic(memrix.mem_dump_task)
 
     elif cmd_lines.sleek:
