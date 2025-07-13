@@ -350,7 +350,9 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                     {% for i in item.value %}
                         <p>{{ i }}</p>
                     {% endfor %}
-                    <button class="{{ item.class }}">Copy</button>
+                    {% if item.class %}
+                        <button class="{{ item.class }}">Copy</button>
+                    {% endif %}
                 </div>
                 {% endif %}
             {% endfor %}

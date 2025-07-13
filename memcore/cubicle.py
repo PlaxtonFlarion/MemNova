@@ -31,20 +31,24 @@ class Cubicle(object):
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.joint_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
-            title TEXT)''')
+            title TEXT,
+            timestamp TEXT)''')
         await db.commit()
 
     @staticmethod
     async def insert_joint_data(
             db: "aiosqlite.Connection",
             data_dir,
-            title
+            title,
+            timestamp
     ):
         await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
             data_dir,
-            title) VALUES (?, ?)''', (
+            title,
+            timestamp) VALUES (?, ?, ?)''', (
                 data_dir,
-                title
+                title,
+                timestamp
             )
         )
         await db.commit()
@@ -53,7 +57,7 @@ class Cubicle(object):
     async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
         sql = f"""
             SELECT
-                data_dir, title
+                title, timestamp
             FROM {Cubicle.gfx_data_table}
             WHERE data_dir = '{data_dir}'
         """
@@ -69,7 +73,7 @@ class Cubicle(object):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
-            timestamp INTEGER,
+            timestamp TEXT,
             pid INTEGER,
             uid INTEGER,
             adj INTEGER,
@@ -228,7 +232,7 @@ class Cubicle(object):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
-            timestamp INTEGER,
+            timestamp TEXT,
             raw_frames TEXT,
             vsync_sys TEXT,
             vsync_app TEXT,

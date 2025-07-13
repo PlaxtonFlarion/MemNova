@@ -17,6 +17,7 @@ import shutil
 import typing
 import aiofiles
 from loguru import logger
+from datetime import datetime
 from rich.text import Text
 from rich.console import Console
 from rich.logging import (
@@ -288,6 +289,21 @@ class Active(object):
             Active._RichSink(Design.console),
             level=log_level, format=const.PRINT_FORMAT
         )
+
+
+class Period(object):
+
+    @staticmethod
+    def convert_time(raw_time: str) -> str:
+        try:
+            dt = datetime.strptime(raw_time, "%Y%m%d%H%M%S")
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            raise MemrixError(f"非法时间格式: {raw_time}")
+
+    @staticmethod
+    def compress_time(dt: "datetime") -> str:
+        return dt.strftime("%Y%m%d%H%M%S")
 
 
 class Pid(object):

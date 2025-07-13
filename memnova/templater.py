@@ -30,8 +30,9 @@ from bokeh.models import (
     ColumnDataSource, Span, HoverTool,
     DatetimeTickFormatter, BoxAnnotation, Range1d
 )
-from engine.tinker import MemrixError
+from engine.tinker import Period
 from memcore.cubicle import Cubicle
+from memnova.painter import Painter
 from memnova.scores import Scores
 from memnova import const
 
@@ -64,9 +65,7 @@ class Templater(object):
             "uss": uss,
             "adj": adj,
             "foreground": foreground,
-            "activity": [
-                (act.split("/")[-1] if "/" in act else act) if act else act for act in activity
-            ],
+            "activity": [a for a in activity if a],
         }
 
         avg_value, max_value, min_value = float(numpy.mean(pss)), max(pss), min(pss)
@@ -211,22 +210,26 @@ class Templater(object):
             group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        match data_dir:
-            case data_dir.startswith(const.STORM_TREE_DIR):
-                (fg_list, bg_list), subtitle = await asyncio.gather(
-                    Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
-                )
-                fg_upshot = await self.plot_mem_analysis("FG", fg_list, group)
-                bg_upshot = await self.plot_mem_analysis("BG", bg_list, group)
-                compilation = fg_upshot | bg_upshot | {"subtitle": subtitle or data_dir}
-            case data_dir.startswith(const.LEAKS_TREE_DIR):
-                fg_list, subtitle = await asyncio.gather(
-                    Cubicle.query_mem_data(self.db, data_dir, True), Cubicle.query_joint_data(self.db, data_dir)
-                )
-                fg_upshot = await self.plot_mem_analysis("FG", fg_list, group)
-                compilation = fg_upshot | {"subtitle": subtitle or data_dir}
-            case _:
-                raise MemrixError(f"Unsupported directory type: {data_dir} ...")
+        if data_dir.startswith(const.TRACK_TREE_DIR):
+            (fg_list, bg_list), (title, *_) = await asyncio.gather(
+                Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
+            )
+            fg_upshot = await self.plot_mem_analysis("FG", fg_list, group)
+            bg_upshot = await self.plot_mem_analysis("BG", bg_list, group)
+            compilation = fg_upshot | bg_upshot | {"subtitle": title or data_dir}
+
+        else:
+            union_list, (title, timestamp) = await asyncio.gather(
+                Cubicle.query_mem_data(self.db, data_dir, True), Cubicle.query_joint_data(self.db, data_dir)
+            )
+            head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+            if not (images := Path(self.download).parent / "Images").exists():
+                images.mkdir(parents=True, exist_ok=True)
+            image_loc = images / f"{head}_image.png"
+            await Painter.draw_memory_enhanced(union_list, str(image_loc))
+
+            union_upshot = await self.plot_mem_analysis("MEM", union_list, group)
+            compilation = union_upshot | {"subtitle": title or data_dir}
 
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
@@ -342,7 +345,7 @@ class Templater(object):
             group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (frame_data, *_), subtitle = await asyncio.gather(
+        (frame_data, *_), (title, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
         )
         raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data
@@ -389,7 +392,7 @@ class Templater(object):
         logger.info(f"{data_dir} Handler Done ...")
 
         return {
-            "subtitle": subtitle or data_dir,
+            "subtitle": title or data_dir,
             "tags": [
                 {
                     "fields": [

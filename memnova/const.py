@@ -34,8 +34,8 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 
 # ========【路径与资源配置】========
 TOTAL_DIR       = f"{APP_DESC}_Library"
-STORM_TREE_DIR  = r"Storm_Tree"
-LEAKS_TREE_DIR  = r"Leaks_Tree"
+TRACK_TREE_DIR  = r"Track_Tree"
+LAPSE_TREE_DIR  = r"Lapse_Tree"
 SLEEK_TREE_DIR  = r"Sleek_Tree"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
