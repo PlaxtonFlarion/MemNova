@@ -781,7 +781,6 @@ class Design(object):
             visual_center = (cols * 2 - 1) // 2
             pad = " " * (visual_center - (len(final_text) // 2))
             memories.update({
-                "exc": "*",
                 "msg": f"Memory Data {(memories['foreground'] + memories['background'])}",
                 "stt": "*",
                 "act": "*",

@@ -468,39 +468,18 @@ class Memrix(object):
         _ = asyncio.create_task(input_stream())
         _ = asyncio.create_task(error_stream())
 
-        self.memories.update({
-            "msg": (msg := f"开始采样 ...")
-        })
-        logger.info(msg)
-        self.animation_task = asyncio.create_task(
-            self.design.memory_wave(self.memories, (perfetto_event := asyncio.Event()))
-        )
+        logger.info(f"开始采样 ...")
         await self.task_close_event.wait()
         await device.perfetto_close()
-        self.memories.update({
-            "msg": (msg := f"结束采样 ...")
-        })
-        logger.info(msg)
+        logger.info(f"结束采样 ...")
 
-        self.memories.update({
-            "msg": (msg := f"拉取 ...")
-        })
-        logger.info(msg)
+        logger.info(f"拉取样本 ...")
         await device.pull(target_folder, str(trace_loc))
 
-        self.memories.update({
-            "msg": (msg := f"解析样本 ...")
-        })
-        logger.info(msg)
+        logger.info(f"解析样本 ...")
         with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
             if self.sleek:
                 if not (raw_frames := await tracer.extract_primary_frames(tp, self.focus)):
-                    self.memories.update({
-                        "msg": (msg := f"没有有效样本 ...")
-                    })
-                    logger.info(msg)
-                    perfetto_event.set()
-                    await self.animation_task
                     raise MemrixError(f"没有有效样本 ...")
 
                 vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
@@ -526,10 +505,7 @@ class Memrix(object):
                     "drag_ranges": json.dumps(drag_ranges),
                     "jank_ranges": json.dumps(jank_ranges),
                 }
-                self.memories.update({
-                    "msg": (msg := f"存储样本 ...")
-                })
-                logger.info(msg)
+                logger.info(f"存储样本 ...")
                 async with aiosqlite.connect(reporter.db_file) as db:
                     await asyncio.gather(
                         Cubicle.create_gfx_table(db), Cubicle.create_joint_table(db)
@@ -541,16 +517,11 @@ class Memrix(object):
                         db, self.file_folder, self.align.label, Period.convert_time(now_format), gfx_info
                     )
                     self.file_insert += len(raw_frames)
-                    self.memories.update({
-                        "msg": (msg := f"Article {self.file_insert} data insert success")
-                    })
-                    logger.info(msg)
+                    logger.info(f"Article {self.file_insert} data insert success")
 
             else:
                 gfx_info = await tracer.aggregate_io_metrics(tp, self.focus)
                 self.design.console.print(gfx_info)
-
-            perfetto_event.set()
 
         await watcher
         await self.sample_stop(reporter)
