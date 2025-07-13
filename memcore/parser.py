@@ -77,6 +77,15 @@ class Parser(object):
             ''')
         )
         major_group.add_argument(
+            "--surge", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;34m^*引力回廊*^\033[0m
+                -------------------------
+                - I/O
+
+            ''')
+        )
+        major_group.add_argument(
             "--forge", action="store_true",
             help=textwrap.dedent(f'''\
                 \033[1;34m^*真相快照*^\033[0m
@@ -113,9 +122,9 @@ class Parser(object):
         minor_group.add_argument(
             "--hprof", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*Hprof*^\033[0m
+                \033[1;36m^*核心碎片*^\033[0m
                 -------------------------
-                - Hprof
+                - 核心碎片
 
             ''')
         )
@@ -149,9 +158,9 @@ class Parser(object):
         minor_group.add_argument(
             "--title", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*标题*^\033[0m
+                \033[1;36m^*星辰序列*^\033[0m
                 -------------------------
-                - 标题
+                - 星辰序列
 
             ''')
         )

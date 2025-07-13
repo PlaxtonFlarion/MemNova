@@ -14,6 +14,8 @@ from perfetto.trace_processor import TraceProcessor
 
 class Tracer(object):
 
+    # Notes: ======================== GFX ========================
+
     @staticmethod
     async def extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
         where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
@@ -200,6 +202,77 @@ class Tracer(object):
             f["in_jank"] = in_any_range(timestamp_ms, jank_ranges)
             f["fps_sys"] = find_nearest(timestamp_ms, vsync_sys)
             f["fps_app"] = find_nearest(timestamp_ms, vsync_app)
+
+    # Notes: ======================== I/O ========================
+
+    @staticmethod
+    async def extract_vm_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
+        query = """
+        SELECT
+            ts / 1e9 AS time_sec,
+            name,
+            value - LAG(value) OVER (PARTITION BY name ORDER BY ts) AS delta
+        FROM counter
+        WHERE name IN ('vmstat.pgpgin', 'vmstat.pgpgout')
+        ORDER BY ts;
+        """
+        df = tp.query(query).as_pandas_dataframe().dropna()
+        return {
+            "in": df[df["name"] == "vmstat.pgpgin"].to_dict("records"),
+            "out": df[df["name"] == "vmstat.pgpgout"].to_dict("records"),
+        }
+
+    @staticmethod
+    async def extract_block_events(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        query = f"""
+        SELECT
+            slice.ts / 1e9 AS start_sec,
+            slice.dur / 1e6 AS duration_ms,
+            slice.name,
+            thread.name AS thread_name,
+            process.name AS process_name
+        FROM slice
+        JOIN thread ON slice.utid = thread.utid
+        JOIN process ON thread.upid = process.upid
+        WHERE slice.name IN ('block_rq_issue', 'block_rq_complete')
+        AND process.name = '{app_name}'
+        ORDER BY slice.ts;
+        """
+        df = tp.query(query).as_pandas_dataframe()
+        return df.to_dict("records")
+
+    @staticmethod
+    async def extract_disk_latency(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        query = f"""
+        SELECT
+            raw.ts / 1e9 AS time_sec,
+            raw.name,
+            thread.name AS thread_name,
+            process.name AS process_name
+        FROM raw
+        JOIN thread ON raw.utid = thread.utid
+        JOIN process ON thread.upid = process.upid
+        WHERE (raw.name LIKE '%blk%' OR raw.name LIKE '%mmc%')
+        AND process.name = '{app_name}'
+        ORDER BY raw.ts;
+        """
+        df = tp.query(query).as_pandas_dataframe()
+        return df.to_dict("records")
+
+    @staticmethod
+    async def aggregate_io_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+        return {
+            "vm_io": await Tracer.extract_vm_io(tp),
+            "block_events": await Tracer.extract_block_events(tp, app_name),
+            "meta": {
+                "source": "perfetto",
+                "app": app_name,
+                "unit": {
+                    "vm_io": "KB",
+                    "block_events": "ms"
+                }
+            }
+        }
 
 
 if __name__ == '__main__':

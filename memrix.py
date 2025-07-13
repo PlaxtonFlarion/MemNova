@@ -72,8 +72,8 @@ class Memrix(object):
 
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
-        self.track, self.lapse, self.sleek, self.forge, *_ = args
-        _, _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
+        self.track, self.lapse, self.sleek, self.surge, self.forge, *_ = args
+        _, _, _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -423,7 +423,7 @@ class Memrix(object):
         await watcher
         await self.mem_dump_stop(reporter)
 
-    # """帧影流光"""
+    # """帧影流光 / 引力回廊"""
     async def gfx_dump_task(self, device: "Device") -> None:
 
         async def input_stream() -> None:
@@ -438,7 +438,9 @@ class Memrix(object):
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-        reporter = Reporter(self.src_total_place, self.vault, const.SLEEK_TREE_DIR)
+        reporter = Reporter(
+            self.src_total_place, self.vault, const.SLEEK_TREE_DIR if self.sleek else const.SURGE_TREE_DIR
+        )
 
         logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
@@ -446,7 +448,8 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"SLEEK_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
+        prefix = "SLEEK" if self.sleek else "SURGE"
+        team_name = f"{prefix}_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         await self.refresh(
             self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
@@ -787,7 +790,7 @@ async def main() -> typing.Optional[typing.Any]:
     await align.load_align()
 
     positions = (
-        cmd_lines.track, cmd_lines.lapse, cmd_lines.sleek, cmd_lines.forge,
+        cmd_lines.track, cmd_lines.lapse, cmd_lines.sleek, cmd_lines.surge, cmd_lines.forge,
         cmd_lines.focus, cmd_lines.vault, cmd_lines.title, cmd_lines.hprof,
     )
     keywords = {

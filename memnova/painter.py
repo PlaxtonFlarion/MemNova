@@ -19,6 +19,8 @@ from memnova.scores import Scores
 
 class Painter(object):
 
+    # Notes: ======================== MEM ========================
+
     @staticmethod
     async def draw_memory_enhanced(data_list: list[tuple], output_path: str) -> str:
         timestamp, _, pss, *_ = list(zip(*data_list))
@@ -120,6 +122,8 @@ class Painter(object):
 
         return output_path
 
+    # Notes: ======================== GFX ========================
+
     @staticmethod
     async def draw_frame_timeline(
             frames: list[dict],
@@ -182,7 +186,7 @@ class Painter(object):
                 horizontalalignment="left"
             )
 
-        # === FPS 统计信息（用于 legend title）===
+        # === FPS 统计信息 ===
         max_sys = max(fps_sys, default=0)
         avg_sys = sum(fps_sys) / len(fps_sys) if fps_sys else 0
         max_app = max(fps_app, default=0)
@@ -227,6 +231,9 @@ class Painter(object):
         logger.info(f"[√] 图表已保存至: {output_path}")
 
         return output_path
+
+    # Notes: ======================== I/O ========================
+
 
 
 if __name__ == '__main__':
