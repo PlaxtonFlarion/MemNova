@@ -95,11 +95,11 @@ class Painter(object):
         # 构造伪图例项（作为文字说明）
         legend_items = [
             Line2D([0], [0], color="none", label=f"Trend: {trend_label}"),
-            Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
             Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
-            Line2D([0], [0], color="#FF4B00", label=f"Max PSS: {max_val:.2f} MB"),
-            Line2D([0], [0], color="#6666CC", label=f"Avg PSS: {avg_val:.2f} MB"),
-            Line2D([0], [0], color="#00FF85", label=f"Min PSS: {min_val:.2f} MB"),
+            Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
+            Line2D([0], [0], color="#FF4B00", label=f"PSS MAX: {max_val:.2f} MB"),
+            Line2D([0], [0], color="#6666CC", label=f"PSS AVG: {avg_val:.2f} MB"),
+            Line2D([0], [0], color="#00FF85", label=f"PSS MIN: {min_val:.2f} MB"),
             Line2D([0], [0], color="#3333AA", label=f"Sliding Avg"),
             Line2D([0], [0], color=line_color, label="PSS Line")
         ]
