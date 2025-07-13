@@ -487,46 +487,49 @@ class Memrix(object):
         await device.pull(target_folder, str(trace_loc))
 
         logger.info(f"解析样本 ...")
-        config = TraceProcessorConfig(self.tp_shell)
-        with TraceProcessor(str(trace_loc), config=config) as tp:
-            if not (raw_frames := await tracer.extract_primary_frames(tp, self.focus)):
-                raise MemrixError(f"没有有效样本 ...")
+        with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
+            if self.sleek:
+                if not (raw_frames := await tracer.extract_primary_frames(tp, self.focus)):
+                    raise MemrixError(f"没有有效样本 ...")
 
-            vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
-            vsync_app = await Tracer.extract_vsync_app_points(tp)  # 应用FPS
+                vsync_sys = await Tracer.extract_vsync_sys_points(tp)  # 系统FPS
+                vsync_app = await Tracer.extract_vsync_app_points(tp)  # 应用FPS
 
-            roll_ranges = await tracer.extract_roll_ranges(tp)  # 滑动区间
-            drag_ranges = await tracer.extract_drag_ranges(tp)  # 拖拽区间
+                roll_ranges = await tracer.extract_roll_ranges(tp)  # 滑动区间
+                drag_ranges = await tracer.extract_drag_ranges(tp)  # 拖拽区间
 
-            jank_ranges = await tracer.mark_consecutive_jank(raw_frames)  # 连续丢帧
+                jank_ranges = await tracer.mark_consecutive_jank(raw_frames)  # 连续丢帧
 
-            await tracer.annotate_frames(
-                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
-            )
-            await Painter.draw_frame_timeline(
-                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app, str(image_loc)
-            )
+                await tracer.annotate_frames(
+                    raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
+                )
+                await Painter.draw_frame_timeline(
+                    raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app, str(image_loc)
+                )
 
-        gfx_info = {
-            "raw_frames": json.dumps(raw_frames),
-            "vsync_sys": json.dumps(vsync_sys),
-            "vsync_app": json.dumps(vsync_app),
-            "roll_ranges": json.dumps(roll_ranges),
-            "drag_ranges": json.dumps(drag_ranges),
-            "jank_ranges": json.dumps(jank_ranges),
-        }
+                gfx_info = {
+                    "raw_frames": json.dumps(raw_frames),
+                    "vsync_sys": json.dumps(vsync_sys),
+                    "vsync_app": json.dumps(vsync_app),
+                    "roll_ranges": json.dumps(roll_ranges),
+                    "drag_ranges": json.dumps(drag_ranges),
+                    "jank_ranges": json.dumps(jank_ranges),
+                }
+                logger.info(f"存储样本 ...")
+                async with aiosqlite.connect(reporter.db_file) as db:
+                    await asyncio.gather(
+                        Cubicle.create_gfx_table(db), Cubicle.create_joint_table(db)
+                    )
+                    await Cubicle.insert_joint_data(
+                        db, self.file_folder, self.title, Period.convert_time(now_format)
+                    )
+                    await Cubicle.insert_gfx_data(
+                        db, self.file_folder, self.align.label, Period.convert_time(now_format), gfx_info
+                    )
 
-        logger.info(f"存储样本 ...")
-        async with aiosqlite.connect(reporter.db_file) as db:
-            await asyncio.gather(
-                Cubicle.create_gfx_table(db), Cubicle.create_joint_table(db)
-            )
-            await Cubicle.insert_joint_data(
-                db, self.file_folder, self.title, Period.convert_time(now_format)
-            )
-            await Cubicle.insert_gfx_data(
-                db, self.file_folder, self.align.label, Period.convert_time(now_format), gfx_info
-            )
+            else:
+                gfx_info = await tracer.aggregate_io_metrics(tp, self.focus)
+                self.design.console.print(gfx_info)
 
         await watcher
         await self.gfx_dump_stop(reporter)

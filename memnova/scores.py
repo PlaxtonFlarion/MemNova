@@ -16,6 +16,8 @@ from scipy.stats import linregress
 
 class Scores(object):
 
+    # Notes: ======================== MEM ========================
+
     @staticmethod
     def analyze_mem_trend(values: tuple[typing.Any]) -> dict:
         if len(values) < 10:
@@ -68,6 +70,8 @@ class Scores(object):
             "slope": slope,
             "color": color
         }
+
+    # Notes: ======================== GFX ========================
 
     @staticmethod
     def score_segment(
@@ -151,7 +155,7 @@ class Scores(object):
             return {
                 "level": "D",
                 "color": "#FF3D00",
-                "label": "严重卡顿，需优化"
+                "label": "严重卡顿，需要优化"
             }
         else:
             return {

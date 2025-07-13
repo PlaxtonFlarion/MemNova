@@ -214,8 +214,9 @@ class Templater(object):
             (fg_list, bg_list), (title, *_) = await asyncio.gather(
                 Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
             )
-            fg_upshot = await self.plot_mem_analysis("FG", fg_list, group)
-            bg_upshot = await self.plot_mem_analysis("BG", bg_list, group)
+            fg_upshot, bg_upshot = await asyncio.gather(
+                *(self.plot_mem_analysis(name, data, group) for name, data in [("FG", fg_list), ("BG", bg_list)])
+            )
             compilation = fg_upshot | bg_upshot | {"subtitle": title or data_dir}
 
         else:
@@ -259,9 +260,11 @@ class Templater(object):
             toolbar_location="above"
         )
 
-        p.xaxis.major_label_orientation = 0.5  # 约30度
         align_start = min(f["timestamp_ms"] for f in frames)
         p.xaxis.axis_label = f"时间 (ms) - 起点 {align_start}ms"
+        p.xaxis.major_label_orientation = 0.5  # 约30度
+        p.legend.label_text_font_size = "10pt"
+        p.title.text_font_size = "16pt"
 
         # 主帧折线图与散点
         p.line(
@@ -270,7 +273,7 @@ class Templater(object):
         )
         p.scatter(
             "timestamp_ms", "duration_ms",
-            source=source, size=6, color="color", alpha=0.8, legend_label="帧耗时"
+            source=source, size=2, color="color", alpha=0.8, legend_label="帧耗时"
         )
 
         # Hover 显示信息
@@ -281,8 +284,8 @@ class Templater(object):
             ("类型", "@frame_type"),
             ("GPU合成", "@gpu_composition"),
             ("按时呈现", "@on_time_finish"),
-            ("FPS系统", "@fps_sys"),
-            ("FPS应用", "@fps_app"),
+            ("系统FPS", "@fps_sys"),
+            ("应用FPS", "@fps_app"),
             ("图层", "@layer_name"),
         ]))
 
@@ -319,9 +322,6 @@ class Templater(object):
                 fill_alpha=0.15
             ))
 
-        p.legend.label_text_font_size = "10pt"
-        p.title.text_font_size = "16pt"
-
         return p
 
     async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:
@@ -355,6 +355,11 @@ class Templater(object):
         drag_ranges = json.loads(drag_ranges)
         jank_ranges = json.loads(jank_ranges)
 
+        # 平均帧
+        avg_fps = round(sum(f["fps_app"] for f in raw_frames) / (total_frames := len(raw_frames)), 2)
+        # 掉帧率
+        jank_rate = round(sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2)
+
         segment_list = split_frames_by_time(raw_frames)
 
         conspiracy = []
@@ -368,7 +373,7 @@ class Templater(object):
             )
             if seg_score is None:
                 continue
-            labels = Scores.quality_label(seg_score)
+            mk = Scores.quality_label(seg_score)
 
             p = await self.plot_gfx_analysis(
                 frames=segment,
@@ -378,8 +383,8 @@ class Templater(object):
                 drag_ranges=None,
                 jank_ranges=jank_ranges,
             )
-            p.title.text = f"[Frame Range {idx:02}] - [{labels['level']}] {labels['label']}"
-            p.title.text_color = labels["color"]
+            p.title.text = f"[Range {idx:02}] - [{seg_score}] - [{mk['level']}] - [{mk['label']}]"
+            p.title.text_color = mk["color"]
             conspiracy.append(p)
 
         if not conspiracy:
@@ -396,8 +401,8 @@ class Templater(object):
             "tags": [
                 {
                     "fields": [
-                        {"label": "平均帧", "value": "56", "unit": "FPS"},
-                        {"label": "掉帧率", "value": "11", "unit": "%"}
+                        {"label": "平均帧", "value": avg_fps, "unit": "FPS"},
+                        {"label": "掉帧率", "value": jank_rate, "unit": "%"}
                     ],
                     "link": str(Path(const.SUMMARY) / data_dir / Path(file_path).name),
                 }
