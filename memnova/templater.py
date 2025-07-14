@@ -263,8 +263,6 @@ class Templater(object):
         align_start = min(f["timestamp_ms"] for f in frames)
         p.xaxis.axis_label = f"时间 (ms) - 起点 {align_start}ms"
         p.xaxis.major_label_orientation = 0.5  # 约30度
-        p.legend.label_text_font_size = "10pt"
-        p.title.text_font_size = "16pt"
 
         # 主帧折线图与散点
         p.line(
@@ -322,6 +320,9 @@ class Templater(object):
                 fill_alpha=0.15
             ))
 
+        p.legend.label_text_font_size = "10pt"
+        p.title.text_font_size = "16pt"
+        
         return p
 
     async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:
