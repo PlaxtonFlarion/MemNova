@@ -164,6 +164,98 @@ class Scores(object):
                 "label": "极差体验，建议排查"
             }
 
+    # Notes: ======================== GFX ========================
+
+    @staticmethod
+    def assess_io_score(
+            metrics: dict,
+            swap_io_threshold: float = 10.0,
+            page_io_peak_threshold: float = 100.0,
+            swap_active_ratio_threshold: float = 0.2
+    ) -> dict:
+
+        io = metrics.get("io", {})
+        block = metrics.get("block", [])
+
+        result = {
+            "swap_status": "PASS",
+            "swap_max": 0.0,
+            "swap_events": 0,
+            "swap_ratio": 0.0,
+            "page_io_status": "PASS",
+            "page_io_peak": 0.0,
+            "page_io_std": 0.0,
+            "block_events": len(block),
+            "tags": [],
+            "risk": [],
+            "score": 100,
+            "grade": "S"
+        }
+
+        penalties = []
+        tags = []
+
+        # Swap IO
+        swap_vals = []
+        swap_times = set()
+        for k in ("pswpin", "pswpout"):
+            for d in io.get(k, []):
+                v = float(d.get("delta", 0))
+                t = float(d.get("time_sec", 0))
+                if v > 0:
+                    swap_vals.append(v)
+                    swap_times.add(round(t, 1))
+
+        if swap_vals:
+            max_swap = max(swap_vals)
+            ratio = len(swap_times) / max(len(io.get("pgpgin", [])), 1)
+            result["swap_max"] = round(max_swap, 2)
+            result["swap_events"] = len(swap_vals)
+            result["swap_ratio"] = round(ratio, 2)
+            if max_swap > swap_io_threshold:
+                result["swap_status"] = "FAIL"
+                penalties.append(20)
+                result["risk"].append("swap_peak")
+                tags.append("high_swap")
+            if ratio > swap_active_ratio_threshold:
+                result["swap_status"] = "FAIL"
+                penalties.append(10)
+                result["risk"].append("swap_ratio")
+                tags.append("swap_active")
+
+        # Page IO
+        page_vals = []
+        for k in ("pgpgin", "pgpgout"):
+            page_vals += [float(d.get("delta", 0)) for d in io.get(k, [])]
+        if page_vals:
+            peak = max(page_vals)
+            std = numpy.std(page_vals)
+            result["page_io_peak"] = round(peak, 2)
+            result["page_io_std"] = round(std, 2)
+            if peak > page_io_peak_threshold:
+                result["page_io_status"] = "FAIL"
+                penalties.append(10)
+                result["risk"].append("page_io_peak")
+                tags.append("high_page_io")
+
+        score = max(100 - sum(penalties), 0)
+        result["score"], result["tags"] = score, tags
+
+        if score >= 95:
+            result["grade"] = "S"
+        elif score >= 90:
+            result["grade"] = "A"
+        elif score >= 80:
+            result["grade"] = "B"
+        elif score >= 70:
+            result["grade"] = "C"
+        elif score >= 60:
+            result["grade"] = "D"
+        else:
+            result["grade"] = "E"
+
+        return result
+
 
 if __name__ == '__main__':
     pass

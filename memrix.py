@@ -383,8 +383,13 @@ class Memrix(object):
         # Notes: ========== 启动工具 ==========
         toolkit: typing.Optional["ToolKit"] = ToolKit()
 
-        if not (heaped := Path(reporter.group_dir) / "Heaped").exists():
-            heaped.mkdir(parents=True, exist_ok=True)
+        if not (traces := Path(reporter.group_dir) / "Traces").exists():
+            traces.mkdir(parents=True, exist_ok=True)
+        if not (images := Path(reporter.group_dir) / "Images").exists():
+            images.mkdir(parents=True, exist_ok=True)
+
+        head = f"{title}_{now_format}" if (title := self.title) else self.file_folder
+        image_loc = images / f"{head}_image.png"
 
         async with aiosqlite.connect(reporter.db_file) as db:
             await asyncio.gather(
@@ -399,17 +404,14 @@ class Memrix(object):
             )
             watcher = asyncio.create_task(self.watcher())
 
-            heap_profile_task = None
-            if self.lapse and self.hprof:
-                heap_profile_task = asyncio.create_task(self.profile(device, str(heaped)))
-
             self.dumped = asyncio.Event()
             while not self.task_close_event.is_set():
                 await flash_memory_launch()
                 await asyncio.sleep(self.align.speed)
 
-        if heap_profile_task:
-            await heap_profile_task
+            union_list = await Cubicle.query_mem_data(db, self.file_folder, True)
+            await Painter.draw_mem_enhanced(union_list, str(image_loc))
+
         await watcher
         await self.sample_stop(reporter)
 
@@ -493,7 +495,7 @@ class Memrix(object):
                 await tracer.annotate_frames(
                     raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
                 )
-                await Painter.draw_frame_timeline(
+                await Painter.draw_gfx_timeline(
                     raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app, str(image_loc)
                 )
 
@@ -518,19 +520,18 @@ class Memrix(object):
                     )
                     self.file_insert += len(raw_frames)
                     logger.info(f"Article {self.file_insert} data insert success")
-
             else:
-                gfx_info = await tracer.extract_metrics(tp, self.focus)
+                gfx_info = await Tracer.extract_metrics(tp, self.focus)
                 self.design.console.print(gfx_info)
+                await Painter.draw_io_metrics(gfx_info, str(image_loc))
 
         await watcher
         await self.sample_stop(reporter)
 
     # """真相快照"""
     async def observation(self) -> None:
-        # todo 需要重构
-        if not (target_dir := Path(self.src_total_place) / self.focus).exists():
-            raise MemrixError(f"Target directory {target_dir} does not exist ...")
+        if not (target_dir := Path(self.focus)).exists():
+            raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
         segment_router = {
             const.TRACK_TREE_DIR: {
@@ -550,17 +551,17 @@ class Memrix(object):
             }
         }
 
-        parent_dir = target_dir.parent.name
+        parent_dir_name = target_dir.parent.name
         try:
-            router = segment_router[parent_dir]
+            router = segment_router[parent_dir_name]
         except KeyError:
-            raise MemrixError(f"Unsupported directory type: {parent_dir} ...")
+            raise MemrixError(f"Unsupported directory type: {parent_dir_name} ...")
 
         folder = router["folder"]
         method = router["method"]
         render = router["render"]
 
-        reporter = Reporter(self.src_total_place, self.focus, folder)
+        reporter = Reporter(self.src_total_place, target_dir.name, folder)
 
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():

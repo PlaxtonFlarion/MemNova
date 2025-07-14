@@ -13,6 +13,24 @@ from perfetto.trace_processor import TraceProcessor
 
 
 class Tracer(object):
+    """提取"""
+
+    # Notes: ======================== MEM ========================
+
+    @staticmethod
+    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        sql = f"""
+            SELECT
+                c.ts / 1e9 AS time_sec,
+                c.value / 1024.0 AS rss_mb
+            FROM counter c
+            JOIN process_counter_track t ON c.track_id = t.id
+            JOIN process p ON t.upid = p.upid
+            WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
+            ORDER BY c.ts;
+        """
+        df = tp.query(sql).as_pandas_dataframe().dropna()
+        return df.to_dict("records")
 
     # Notes: ======================== GFX ========================
 
@@ -224,21 +242,6 @@ class Tracer(object):
             for name in df["counter_name"].unique()
         }
         return grouped
-
-    @staticmethod
-    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
-        sql = f"""
-            SELECT
-                c.ts / 1e9 AS time_sec,
-                c.value / 1024.0 AS rss_mb
-            FROM counter c
-            JOIN process_counter_track t ON c.track_id = t.id
-            JOIN process p ON t.upid = p.upid
-            WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
-            ORDER BY c.ts;
-        """
-        df = tp.query(sql).as_pandas_dataframe().dropna()
-        return df.to_dict("records")
 
     @staticmethod
     async def extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:

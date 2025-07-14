@@ -67,7 +67,7 @@ class Reporter(object):
     @staticmethod
     def mean_of_field(field: str, report_list: list[dict]) -> typing.Optional[float]:
         values = [
-            float(item["metrics"][field])
+            round(float(item["metrics"][field]), 2)
             for item in report_list
             if "metrics" in item and field in item["metrics"]
         ]

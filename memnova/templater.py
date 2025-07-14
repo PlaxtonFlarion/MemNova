@@ -30,9 +30,7 @@ from bokeh.models import (
     ColumnDataSource, Span, HoverTool,
     DatetimeTickFormatter, BoxAnnotation, Range1d
 )
-from engine.tinker import Period
 from memcore.cubicle import Cubicle
-from memnova.painter import Painter
 from memnova.scores import Scores
 from memnova import const
 
@@ -192,7 +190,7 @@ class Templater(object):
         save(p)
 
         return {
-            "name": file_name,  # 如 FG / BG / MEM
+            "name": file_name,  # FG / BG / MEM
             "metrics": {
                 "MAX": round(float(max_value), 2),
                 "AVG": round(float(avg_value), 2),
@@ -218,6 +216,7 @@ class Templater(object):
                 Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
             )
             title, timestamp = joint
+
             fg_upshot, bg_upshot = await asyncio.gather(
                 *(self.plot_mem_analysis(name, data, group) for name, data in [("FG", fg_list), ("BG", bg_list)])
             )
@@ -242,13 +241,9 @@ class Templater(object):
                 Cubicle.query_mem_data(self.db, data_dir, True), Cubicle.query_joint_data(self.db, data_dir)
             )
             title, timestamp = joint
-            head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-            if not (images := Path(self.download).parent / "Images").exists():
-                images.mkdir(parents=True, exist_ok=True)
-            image_loc = images / f"{head}_image.png"
-            await Painter.draw_memory_enhanced(union_list, str(image_loc))
 
             union_upshot = await self.plot_mem_analysis("MEM", union_list, group)
+
             compilation = {
                 "subtitle": title or data_dir,
                 "tags": union_upshot.get("tags", []),
@@ -385,9 +380,13 @@ class Templater(object):
         jank_ranges = json.loads(jank_ranges)
 
         # 平均帧
-        avg_fps = round(sum(f["fps_app"] for f in raw_frames) / (total_frames := len(raw_frames)), 2)
+        avg_fps = round(
+            sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2
+        )
         # 掉帧率
-        jank_rate = round(sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2)
+        jank_rate = round(
+            sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
+        )
 
         segment_list = split_frames_by_time(raw_frames)
 
