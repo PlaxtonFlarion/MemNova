@@ -192,13 +192,16 @@ class Templater(object):
         save(p)
 
         return {
-            f"{file_name}-MAX": round(float(max_value), 2),
-            f"{file_name}-AVG": round(float(avg_value), 2),
+            "name": file_name,  # 如 FG / BG / MEM
+            "metrics": {
+                "MAX": round(float(max_value), 2),
+                "AVG": round(float(avg_value), 2),
+            },
             "tags": [
                 {
                     "fields": [
                         {"label": f"{file_name}-MAX: ", "value": f"{float(max_value):.2f}", "unit": "MB"},
-                        {"label": f"{file_name}-AVG: ", "value": f"{float(avg_value):.2f}", "unit": "MB"}
+                        {"label": f"{file_name}-AVG: ", "value": f"{float(avg_value):.2f}", "unit": "MB"},
                     ],
                     "link": str(Path(const.SUMMARY) / Path(group).name / Path(file_path).name)
                 }
@@ -210,19 +213,35 @@ class Templater(object):
             group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        if data_dir.startswith(const.TRACK_TREE_DIR):
-            (fg_list, bg_list), (title, *_) = await asyncio.gather(
+        if data_dir.startswith(const.TRACK_TREE_DIR.split("_")[0]):
+            (fg_list, bg_list), (joint, *_) = await asyncio.gather(
                 Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
             )
+            title, timestamp = joint
             fg_upshot, bg_upshot = await asyncio.gather(
                 *(self.plot_mem_analysis(name, data, group) for name, data in [("FG", fg_list), ("BG", bg_list)])
             )
-            compilation = fg_upshot | bg_upshot | {"subtitle": title or data_dir}
+
+            compilation = {
+                "subtitle": title or data_dir,
+                "tags": fg_upshot.get("tags", []) + bg_upshot.get("tags", []),
+                "metrics": {
+                    **({
+                           f"{fg_upshot['name']}-MAX": fg_upshot["metrics"]["MAX"],
+                           f"{fg_upshot['name']}-AVG": fg_upshot["metrics"]["AVG"]
+                       } if fg_upshot and fg_upshot.get("metrics") else {}),
+                    **({
+                           f"{bg_upshot['name']}-MAX": bg_upshot["metrics"]["MAX"],
+                           f"{bg_upshot['name']}-AVG": bg_upshot["metrics"]["AVG"]
+                       } if bg_upshot and bg_upshot.get("metrics") else {})
+                }
+            }
 
         else:
-            union_list, (title, timestamp) = await asyncio.gather(
+            union_list, (joint, *_) = await asyncio.gather(
                 Cubicle.query_mem_data(self.db, data_dir, True), Cubicle.query_joint_data(self.db, data_dir)
             )
+            title, timestamp = joint
             head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
             if not (images := Path(self.download).parent / "Images").exists():
                 images.mkdir(parents=True, exist_ok=True)
@@ -230,7 +249,16 @@ class Templater(object):
             await Painter.draw_memory_enhanced(union_list, str(image_loc))
 
             union_upshot = await self.plot_mem_analysis("MEM", union_list, group)
-            compilation = union_upshot | {"subtitle": title or data_dir}
+            compilation = {
+                "subtitle": title or data_dir,
+                "tags": union_upshot.get("tags", []),
+                "metrics": {
+                    **({
+                           f"{union_upshot['name']}-MAX": union_upshot["metrics"]["MAX"],
+                           f"{union_upshot['name']}-AVG": union_upshot["metrics"]["AVG"]
+                       } if union_upshot and union_upshot.get("metrics") else {})
+                }
+            }
 
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
@@ -322,7 +350,7 @@ class Templater(object):
 
         p.legend.label_text_font_size = "10pt"
         p.title.text_font_size = "16pt"
-        
+
         return p
 
     async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:

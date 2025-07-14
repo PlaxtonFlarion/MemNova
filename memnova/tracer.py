@@ -206,72 +206,68 @@ class Tracer(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def extract_vm_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
-        query = """
-        SELECT
-            ts / 1e9 AS time_sec,
-            name,
-            value - LAG(value) OVER (PARTITION BY name ORDER BY ts) AS delta
-        FROM counter
-        WHERE name IN ('vmstat.pgpgin', 'vmstat.pgpgout')
-        ORDER BY ts;
+    async def extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
+        sql = """
+            SELECT
+                ts / 1e9 AS time_sec,
+                t.name AS counter_name,
+                value,
+                COALESCE(value - LAG(value) OVER (PARTITION BY t.name ORDER BY ts), 0.0) AS delta
+            FROM counter c
+            JOIN counter_track t ON c.track_id = t.id
+            WHERE t.name IN ('pgpgin', 'pgpgout', 'pswpin', 'pswpout')
+            ORDER BY ts;
         """
-        df = tp.query(query).as_pandas_dataframe().dropna()
-        return {
-            "in": df[df["name"] == "vmstat.pgpgin"].to_dict("records"),
-            "out": df[df["name"] == "vmstat.pgpgout"].to_dict("records"),
+        df = tp.query(sql).as_pandas_dataframe().dropna()
+        grouped = {
+            name: df[df["counter_name"] == name][["time_sec", "delta"]].to_dict("records")
+            for name in df["counter_name"].unique()
         }
+        return grouped
 
     @staticmethod
-    async def extract_block_events(tp: "TraceProcessor", app_name: str) -> list[dict]:
-        query = f"""
-        SELECT
-            slice.ts / 1e9 AS start_sec,
-            slice.dur / 1e6 AS duration_ms,
-            slice.name,
-            thread.name AS thread_name,
-            process.name AS process_name
-        FROM slice
-        JOIN thread ON slice.utid = thread.utid
-        JOIN process ON thread.upid = process.upid
-        WHERE slice.name IN ('block_rq_issue', 'block_rq_complete')
-        AND process.name = '{app_name}'
-        ORDER BY slice.ts;
+    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        sql = f"""
+            SELECT
+                c.ts / 1e9 AS time_sec,
+                c.value / 1024.0 AS rss_mb
+            FROM counter c
+            JOIN process_counter_track t ON c.track_id = t.id
+            JOIN process p ON t.upid = p.upid
+            WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
+            ORDER BY c.ts;
         """
-        df = tp.query(query).as_pandas_dataframe()
+        df = tp.query(sql).as_pandas_dataframe().dropna()
         return df.to_dict("records")
 
     @staticmethod
-    async def extract_disk_latency(tp: "TraceProcessor", app_name: str) -> list[dict]:
-        query = f"""
-        SELECT
-            raw.ts / 1e9 AS time_sec,
-            raw.name,
-            thread.name AS thread_name,
-            process.name AS process_name
-        FROM raw
-        JOIN thread ON raw.utid = thread.utid
-        JOIN process ON thread.upid = process.upid
-        WHERE (raw.name LIKE '%blk%' OR raw.name LIKE '%mmc%')
-        AND process.name = '{app_name}'
-        ORDER BY raw.ts;
+    async def extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        sql = f"""
+            SELECT
+                slice.ts / 1e9 AS time_sec,
+                slice.name,
+                process.name AS process_name
+            FROM slice
+            JOIN thread ON slice.utid = thread.utid
+            JOIN process ON thread.upid = process.upid
+            WHERE slice.name IN ('block_rq_issue', 'block_rq_complete')
+            AND process.name = '{app_name}'
+            ORDER BY slice.ts;
         """
-        df = tp.query(query).as_pandas_dataframe()
-        return df.to_dict("records")
+        df = tp.query(sql).as_pandas_dataframe()
+        return df[["time_sec", "event"]].to_dict("records")
 
     @staticmethod
-    async def aggregate_io_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+    async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
         return {
-            "vm_io": await Tracer.extract_vm_io(tp),
-            "block_events": await Tracer.extract_block_events(tp, app_name),
             "meta": {
                 "source": "perfetto",
                 "app": app_name,
-                "unit": {
-                    "vm_io": "KB",
-                    "block_events": "ms"
-                }
-            }
+                "unit": {"io": "KB", "rss": "MB", "block": "ms"}
+            },
+            "io": await Tracer.extract_io(tp),
+            "rss": await Tracer.extract_rss(tp, app_name),
+            "block": await Tracer.extract_block(tp, app_name)
         }
 
 

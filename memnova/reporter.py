@@ -65,9 +65,11 @@ class Reporter(object):
         Design.build_file_tree(html_file)
 
     @staticmethod
-    def mean_of_field(field: str) -> typing.Optional[float]:
+    def mean_of_field(field: str, report_list: list[dict]) -> typing.Optional[float]:
         values = [
-            float(i[field]) for i in report_list if field in i
+            float(item["metrics"][field])
+            for item in report_list
+            if "metrics" in item and field in item["metrics"]
         ]
         return sum(values) / len(values) if values else None
 
@@ -75,12 +77,12 @@ class Reporter(object):
     def track_rendition(self, align: "Align" , team_data: dict, report_list: list[dict]) -> dict:
 
         fg_final = {
-            "前台峰值": (avg_fg_max := self.mean_of_field("FG-MAX")),
-            "前台均值": (avg_fg_avg := self.mean_of_field("FG-AVG")),
+            "前台峰值": (avg_fg_max := self.mean_of_field("FG-MAX", report_list)),
+            "前台均值": (avg_fg_avg := self.mean_of_field("FG-AVG", report_list)),
         }
         bg_final = {
-            "后台峰值": (avg_bg_max := self.mean_of_field("BG-MAX")),
-            "后台均值": (avg_bg_avg := self.mean_of_field("BG-AVG")),
+            "后台峰值": (avg_bg_max := self.mean_of_field("BG-MAX", report_list)),
+            "后台均值": (avg_bg_avg := self.mean_of_field("BG-AVG", report_list)),
         }
 
         conclusion = []
@@ -137,8 +139,8 @@ class Reporter(object):
     def lapse_rendition(self, align: "Align" , team_data: dict, report_list: list[dict]) -> dict:
 
         union_final = {
-            "内存峰值": (avg_fg_max := self.mean_of_field("MEM-MAX")),
-            "内存均值": (avg_fg_avg := self.mean_of_field("MEM-AVG")),
+            "内存峰值": self.mean_of_field("MEM-MAX", report_list),
+            "内存均值": self.mean_of_field("MEM-AVG", report_list),
         }
 
         return {

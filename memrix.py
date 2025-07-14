@@ -374,8 +374,8 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        prefix = "TRACK" if self.track else "LAPSE"
-        team_name = f"{prefix}_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
+        prefix = "Track" if self.track else "Lapse"
+        team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         await self.refresh(
             self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
@@ -438,8 +438,8 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        prefix = "SLEEK" if self.sleek else "SURGE"
-        team_name = f"{prefix}_DATA_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
+        prefix = "Sleek" if self.sleek else "Surge"
+        team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         await self.refresh(
             self.focus, reporter.team_file, team_name, device.serial, reporter.before_time
         )
@@ -520,7 +520,7 @@ class Memrix(object):
                     logger.info(f"Article {self.file_insert} data insert success")
 
             else:
-                gfx_info = await tracer.aggregate_io_metrics(tp, self.focus)
+                gfx_info = await tracer.extract_metrics(tp, self.focus)
                 self.design.console.print(gfx_info)
 
         await watcher
@@ -528,6 +528,7 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self) -> None:
+        # todo 需要重构
         if not (target_dir := Path(self.src_total_place) / self.focus).exists():
             raise MemrixError(f"Target directory {target_dir} does not exist ...")
 
