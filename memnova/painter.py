@@ -137,8 +137,8 @@ class Painter(object):
 
         timestamps = [f["timestamp_ms"] for f in frames]
         durations = [f["duration_ms"] for f in frames]
-        fps_sys = [f["fps_sys"] for f in vsync_sys]
-        fps_app = [f["fps_app"] for f in vsync_app]
+        fps_sys = [f["fps"] for f in vsync_sys]
+        fps_app = [f["fps"] for f in vsync_app]
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
