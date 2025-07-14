@@ -42,7 +42,7 @@ class Cubicle(object):
             title,
             timestamp
     ):
-        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.joint_table} (
             data_dir,
             title,
             timestamp) VALUES (?, ?, ?)''', (
@@ -58,7 +58,7 @@ class Cubicle(object):
         sql = f"""
             SELECT
                 title, timestamp
-            FROM {Cubicle.gfx_data_table}
+            FROM {Cubicle.joint_table}
             WHERE data_dir = '{data_dir}'
         """
         return await Cubicle.find_data(db, sql)
