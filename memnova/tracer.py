@@ -12,30 +12,31 @@ from bisect import bisect_left
 from perfetto.trace_processor import TraceProcessor
 
 
-class Tracer(object):
-    """提取"""
+class _Tracer(object):
+    """Tracer"""
 
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def __extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        # todo c.value / 1024.0 / 1024.0 AS rss_mb ?
         sql = f"""
-            SELECT
-                c.ts / 1e9 AS time_sec,
-                c.value / 1024.0 AS rss_mb
-            FROM counter c
-            JOIN process_counter_track t ON c.track_id = t.id
-            JOIN process p ON t.upid = p.upid
-            WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
-            ORDER BY c.ts;
-        """
+               SELECT
+                   c.ts / 1e9 AS time_sec,
+                   c.value / 1024.0 / 1024.0 AS rss_mb
+               FROM counter c
+               JOIN process_counter_track t ON c.track_id = t.id
+               JOIN process p ON t.upid = p.upid
+               WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
+               ORDER BY c.ts;
+           """
         df = tp.query(sql).as_pandas_dataframe().dropna()
         return df.to_dict("records")
 
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
+    async def __extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
         where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
 
         sql = f"""
@@ -79,7 +80,7 @@ class Tracer(object):
         ]
 
     @staticmethod
-    async def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def __extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -90,7 +91,7 @@ class Tracer(object):
         ]
 
     @staticmethod
-    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def __extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -101,7 +102,7 @@ class Tracer(object):
         ]
 
     @staticmethod
-    async def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
+    async def __extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -132,7 +133,7 @@ class Tracer(object):
         return fps_points
 
     @staticmethod
-    async def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
+    async def __extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -163,7 +164,7 @@ class Tracer(object):
         return fps_points
 
     @staticmethod
-    async def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
+    async def __mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
         jank_ranges = []
         count = 0
         start_ts = None
@@ -186,7 +187,7 @@ class Tracer(object):
         return jank_ranges
 
     @staticmethod
-    async def annotate_frames(
+    async def __annotate_frames(
             frames: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
@@ -224,7 +225,7 @@ class Tracer(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
+    async def __extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
         sql = """
             SELECT
                 ts / 1e9 AS time_sec,
@@ -244,17 +245,17 @@ class Tracer(object):
         return grouped
 
     @staticmethod
-    async def extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def __extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT
                 slice.ts / 1e9 AS time_sec,
-                slice.name,
-                process.name AS process_name
+                slice.name AS event
             FROM slice
-            JOIN thread ON slice.utid = thread.utid
+            JOIN thread_track ON slice.track_id = thread_track.id
+            JOIN thread ON thread_track.utid = thread.utid
             JOIN process ON thread.upid = process.upid
             WHERE slice.name IN ('block_rq_issue', 'block_rq_complete')
-            AND process.name = '{app_name}'
+              AND process.name = '{app_name}'
             ORDER BY slice.ts;
         """
         df = tp.query(sql).as_pandas_dataframe()
@@ -262,15 +263,59 @@ class Tracer(object):
 
     @staticmethod
     async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+        raise NotImplementedError("")  # todo
+
+
+class MemAnalyzer(_Tracer):
+    """MEM"""
+
+    @staticmethod
+    async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+        pass
+
+
+class GfxAnalyzer(_Tracer):
+    """GFX"""
+
+    async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
+        raw_frames = await self.__extract_primary_frames(tp, app_name)
+
+        vsync_sys = await self.__extract_vsync_sys_points(tp)  # 系统FPS
+        vsync_app = await self.__extract_vsync_app_points(tp)  # 应用FPS
+
+        roll_ranges = await self.__extract_roll_ranges(tp)  # 滑动区间
+        drag_ranges = await self.__extract_drag_ranges(tp)  # 拖拽区间
+
+        jank_ranges = await self.__mark_consecutive_jank(raw_frames)  # 连续丢帧
+
+        await self.__annotate_frames(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
+        )
+
         return {
-            "meta": {
-                "source": "perfetto",
-                "app": app_name,
-                "unit": {"io": "KB", "rss": "MB", "block": "ms"}
+            "metadata": {
+                "source": "perfetto", "app": app_name
             },
-            "io": await Tracer.extract_io(tp),
-            "rss": await Tracer.extract_rss(tp, app_name),
-            "block": await Tracer.extract_block(tp, app_name)
+            "raw_frames": raw_frames,
+            "vsync_sys": vsync_sys,
+            "vsync_app": vsync_app,
+            "roll_ranges": roll_ranges,
+            "drag_ranges": drag_ranges,
+            "jank_ranges": jank_ranges
+        }
+
+
+class IonAnalyzer(_Tracer):
+    """I/O"""
+
+    async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
+        return {
+            "metadata": {
+                "source": "perfetto", "app": app_name
+            },
+            "io": await self.__extract_io(tp),
+            "rss": await self.__extract_rss(tp, app_name),
+            "block": await self.__extract_block(tp, app_name)
         }
 
 

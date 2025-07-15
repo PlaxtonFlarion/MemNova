@@ -8,23 +8,18 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import json
 import typing
 import asyncio
 import aiosqlite
 
 
 class Cubicle(object):
-    """
-    内存数据数据库操作类，提供异步持久化能力。
-    """
+    """Cubicle"""
+
     joint_table = "joint_table"
     mem_data_table = "mem_data"
     gfx_data_table = "gfx_data"
-
-    @staticmethod
-    async def find_data(db: "aiosqlite.Connection", sql: str) -> typing.Any:
-        async with db.execute(sql) as cursor:
-            return await cursor.fetchall()
 
     @staticmethod
     async def create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
@@ -54,14 +49,16 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
+    async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
         sql = f"""
-            SELECT
-                title, timestamp
+            SELECT title, timestamp
             FROM {Cubicle.joint_table}
-            WHERE data_dir = '{data_dir}'
+            WHERE data_dir = ?
         """
-        return await Cubicle.find_data(db, sql)
+        async with db.execute(sql, (data_dir,)) as cursor:
+            return await cursor.fetchall()
+
+    # Notes: ======================== MEM ========================
 
     @staticmethod
     async def create_mem_table(db: "aiosqlite.Connection") -> None:
@@ -193,37 +190,36 @@ class Cubicle(object):
     async def query_mem_data(
             db: "aiosqlite.Connection",
             data_dir: str,
-            union: bool = False
+            union_query: bool = False
     ) -> typing.Union[tuple[list[tuple], list[tuple]], list[tuple]]:
-        """
-        查询指定数据目录（轮次）下的前台与后台内存采样数据。
-        """
-        if union:
-            sql =f"""
-                SELECT
-                    timestamp, rss, pss, uss, opss, activity, adj, foreground
+
+        async def fetch(sql) -> typing.Any:
+            async with db.execute(sql, (data_dir,)) as cursor:
+                return await cursor.fetchall()
+
+        if union_query:
+            union_sql = f"""
+                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
                 FROM {Cubicle.mem_data_table}
-                WHERE data_dir = '{data_dir}' and pss != ''
+                WHERE data_dir = ? AND pss != ''
                 ORDER BY timestamp ASC
             """
+            return await fetch(union_sql)
 
-            return await Cubicle.find_data(db, sql)
+        else:
+            fg_sql = f"""
+                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
+                FROM {Cubicle.mem_data_table}
+                WHERE foreground = '前台' AND data_dir = ? AND pss != ''
+            """
+            bg_sql = f"""
+                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
+                FROM {Cubicle.mem_data_table}
+                WHERE foreground = '后台' AND data_dir = ? AND pss != ''
+            """
+            return await asyncio.gather(fetch(fg_sql), fetch(bg_sql))
 
-        fg_sql = f"""
-            SELECT
-                timestamp, rss, pss, uss, opss, activity, adj, foreground
-            FROM {Cubicle.mem_data_table}
-            WHERE foreground = '前台' and data_dir = '{data_dir}' and pss != ''
-        """
-
-        bg_sql = f"""
-            SELECT
-                timestamp, rss, pss, uss, opss, activity, adj, foreground
-            FROM {Cubicle.mem_data_table}
-            WHERE foreground = '后台' and data_dir = '{data_dir}' and pss != ''
-        """
-
-        return await asyncio.gather(Cubicle.find_data(db, fg_sql), Cubicle.find_data(db, bg_sql))
+    # Notes: ======================== GFX ========================
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
@@ -247,7 +243,7 @@ class Cubicle(object):
             data_dir: str,
             label: str,
             timestamp: str,
-            gfx_info: dict
+            payload: dict
     ) -> None:
 
         await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
@@ -263,25 +259,42 @@ class Cubicle(object):
                 data_dir,
                 label,
                 timestamp,
-                gfx_info["raw_frames"],
-                gfx_info["vsync_sys"],
-                gfx_info["vsync_app"],
-                gfx_info["roll_ranges"],
-                gfx_info["drag_ranges"],
-                gfx_info["jank_ranges"]
+                payload["raw_frames"],
+                payload["vsync_sys"],
+                payload["vsync_app"],
+                payload["roll_ranges"],
+                payload["drag_ranges"],
+                payload["jank_ranges"]
             )
         )
         await db.commit()
 
     @staticmethod
-    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> tuple[list]:
+    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
-                raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges
+                raw_frames,
+                vsync_sys,
+                vsync_app,
+                roll_ranges,
+                drag_ranges,
+                jank_ranges
             FROM {Cubicle.gfx_data_table}
-            WHERE data_dir = '{data_dir}'
+            WHERE data_dir = ?
         """
-        return await Cubicle.find_data(db, sql)
+        async with db.execute(sql, (data_dir,)) as cursor:
+            rows = await cursor.fetchall()
+            return [
+                {
+                    "raw_frames": json.loads(rf),
+                    "vsync_sys": json.loads(vs),
+                    "vsync_app": json.loads(va),
+                    "roll_ranges": json.loads(rr),
+                    "drag_ranges": json.loads(dr),
+                    "jank_ranges": json.loads(jr),
+                }
+                for rf, vs, va, rr, dr, jr in rows
+            ]
 
 if __name__ == '__main__':
     pass

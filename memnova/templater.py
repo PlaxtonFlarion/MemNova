@@ -10,7 +10,6 @@
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
 import os
-import json
 import numpy
 import pandas
 import typing
@@ -27,7 +26,7 @@ from bokeh.plotting import (
     save, figure
 )
 from bokeh.models import (
-    ColumnDataSource, Span, HoverTool,
+    ColumnDataSource, HoverTool, Spacer, Span, Div,
     DatetimeTickFormatter, BoxAnnotation, Range1d
 )
 from memcore.cubicle import Cubicle
@@ -41,8 +40,61 @@ class Templater(object):
         self.db = db
         self.download = download
 
-    @staticmethod
+    def generate_viewers(self) -> "Div":
+        traces_path = Path(self.download).parent.resolve() / const.TRACES_DIR
+        images_path = Path(self.download).parent.resolve() / const.IMAGES_DIR
+        ionics_path = Path(self.download).parent.resolve() / const.IONICS_DIR
+
+        viewers = [
+            {
+                "label": "➤ Traces 查看",
+                "url": f"file:///{traces_path.as_posix()}",
+                "color": "#4CAF50"
+            },
+            {
+                "label": "➤ Images 查看",
+                "url": f"file:///{images_path.as_posix()}",
+                "color": "#4CAF50"
+            },
+            {
+                "label": "➤ Ionics 查看",
+                "url": f"file:///{ionics_path.as_posix()}",
+                "color": "#4CAF50"
+            },
+            {
+                "label": "➤ UI.Perfetto.dev 查看",
+                "url": f"https://ui.perfetto.dev",
+                "color": "#1E90FF"
+            }
+        ]
+
+        buttons_html = "".join([
+            f"""
+            <a href="{v['url']}" target="_blank" style="
+                display: inline-block;
+                padding: 10px 20px;
+                margin: 10px;
+                background-color: {v['color']};
+                color: white;
+                text-decoration: none;
+                font-weight: bold;
+                border-radius: 6px;
+                font-size: 15px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            ">
+                {v['label']}
+            </a>
+            """ for v in viewers
+        ])
+
+        return Div(text=f"""
+        <div style="margin-top: 40px; text-align: center;">
+            {buttons_html}
+        </div>
+        """)
+
     async def plot_mem_analysis(
+            self,
             file_name: str,
             data_list: list[tuple],
             group: str
@@ -187,7 +239,11 @@ class Templater(object):
 
         file_path = os.path.join(group, f"{file_name}_{Path(group).name}.html")
         output_file(file_path)
-        save(p)
+
+        viewer_div = self.generate_viewers()
+        save(
+            column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both")
+        )
 
         return {
             "name": file_name,  # FG / BG / MEM
@@ -238,7 +294,7 @@ class Templater(object):
 
         else:
             union_list, (joint, *_) = await asyncio.gather(
-                Cubicle.query_mem_data(self.db, data_dir, True), Cubicle.query_joint_data(self.db, data_dir)
+                Cubicle.query_mem_data(self.db, data_dir, union_query=True), Cubicle.query_joint_data(self.db, data_dir)
             )
             title, timestamp = joint
 
@@ -369,15 +425,11 @@ class Templater(object):
             group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (frame_data, *_), (title, *_) = await asyncio.gather(
+        (frame_data, *_), (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
         )
         raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data
-
-        raw_frames = json.loads(raw_frames)
-        roll_ranges = json.loads(roll_ranges)
-        drag_ranges = json.loads(drag_ranges)
-        jank_ranges = json.loads(jank_ranges)
+        title, timestamp = joint
 
         # 平均帧
         avg_fps = round(
@@ -420,7 +472,11 @@ class Templater(object):
 
         file_path = os.path.join(group, f"{data_dir}.html")
         output_file(file_path)
-        save(column(*conspiracy, sizing_mode="stretch_width"))
+
+        viewer_div = self.generate_viewers()
+        save(
+            column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width")
+        )
 
         logger.info(f"{data_dir} Handler Done ...")
 

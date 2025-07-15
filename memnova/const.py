@@ -7,6 +7,7 @@
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
+from fontTools.ufoLib import IMAGES_DIRNAME
 
 # ========【应用基础信息】========
 APP_ITEM         = r"MemNova"
@@ -38,6 +39,9 @@ TRACK_TREE_DIR  = r"Track_Tree"
 LAPSE_TREE_DIR  = r"Lapse_Tree"
 SLEEK_TREE_DIR  = r"Sleek_Tree"
 SURGE_TREE_DIR  = r"Surge_Tree"
+TRACES_DIR      = f"{APP_DESC}_Traces"
+IMAGES_DIR      = f"{APP_DESC}_Images"
+IONICS_DIR      = f"{APP_DESC}_Ionics"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"

@@ -127,55 +127,53 @@ class Scores(object):
 
     @staticmethod
     def quality_label(score: float) -> dict:
-        if score >= 0.95:
+        if score >= 0.93:
             return {
                 "level": "S",
-                "color": "#007E33",
+                "color": "#005822",
                 "label": "极致流畅，近乎完美"
             }
-        elif score >= 0.85:
+        elif score >= 0.80:
             return {
                 "level": "A",
-                "color": "#43A047",
-                "label": "流畅稳定，表现优秀"
+                "color": "#1B5E20",
+                "label": "稳定流畅，表现优秀"
             }
-        elif score >= 0.7:
+        elif score >= 0.68:
             return {
                 "level": "B",
-                "color": "#F4B400",
+                "color": "#D39E00",
                 "label": "基本流畅，偶有波动"
             }
-        elif score >= 0.55:
+        elif score >= 0.50:
             return {
                 "level": "C",
-                "color": "#FF8C00",
+                "color": "#E65100",
                 "label": "有明显卡顿，影响体验"
             }
-        elif score >= 0.4:
+        elif score >= 0.35:
             return {
                 "level": "D",
-                "color": "#FF3D00",
+                "color": "#C62828",
                 "label": "严重卡顿，需要优化"
             }
         else:
             return {
                 "level": "E",
-                "color": "#B00020",
+                "color": "#7B1FA2",
                 "label": "极差体验，建议排查"
             }
 
-    # Notes: ======================== GFX ========================
+    # Notes: ======================== I/O ========================
 
     @staticmethod
     def assess_io_score(
-            metrics: dict,
+            io: dict,
+            block: list,
             swap_io_threshold: float = 10.0,
             page_io_peak_threshold: float = 100.0,
             swap_active_ratio_threshold: float = 0.2
     ) -> dict:
-
-        io = metrics.get("io", {})
-        block = metrics.get("block", [])
 
         result = {
             "swap_status": "PASS",

@@ -23,13 +23,13 @@ class Painter(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def draw_mem_enhanced(
+    async def draw_mem_metrics(
             data_list: list[tuple],
             output_path: str
     ) -> str:
+
         timestamp, _, pss, *_ = list(zip(*data_list))
 
-        # todo 还需要转换格式？
         timestamps = md.date2num(
             [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamp]
         )
@@ -123,6 +123,7 @@ class Painter(object):
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
         plt.close()
+
         logger.info(f"[√] 图表已保存至: {output_path}")
 
         return output_path
@@ -130,18 +131,21 @@ class Painter(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def draw_gfx_timeline(
-            frames: list[dict],
+    async def draw_gfx_metrics(
+            metadata: dict,
+            raw_frames: list[dict],
+            vsync_sys: list[dict],
+            vsync_app: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
             jank_ranges: list[dict],
-            vsync_sys: list[dict],
-            vsync_app: list[dict],
             output_path: str
     ) -> str:
 
-        timestamps = [f["timestamp_ms"] for f in frames]
-        durations = [f["duration_ms"] for f in frames]
+        _ = metadata
+
+        timestamps = [f["timestamp_ms"] for f in raw_frames]
+        durations = [f["duration_ms"] for f in raw_frames]
         fps_sys = [f["fps"] for f in vsync_sys]
         fps_app = [f["fps"] for f in vsync_app]
 
@@ -233,6 +237,7 @@ class Painter(object):
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
         plt.close()
+
         logger.info(f"[√] 图表已保存至: {output_path}")
 
         return output_path
@@ -240,16 +245,17 @@ class Painter(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def draw_io_metrics(
-            metrics: dict,
+    async def draw_ion_metrics(
+            metadata: dict,
+            io: dict,
+            rss: list,
+            block: list,
             output_path: str
-    ) -> None:
+    ) -> str:
 
-        evaluate = Scores.assess_io_score(metrics)
+        _ = metadata
 
-        io = metrics.get("io", {})
-        rss = metrics.get("rss", [])
-        block = metrics.get("block", [])
+        evaluate = Scores.assess_io_score(io, block)
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
@@ -337,7 +343,9 @@ class Painter(object):
         plt.savefig(output_path, dpi=300)
         plt.close()
 
-        print(f"[√] 联合图表已保存至: {output_path}")
+        logger.info(f"[√] 图表已保存至: {output_path}")
+
+        return output_path
 
 
 if __name__ == '__main__':
