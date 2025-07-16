@@ -17,7 +17,6 @@ import asyncio
 import aiosqlite
 from pathlib import Path
 from loguru import logger
-from datetime import datetime
 from bokeh.layouts import column
 from bokeh.io import (
     curdoc, output_file
@@ -92,6 +91,8 @@ class Templater(object):
             {buttons_html}
         </div>
         """)
+
+    # Notes: ======================== MEM ========================
 
     async def plot_mem_analysis(
             self,
@@ -306,6 +307,8 @@ class Templater(object):
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
 
+    # Notes: ======================== GFX ========================
+
     @staticmethod
     async def plot_gfx_analysis(
             frames: list[dict],
@@ -383,7 +386,7 @@ class Templater(object):
             max_duration = df["duration_ms"].max()
 
             span_avg = Span(
-                location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1
+                location=avg_duration, dimension="width", line_color="#8700FF", line_dash="dotted", line_width=1
             )
             span_max = Span(
                 location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1
@@ -438,18 +441,17 @@ class Templater(object):
 
         def split_frames_by_time(frames: list[dict], segment_ms: int = 60000) -> list[list[dict]]:
             frames = sorted(frames, key=lambda f: f["timestamp_ms"])
-            segments = []
-            start_ts = frames[0]["timestamp_ms"]
-            close_ts = frames[-1]["timestamp_ms"]
+            segment_list = []
 
+            start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
             cur_start = start_ts
             while cur_start < close_ts:
                 cur_end = cur_start + segment_ms
                 if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
-                    segments.append(seg)
+                    segment_list.append(seg)
                 cur_start = cur_end
 
-            return segments
+            return segment_list
 
         os.makedirs(
             group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
@@ -470,20 +472,14 @@ class Templater(object):
             sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
         )
 
-        segment_list = split_frames_by_time(raw_frames)
+        conspiracy, segments = [], split_frames_by_time(raw_frames)
 
-        conspiracy = []
-
-        for idx, segment in enumerate(segment_list, start=1):
+        for idx, segment in enumerate(segments, start=1):
             x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
             padding = (x_close - x_start) * 0.05
 
-            seg_score = Scores.score_segment(
-                segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-            )
-            if seg_score is None:
+            if not (mk := Scores.score_segment(segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")):
                 continue
-            mk = Scores.quality_label(seg_score)
 
             p = await self.plot_gfx_analysis(
                 frames=segment,
@@ -493,7 +489,7 @@ class Templater(object):
                 drag_ranges=drag_ranges,  # todo 测试绘图性能
                 jank_ranges=jank_ranges,
             )
-            p.title.text = f"[Range {idx:02}] - [{seg_score}] - [{mk['level']}] - [{mk['label']}]"
+            p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}] - [{mk['label']}]"
             p.title.text_color = mk["color"]
             conspiracy.append(p)
 

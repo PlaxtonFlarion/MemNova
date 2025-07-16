@@ -80,7 +80,7 @@ class Scores(object):
             drag_ranges: list[dict],
             jank_ranges: list[dict],
             fps_key: str
-    ) -> typing.Optional[float]:
+    ) -> typing.Optional[dict]:
 
         if len(frames) < 5:
             return None
@@ -120,45 +120,48 @@ class Scores(object):
             motion_score = 1.0 - min(motion_jank_ratio, 1.0)
 
         # ✅ 综合得分
-        final_score = (
-            jank_score * 0.5 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.1
+        final_score = round(
+            (jank_score * 0.5 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.1), 3
         )
-        return round(final_score, 3)
 
-    @staticmethod
-    def quality_label(score: float) -> dict:
-        if score >= 0.93:
+        if final_score >= 0.93:
             return {
+                "score": final_score,
                 "level": "S",
                 "color": "#005822",
                 "label": "极致流畅，近乎完美"
             }
-        elif score >= 0.80:
+        elif final_score >= 0.80:
             return {
+                "score": final_score,
                 "level": "A",
                 "color": "#1B5E20",
                 "label": "稳定流畅，表现优秀"
             }
-        elif score >= 0.68:
+        elif final_score >= 0.68:
             return {
+                "score": final_score,
                 "level": "B",
                 "color": "#D39E00",
                 "label": "基本流畅，偶有波动"
             }
-        elif score >= 0.50:
+        elif final_score >= 0.50:
             return {
+                "score": final_score,
                 "level": "C",
                 "color": "#E65100",
                 "label": "有明显卡顿，影响体验"
             }
-        elif score >= 0.35:
+        elif final_score >= 0.35:
             return {
+                "score": final_score,
                 "level": "D",
                 "color": "#C62828",
                 "label": "严重卡顿，需要优化"
             }
         else:
             return {
+                "score": final_score,
                 "level": "E",
                 "color": "#7B1FA2",
                 "label": "极差体验，建议排查"
