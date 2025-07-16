@@ -7,7 +7,6 @@
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
-from fontTools.ufoLib import IMAGES_DIRNAME
 
 # ========【应用基础信息】========
 APP_ITEM         = r"MemNova"
