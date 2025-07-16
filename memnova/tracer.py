@@ -88,7 +88,7 @@ class _Tracer(object):
         """
         return [
             {
-                "start_ts": (row.ts / 1e6) - self.normalize_start_ts, 
+                "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
                 "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
             } for row in tp.query(sql)
         ]
@@ -101,7 +101,7 @@ class _Tracer(object):
         """
         return [
             {
-                "start_ts": (row.ts / 1e6) - self.normalize_start_ts, 
+                "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
                 "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
             } for row in tp.query(sql)
         ]
@@ -283,7 +283,7 @@ class GfxAnalyzer(_Tracer):
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
         await self.set_trace_start_ts(tp)
-        
+
         raw_frames = await self.extract_raw_frames(tp, app_name)
 
         vsync_sys = await self.extract_vsync_sys_points(tp)  # 系统FPS
@@ -316,14 +316,14 @@ class IonAnalyzer(_Tracer):
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
         await self.set_trace_start_ts(tp)
-        
+
         return {
             "metadata": {
                 "source": "perfetto", "app": app_name
             },
             "io": await self.extract_io(tp),
             "rss": await self.extract_rss(tp, app_name),
-            "block": await self.extract_block(tp, app_name)
+            "block": []
         }
 
 
