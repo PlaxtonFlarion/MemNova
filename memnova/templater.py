@@ -316,108 +316,105 @@ class Templater(object):
         return compilation
 
     async def plot_gfx_analysis(
-            self,
-            frames: list[dict],
-            x_start: int | float,
-            x_close: int | float,
-            roll_ranges: typing.Optional[list[dict]],
-            drag_ranges: typing.Optional[list[dict]],
-            jank_ranges: list[dict]
+        self,
+        frames: list[dict],
+        x_start: int | float,
+        x_close: int | float,
+        roll_ranges: typing.Optional[list[dict]],
+        drag_ranges: typing.Optional[list[dict]],
+        jank_ranges: list[dict]
     ):
-        
-        for frame in frames:
-            frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
-            frame["marker"] = frame.get("frame_type", "Unknown")
+    for frame in frames:
+        frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
+        frame["marker"] = frame.get("frame_type", "Unknown")
 
-        df = pandas.DataFrame(frames)
-        source = ColumnDataSource(df)
+    df = pandas.DataFrame(frames)
+    source = ColumnDataSource(df)
 
-        p = figure(
-            x_range=Range1d(x_start, x_close),
-            x_axis_label="Time (ms)",
-            y_axis_label="Frame Duration (ms)",
-            height=700,
-            sizing_mode="stretch_width",
-            tools="pan,wheel_zoom,box_zoom,reset,save",
-            toolbar_location="above",
-            output_backend="webgl"
-        )
+    p = figure(
+        x_range=Range1d(x_start, x_close),
+        x_axis_label="Time (ms)",
+        y_axis_label="Frame Duration (ms)",
+        height=700,
+        sizing_mode="stretch_width",
+        tools="pan,wheel_zoom,box_zoom,reset,save",
+        toolbar_location="above",
+        output_backend="webgl"
+    )
 
-        align_start = int(df["timestamp_ms"].min())
-        p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
-        p.xaxis.major_label_orientation = 0.5
+    align_start = int(df["timestamp_ms"].min())
+    p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
+    p.xaxis.major_label_orientation = 0.5
 
-        # 提取所有类型并匹配图形
-        frame_types = df["marker"].unique().tolist()
-        marker_shapes = ["circle", "square", "triangle", "diamond", "inverted_triangle"]
-        markers = marker_shapes[:len(frame_types)]
+    # Marker 映射
+    frame_types = df["marker"].unique().tolist()
+    marker_shapes = ["circle", "square", "triangle", "diamond", "inverted_triangle"]
+    markers = marker_shapes[:len(frame_types)]
 
-        # 折线与散点图
-        p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
-        p.scatter(
-            "timestamp_ms", "duration_ms",
-            source=source,
-            size=4,
-            marker=factor_mark("marker", markers=markers, factors=frame_types),
-            color="color", alpha=0.8,
-            legend_field="marker"
-        )
+    # 主图绘制
+    p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
+    p.scatter(
+        "timestamp_ms", "duration_ms",
+        source=source,
+        size=4,
+        marker=factor_mark("marker", markers=markers, factors=frame_types),
+        color="color", alpha=0.8,
+        legend_field="marker"
+    )
 
-        # Hover 中文提示
-        p.add_tools(HoverTool(tooltips="""
-            <div style="padding: 5px;">
-                <b>时间:</b> @timestamp_ms ms<br/>
-                <b>耗时:</b> @duration_ms ms<br/>
-                <b>掉帧:</b> @is_jank<br/>
-                <b>系统FPS:</b> @fps_sys<br/>
-                <b>应用FPS:</b> @fps_app<br/>
-                <b>图层:</b> @layer_name
-            </div>
-        """, mode="vline"))
+    # Hover 提示
+    p.add_tools(HoverTool(tooltips="""
+        <div style="padding: 5px;">
+            <b>时间:</b> @timestamp_ms ms<br/>
+            <b>耗时:</b> @duration_ms ms<br/>
+            <b>掉帧:</b> @is_jank<br/>
+            <b>系统FPS:</b> @fps_sys<br/>
+            <b>应用FPS:</b> @fps_app<br/>
+            <b>图层:</b> @layer_name
+        </div>
+    """, mode="vline"))
 
-        # 阈值线与统计线
-        p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
-        if "duration_ms" in df:
-            avg_duration = df["duration_ms"].mean()
-            max_duration = df["duration_ms"].max()
-            p.add_layout(Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1))
-            p.add_layout(Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1))
+    # 阈值线 + 平均耗时线 + 最大值线
+    p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
+    if "duration_ms" in df and not df["duration_ms"].isnull().all():
+        avg_duration = df["duration_ms"].mean()
+        max_duration = df["duration_ms"].max()
+        p.add_layout(Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1))
+        p.add_layout(Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1))
 
-        # 背景区间标注
-        bg_legends = []
+    # 背景区间 + 虚拟图例项
+    dummy_renderers = []
+    legend_items = []
 
-        for rng in roll_ranges or []:
-            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
-            p.add_layout(box)
-            bg_legends.append(("Roll", box))
+    # Scroll 区间（总是显示）
+    for rng in roll_ranges or []:
+        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
+        p.add_layout(box)
+    dummy_scroll = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#ADD8E6", fill_alpha=0.3)
+    legend_items.append(LegendItem(label="Scroll", renderers=[dummy_scroll]))
 
-        for rng in drag_ranges or []:
-            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
-            p.add_layout(box)
-            bg_legends.append(("Drag", box))
+    # Drag 区间（总是显示）
+    for rng in drag_ranges or []:
+        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
+        p.add_layout(box)
+    dummy_drag = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FFA500", fill_alpha=0.25)
+    legend_items.append(LegendItem(label="Drag", renderers=[dummy_drag]))
 
-        for rng in jank_ranges or []:
-            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15)
-            p.add_layout(box)
-            bg_legends.append(("Jank", box))
+    # Jank 区间（总是显示）
+    for rng in jank_ranges or []:
+        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15)
+        p.add_layout(box)
+    dummy_jank = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FF0000", fill_alpha=0.15)
+    legend_items.append(LegendItem(label="Jank", renderers=[dummy_jank]))
 
-        # 虚拟图例支持
-        dummy_renderers = []
-        legend_items = []
+    # 添加图例
+    legend = Legend(items=legend_items, location="top_right")
+    p.add_layout(legend)
 
-        for label, box in bg_legends:
-            dummy = p.rect(x=[0], y=[0], width=0, height=0, fill_color=box.fill_color, fill_alpha=box.fill_alpha)
-            dummy_renderers.append(dummy)
-            legend_items.append(LegendItem(label=label, renderers=[dummy]))
+    p.legend.label_text_font_size = "10pt"
+    p.title.text_font_size = "16pt"
 
-        if legend_items:
-            legend = Legend(items=legend_items, location="top_right")
-            p.add_layout(legend)
-
-        p.legend.label_text_font_size = "10pt"
-        p.title.text_font_size = "16pt"
-
-        return p
+    return p
 
     async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:
 
