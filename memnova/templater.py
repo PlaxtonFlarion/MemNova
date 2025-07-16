@@ -315,7 +315,8 @@ class Templater(object):
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
 
-    async def plot_gfx_analysis_enhanced(
+    async def plot_gfx_analysis(
+            self,
             frames: list[dict],
             x_start: int | float,
             x_close: int | float,
@@ -328,7 +329,7 @@ class Templater(object):
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
             frame["marker"] = frame.get("frame_type", "Unknown")
 
-        df = pd.DataFrame(frames)
+        df = pandas.DataFrame(frames)
         source = ColumnDataSource(df)
 
         p = figure(
@@ -372,7 +373,7 @@ class Templater(object):
                 <b>应用FPS:</b> @fps_app<br/>
                 <b>图层:</b> @layer_name
             </div>
-        """, mode='vline'))
+        """, mode="vline"))
 
         # 阈值线与统计线
         p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
