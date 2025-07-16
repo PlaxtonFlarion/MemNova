@@ -38,9 +38,7 @@ class _Tracer(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
-        where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
-
+    async def extract_primary_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -61,7 +59,7 @@ class _Tracer(object):
                 FROM actual_frame_timeline_slice a
                 JOIN expected_frame_timeline_slice e ON a.surface_frame_token = e.surface_frame_token
                 LEFT JOIN process p ON a.upid = p.upid
-                {where_clause}
+                WHERE a.layer_name LIKE '%{app_name}%'
             )
             WHERE row_rank = 1
             ORDER BY actual_ts
@@ -281,6 +279,8 @@ class GfxAnalyzer(_Tracer):
     """GFX"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
+        self.normalize_start_ts = list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts / 1e6
+        
         raw_frames = await self.extract_primary_frames(tp, app_name)
 
         vsync_sys = await self.extract_vsync_sys_points(tp)  # 系统FPS
