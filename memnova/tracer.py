@@ -15,14 +15,15 @@ from perfetto.trace_processor import TraceProcessor
 class _Tracer(object):
     """Tracer"""
 
+    normalize_start_ts: float = 0.0
+
     # Notes: ======================== MEM ========================
 
-    @staticmethod
-    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def extract_rss(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
         # todo c.value / 1024.0 / 1024.0 AS rss_mb ?
         sql = f"""
                SELECT
-                   c.ts / 1e9 AS time_sec,
+                   c.ts / 1e6 AS time_sec,
                    c.value / 1024.0 / 1024.0 AS rss_mb
                FROM counter c
                JOIN process_counter_track t ON c.track_id = t.id
@@ -31,6 +32,7 @@ class _Tracer(object):
                ORDER BY c.ts;
            """
         df = tp.query(sql).as_pandas_dataframe().dropna()
+        df["time_sec"] -= self.normalize_start_ts
         return df.to_dict("records")
 
     # Notes: ======================== GFX ========================
@@ -224,11 +226,10 @@ class _Tracer(object):
 
     # Notes: ======================== I/O ========================
 
-    @staticmethod
-    async def extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
+    async def extract_io(self, tp: "TraceProcessor") -> dict[str, list[dict]]:
         sql = """
             SELECT
-                ts / 1e9 AS time_sec,
+                ts / 1e6 AS time_sec,
                 t.name AS counter_name,
                 value,
                 COALESCE(value - LAG(value) OVER (PARTITION BY t.name ORDER BY ts), 0.0) AS delta
@@ -238,17 +239,18 @@ class _Tracer(object):
             ORDER BY ts;
         """
         df = tp.query(sql).as_pandas_dataframe().dropna()
-        grouped = {
-            name: df[df["counter_name"] == name][["time_sec", "delta"]].to_dict("records")
-            for name in df["counter_name"].unique()
-        }
-        return grouped
 
-    @staticmethod
-    async def extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        df["delta"] *= (4 / 1024)
+        df["time_sec"] -= self.normalize_start_ts
+        return {
+            name: group[["time_sec", "delta"]].to_dict("records")
+            for name, group in df.groupby("counter_name")
+        }
+
+    async def extract_block(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT
-                slice.ts / 1e9 AS time_sec,
+                slice.ts / 1e6 AS time_sec,
                 slice.name AS event
             FROM slice
             JOIN thread_track ON slice.track_id = thread_track.id
@@ -259,6 +261,7 @@ class _Tracer(object):
             ORDER BY slice.ts;
         """
         df = tp.query(sql).as_pandas_dataframe()
+        df["time_sec"] -= self.normalize_start_ts
         return df[["time_sec", "event"]].to_dict("records")
 
     @staticmethod
@@ -309,6 +312,8 @@ class IonAnalyzer(_Tracer):
     """I/O"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
+        self.normalize_start_ts = list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts / 1e6
+        
         return {
             "metadata": {
                 "source": "perfetto", "app": app_name
