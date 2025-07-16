@@ -27,7 +27,7 @@ from bokeh.plotting import (
 )
 from bokeh.models import (
     ColumnDataSource, HoverTool, Spacer, Span, Div,
-    DatetimeTickFormatter, BoxAnnotation, Range1d, LegendItem
+    DatetimeTickFormatter, BoxAnnotation, Range1d, Legend, LegendItem
 )
 from bokeh.transform import factor_mark
 from memcore.cubicle import Cubicle
