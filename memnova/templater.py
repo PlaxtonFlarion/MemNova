@@ -27,7 +27,7 @@ from bokeh.plotting import (
 )
 from bokeh.models import (
     ColumnDataSource, HoverTool, Spacer, Span, Div,
-    DatetimeTickFormatter, BoxAnnotation, Range1d
+    DatetimeTickFormatter, BoxAnnotation, Range1d, LegendItem
 )
 from bokeh.transform import factor_mark
 from memcore.cubicle import Cubicle
@@ -389,7 +389,7 @@ class Templater(object):
         for rng in roll_ranges or []:
             box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
             p.add_layout(box)
-            bg_legends.append(("Scroll", box))
+            bg_legends.append(("Roll", box))
 
         for rng in drag_ranges or []:
             box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
