@@ -328,7 +328,7 @@ class Templater(object):
         frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
         frame["marker"] = frame.get("frame_type", "Unknown")
 
-    df = pd.DataFrame(frames)
+    df = pandas.DataFrame(frames)
     source = ColumnDataSource(df)
 
     p = figure(
@@ -395,7 +395,7 @@ class Templater(object):
     # 背景区间绘制
     for rng in roll_ranges or []:
         p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3))
-    add_bg_legend("Scroll", "#ADD8E6", 0.3)
+    add_bg_legend("Roll", "#ADD8E6", 0.3)
 
     for rng in drag_ranges or []:
         p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25))
@@ -416,7 +416,6 @@ class Templater(object):
     # 样式
     p.legend.label_text_font_size = "10pt"
     p.legend.title_text_font_size = "10pt"
-    p.title.text = "Frame Analysis"
     p.title.text_font_size = "16pt"
 
     return p
