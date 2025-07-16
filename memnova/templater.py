@@ -428,7 +428,7 @@ class Templater(object):
         (frame_data, *_), (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
         )
-        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data
+        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data.values()
         title, timestamp = joint
 
         # 平均帧
