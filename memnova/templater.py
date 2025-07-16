@@ -314,21 +314,21 @@ class Templater(object):
 
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
-
+    
     async def plot_gfx_analysis(
-        self,
         frames: list[dict],
         x_start: int | float,
         x_close: int | float,
         roll_ranges: typing.Optional[list[dict]],
         drag_ranges: typing.Optional[list[dict]],
-        jank_ranges: list[dict]
+        jank_ranges: typing.Optional[list[dict]]
     ):
+    # 添加颜色和 marker 类型
     for frame in frames:
         frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
         frame["marker"] = frame.get("frame_type", "Unknown")
 
-    df = pandas.DataFrame(frames)
+    df = pd.DataFrame(frames)
     source = ColumnDataSource(df)
 
     p = figure(
@@ -351,9 +351,11 @@ class Templater(object):
     marker_shapes = ["circle", "square", "triangle", "diamond", "inverted_triangle"]
     markers = marker_shapes[:len(frame_types)]
 
-    # 主图绘制
+    # 主折线图
     p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
-    p.scatter(
+
+    # 主散点图（包含 legend_field）
+    scatter_renderer = p.scatter(
         "timestamp_ms", "duration_ms",
         source=source,
         size=4,
@@ -362,7 +364,7 @@ class Templater(object):
         legend_field="marker"
     )
 
-    # Hover 提示
+    # Hover Tool 中文提示
     p.add_tools(HoverTool(tooltips="""
         <div style="padding: 5px;">
             <b>时间:</b> @timestamp_ms ms<br/>
@@ -374,44 +376,47 @@ class Templater(object):
         </div>
     """, mode="vline"))
 
-    # 阈值线 + 平均耗时线 + 最大值线
+    # 阈值线与统计线
     p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
-    if "duration_ms" in df and not df["duration_ms"].isnull().all():
+    if "duration_ms" in df:
         avg_duration = df["duration_ms"].mean()
         max_duration = df["duration_ms"].max()
         p.add_layout(Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1))
         p.add_layout(Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1))
 
-    # 背景区间 + 虚拟图例项
-    dummy_renderers = []
-    legend_items = []
+    # 统一图例列表：包括背景区间
+    legend_items: list[LegendItem] = []
 
-    # Scroll 区间（总是显示）
+    # 添加虚拟背景图例项
+    def add_bg_legend(label: str, color: str, alpha: float):
+        dummy = p.rect(x=[0], y=[0], width=0, height=0, fill_color=color, fill_alpha=alpha)
+        legend_items.append(LegendItem(label=label, renderers=[dummy]))
+
+    # 背景区间绘制
     for rng in roll_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
-        p.add_layout(box)
-    dummy_scroll = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#ADD8E6", fill_alpha=0.3)
-    legend_items.append(LegendItem(label="Scroll", renderers=[dummy_scroll]))
+        p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3))
+    add_bg_legend("Scroll", "#ADD8E6", 0.3)
 
-    # Drag 区间（总是显示）
     for rng in drag_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
-        p.add_layout(box)
-    dummy_drag = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FFA500", fill_alpha=0.25)
-    legend_items.append(LegendItem(label="Drag", renderers=[dummy_drag]))
+        p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25))
+    add_bg_legend("Drag", "#FFA500", 0.25)
 
-    # Jank 区间（总是显示）
     for rng in jank_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15)
-        p.add_layout(box)
-    dummy_jank = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FF0000", fill_alpha=0.15)
-    legend_items.append(LegendItem(label="Jank", renderers=[dummy_jank]))
+        p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15))
+    add_bg_legend("Jank", "#FF0000", 0.15)
 
-    # 添加图例
-    legend = Legend(items=legend_items, location="top_right")
+    # 将 marker 图例自动加入 LegendItem
+    for mtype in frame_types:
+        legend_items.append(LegendItem(label=mtype, renderers=[scatter_renderer]))
+
+    # 创建统一图例
+    legend = Legend(items=legend_items, location="top_right", title="Legend")
     p.add_layout(legend)
 
+    # 样式
     p.legend.label_text_font_size = "10pt"
+    p.legend.title_text_font_size = "10pt"
+    p.title.text = "Frame Analysis"
     p.title.text_font_size = "16pt"
 
     return p
