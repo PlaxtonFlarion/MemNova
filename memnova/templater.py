@@ -26,10 +26,9 @@ from bokeh.plotting import (
     save, figure
 )
 from bokeh.models import (
-    ColumnDataSource, HoverTool, Spacer, Span, Div,
+    ColumnDataSource, HoverTool, Spacer, Span, Div, Value,
     DatetimeTickFormatter, BoxAnnotation, Range1d, Legend, LegendItem
 )
-from bokeh.transform import factor_mark
 from memcore.cubicle import Cubicle
 from memnova.scores import Scores
 from memnova import const
@@ -104,150 +103,142 @@ class Templater(object):
         if not data_list:
             return {}
 
-        try:
-            timestamp, rss, pss, uss, opss, activity, adj, foreground = list(zip(*data_list))
-        except ValueError:
-            return {}
+        # 数据处理
+        df = pandas.DataFrame(
+            data_list,
+            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
+        )
 
-        data = {
-            "x": [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamp],
-            "y": pss,
-            "rss": rss,
-            "uss": uss,
-            "adj": adj,
-            "foreground": foreground,
-            "activity": [a for a in activity if a],
-        }
+        # 处理异常时间格式
+        df["x"] = pandas.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df = df.dropna(subset=["x"])
+        df["activity"] = df["activity"].fillna("")
 
-        avg_value, max_value, min_value = float(numpy.mean(pss)), max(pss), min(pss)
+        y = df["pss"]
+        max_value, min_value, avg_value = y.max(), y.min(), y.mean()
 
-        data["colors"] = [
-            "#FF4B00" if y == max_value else ("#00FF85" if y == min_value else "#FFBC00") for y in data["y"]
-        ]
-        data["sizes"] = [
-            5 if y == max_value else (5 if y == min_value else 2) for y in data["y"]
-        ]
+        value_span = max_value - min_value
 
-        source = ColumnDataSource(data=data)
+        if value_span < 1e-6:
+            pad = max(20, 0.05 * max_value)
+            y_start = max(0, min_value - pad)
+            y_end = max_value + pad
+        else:
+            pad = max(10, 0.12 * value_span)
+            y_start = max(0, min_value - pad)
+            y_end = max_value + pad
+
+        # 配色与视觉分区
+        pss_color = "#4074B4"  # 主线 PSS（深蓝，突出）
+        rss_color = "#E07B39"  # RSS 辅助线（橙色）
+        uss_color = "#6BCB77"  # USS 辅助线（草绿色）
+        avg_color = "#6A4C93"  # 均值线（紫色）
+        max_color = "#FF1D58"  # 峰值线（红色）
+        min_color = "#009FFD"  # 谷值线（亮蓝）
+        tie_color = "#ECF8FF"  # 区间高亮（极淡蓝）
+
+        df["colors"] = df["pss"].apply(
+            lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
+        )
+        df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
+        source = ColumnDataSource(df)
+
+        # 绘图主对象
         p = figure(
             sizing_mode="stretch_both",
             x_axis_type="datetime",
-            title="Memory Usage over Time",
-            y_range=Range1d(min_value - 100 if min_value >= 100 else 0, max_value + 150)
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            title=f"{file_name.upper()} - Memory Usage over Time",
+            y_range=Range1d(y_start, y_end),
+        )
+
+        # 主线PSS
+        p.line(
+            "x", "pss",
+            source=source, line_width=2, color=pss_color, legend_label=f"PSS {file_name.upper()}"
+        )
+
+        # 辅助线（RSS/USS）
+        p.line(
+            "x", "rss",
+            source=source, line_width=1, color=rss_color, alpha=0.6, legend_label="RSS", line_dash="dashed"
         )
         p.line(
-            "x", "y",
-            source=source, line_width=1, alpha=0.8, color="#FFBC00", legend_label=file_name.upper()
+            "x", "uss",
+            source=source, line_width=1, color=uss_color, alpha=0.6, legend_label="USS", line_dash="dotted"
         )
 
+        # 极值点
         p.scatter(
-            "x", "y",
-            source=source, size="sizes", color="colors", hover_fill_color="#DF9911", hover_alpha=0.5
+            "x", "pss",
+            source=source, size="sizes", color="colors", alpha=0.95, legend_label="Peak/Valley"
         )
 
-        p.scatter(color="#FF4B00", legend_label=f"峰值: {max_value:.2f} MB")
-        p.scatter(color="#F900FF", legend_label=f"均值: {avg_value:.2f} MB")
-
-        # 范围
-        mid_box = BoxAnnotation(
-            bottom=min_value, top=max_value, fill_alpha=0.1, fill_color="#0072B2"
+        # 均值/极值线
+        p.add_layout(
+            Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
-        p.add_layout(mid_box)
-
-        # 平均线
-        avg_line = Span(
-            location=avg_value, dimension="width", line_color="#F900FF", line_dash="dotted", line_width=1
+        p.add_layout(
+            Span(location=max_value, dimension="width", line_color=max_color, line_dash="dotted", line_width=2)
         )
-        p.add_layout(avg_line)
-
-        # 最大值
-        max_line = Span(
-            location=max_value, dimension="width", line_color="#FF4B00", line_dash="dotted", line_width=1
+        p.add_layout(
+            Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
         )
-        p.add_layout(max_line)
 
-        # 最小值
-        min_line = Span(
-            location=min_value, dimension="width", line_color="#00FF85", line_dash="dotted", line_width=1
+        # 区间高亮
+        p.add_layout(
+            BoxAnnotation(bottom=min_value, top=max_value, fill_alpha=0.10, fill_color=tie_color)
         )
-        p.add_layout(min_line)
 
         # 悬浮提示
-        tooltips = """
-            <div style="background: linear-gradient(to bottom, #B6FBFF, #83A4D4); padding: 5px 10px;">
-                <div>
-                    <span style="font-size: 17px;">PSS:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #4B4B4B;">@y{0.00} MB</span>
-                </div>
-                <div>
-                    <span style="font-size: 17px;">RSS:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #4B4B4B;">@rss{0.00} MB</span>
-                </div>
-                <div>
-                    <span style="font-size: 17px;">USS:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #4B4B4B;">@uss{0.00} MB</span>
-                </div>
-
-                <hr style="border: 0; height: 1px; background-image: repeating-linear-gradient(to right, rgba(0,0,0,0.75), rgba(0,0,0,0.75) 1px, rgba(0,0,0,0) 1px, rgba(0,0,0,0) 5px);">
-
-                <div>
-                    <span style="font-size: 17px;">时间轴:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #9400D3;">@x{%H:%M:%S}</span>
-                </div>
-                <div>
-                    <span style="font-size: 17px;">优先级:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #483D8B;">@foreground</span>
-                </div>
-                <div>
-                    <span style="font-size: 17px;">当前页:</span>
-                    <span style="font-size: 17px; font-weight: bold; color: #006400;">@activity</span>
-                </div>
-            </div>
-        """
-
-        hover = HoverTool(
-            tooltips=tooltips, formatters={"@x": "datetime"}
-        )
+        tooltips = [
+            ("时间", "@timestamp{%H:%M:%S}"),
+            ("PSS", "@pss{0.00} MB"),
+            ("当前页", "@activity"),
+            ("优先级", "@foreground"),
+        ]
+        hover = HoverTool(tooltips=tooltips, formatters={"@timestamp": "datetime"})
         p.add_tools(hover)
 
-        p.xgrid.grid_line_color = "gray"
-        p.ygrid.grid_line_color = "gray"
-        p.xgrid.grid_line_alpha = 0.2
-        p.ygrid.grid_line_alpha = 0.2
-
+        # 网格/坐标轴/主题
+        p.xgrid.grid_line_color = "#E3E3E3"
+        p.ygrid.grid_line_color = "#E3E3E3"
+        p.xgrid.grid_line_alpha = 0.25
+        p.ygrid.grid_line_alpha = 0.25
         p.xaxis.axis_label = "时间轴"
         p.yaxis.axis_label = "内存用量 (MB)"
         p.xaxis.major_label_orientation = 30 * numpy.pi / 180
         p.xaxis.formatter = DatetimeTickFormatter(
-            microseconds="%H:%M:%S", milliseconds="%H:%M:%S", seconds="%H:%M:%S",
-            minsec="%H:%M:%S", minutes="%Y-%m-%d %H:%M:%S",
-            hourmin="%Y-%m-%d %H:%M:%S", hours="%Y-%m-%d %H:%M:%S",
-            days="%Y-%m-%d %H:%M:%S", months="%Y-%m-%d %H:%M:%S", years="%Y-%m-%d %H:%M:%S"
+            seconds="%H:%M:%S",
+            minsec="%H:%M:%S",
+            minutes="%H:%M",
+            hourmin="%H:%M",
+            hours="%H:%M",
+            days="%m-%d",
+            months="%m-%d",
+            years="%Y-%m"
         )
-
         p.legend.location = "top_left"
         p.legend.click_policy = "hide"
-        p.legend.border_line_width = 2
-        p.legend.border_line_color = "#11D2DF"
         p.legend.border_line_alpha = 0.1
-        p.legend.background_fill_color = "#DFC911"
-        p.legend.background_fill_alpha = 0.1
-        p.background_fill_color = "#ECE9E6"
+        p.legend.background_fill_alpha = 0.07
+        p.background_fill_color = "#FBFCFD"
         p.background_fill_alpha = 0.2
+        curdoc().theme = "caliber"
 
-        # 主题
-        curdoc().theme = "light_minimal"
-
+        # 文件导出与布局
         file_path = os.path.join(group, f"{file_name}_{Path(group).name}.html")
         output_file(file_path)
 
         viewer_div = self.generate_viewers()
         save(
             column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both")
+            if viewer_div else p
         )
 
+        # 结果结构
         return {
-            "name": file_name,  # FG / BG / MEM
+            "name": file_name,
             "metrics": {
                 "MAX": round(float(max_value), 2),
                 "AVG": round(float(avg_value), 2),
@@ -258,7 +249,7 @@ class Templater(object):
                         {"label": f"{file_name}-MAX: ", "value": f"{float(max_value):.2f}", "unit": "MB"},
                         {"label": f"{file_name}-AVG: ", "value": f"{float(avg_value):.2f}", "unit": "MB"},
                     ],
-                    "link": str(Path(const.SUMMARY) / Path(group).name / Path(file_path).name)
+                    "link": str(Path(group) / Path(file_path).name)
                 }
             ]
         }
@@ -314,105 +305,134 @@ class Templater(object):
 
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
-    
+
+    @staticmethod
     async def plot_gfx_analysis(
-        self,
-        frames: list[dict],
-        x_start: int | float,
-        x_close: int | float,
-        roll_ranges: typing.Optional[list[dict]],
-        drag_ranges: typing.Optional[list[dict]],
-        jank_ranges: list[dict]
+            frames: list[dict],
+            x_start: int | float,
+            x_close: int | float,
+            roll_ranges: typing.Optional[list[dict]],
+            drag_ranges: typing.Optional[list[dict]],
+            jank_ranges: list[dict]
     ):
-    for frame in frames:
-        frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
-    df = pandas.DataFrame(frames)
-    source = ColumnDataSource(df)
+        # 🟢 颜色预处理
+        for frame in frames:
+            frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
-    p = figure(
-        x_range=Range1d(x_start, x_close),
-        x_axis_label="Time (ms)",
-        y_axis_label="Frame Duration (ms)",
-        height=700,
-        sizing_mode="stretch_width",
-        tools="pan,wheel_zoom,box_zoom,reset,save",
-        toolbar_location="above",
-        output_backend="webgl"
-    )
+        df = pandas.DataFrame(frames)
+        source = ColumnDataSource(df)
 
-    align_start = int(df["timestamp_ms"].min())
-    p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
-    p.xaxis.major_label_orientation = 0.5
+        # 🟢 动态 Y 轴范围
+        y_min = df["duration_ms"].min()
+        y_max = df["duration_ms"].max()
+        y_range = y_max - y_min
+        y_start = max(0, y_min - 0.05 * y_range)
+        y_end = y_max + 0.1 * y_range
 
-    legend_items = []
+        p = figure(
+            x_range=Range1d(x_start, x_close),
+            y_range=Range1d(y_start, y_end),
+            x_axis_label="Time (ms)",
+            y_axis_label="Frame Duration (ms)",
+            height=700,
+            sizing_mode="stretch_width",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            toolbar_location="above",
+            output_backend="webgl"
+        )
 
-    # 主折线
-    line_renderer = p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
-    legend_items.append(LegendItem(label="Main Line", renderers=[line_renderer]))
+        align_start = int(df["timestamp_ms"].min())
+        p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
+        p.xaxis.major_label_orientation = 0.5
 
-    # 正常帧 / 掉帧
-    normal_renderer = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="#32CD32", alpha=0.8, view=source.to_df()[df["is_jank"] == False])
-    jank_renderer = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="#FF4D4D", alpha=0.8, view=source.to_df()[df["is_jank"] == True])
-    legend_items.append(LegendItem(label="Normal Frames", renderers=[normal_renderer]))
-    legend_items.append(LegendItem(label="Jank Frames", renderers=[jank_renderer]))
+        legend_items = []
 
-    # Hover 信息
-    p.add_tools(HoverTool(tooltips="""
-        <div style="padding: 5px;">
-            <b>时间:</b> @timestamp_ms ms<br/>
-            <b>耗时:</b> @duration_ms ms<br/>
-            <b>掉帧:</b> @is_jank<br/>
-            <b>系统FPS:</b> @fps_sys<br/>
-            <b>应用FPS:</b> @fps_app<br/>
-            <b>图层:</b> @layer_name
-        </div>
-    """, mode="vline"))
+        # 🟢 主折线
+        line_renderer = p.line(
+            "timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6
+        )
+        legend_items.append(LegendItem(label=Value("Main Line"), renderers=[line_renderer]))
 
-    # === 辅助线 ===
-    span_threshold = Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5)
-    p.add_layout(span_threshold)
-    dummy_threshold = p.line(x=[0], y=[0], line_color="#1E90FF", line_dash="dashed", line_width=1.5)
-    legend_items.append(LegendItem(label="Threshold Line (16.67ms)", renderers=[dummy_threshold]))
+        # 🟢 点图（已预填色）
+        p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
 
-    if "duration_ms" in df:
-        avg_duration = df["duration_ms"].mean()
-        max_duration = df["duration_ms"].max()
+        # 🟢 Hover 信息
+        p.add_tools(HoverTool(tooltips="""
+            <div style="padding: 5px;">
+                <b>时间:</b> @timestamp_ms ms<br/>
+                <b>耗时:</b> @duration_ms ms<br/>
+                <b>掉帧:</b> @is_jank<br/>
+                <b>类型:</b> @frame_type<br/>
+                <b>系统FPS:</b> @fps_sys<br/>
+                <b>应用FPS:</b> @fps_app<br/>
+                <b>图层:</b> @layer_name
+            </div>
+        """, mode="vline"))
 
-        span_avg = Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1)
-        span_max = Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1)
+        # 🟢 阈值线 + 平均线 + 最大值线
+        span_threshold = Span(
+            location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5
+        )
+        p.add_layout(span_threshold)
+        dummy_threshold = p.line(x=[0], y=[0], line_color="#1E90FF", line_dash="dashed", line_width=1.5)
+        legend_items.append(LegendItem(label=Value("16.67ms / 60 FPS"), renderers=[dummy_threshold]))
 
-        p.add_layout(span_avg)
-        p.add_layout(span_max)
+        if "duration_ms" in df:
+            avg_duration = df["duration_ms"].mean()
+            max_duration = df["duration_ms"].max()
 
-        dummy_avg = p.line(x=[0], y=[0], line_color="#888888", line_dash="dotted", line_width=1)
-        dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
+            span_avg = Span(
+                location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1
+            )
+            span_max = Span(
+                location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1
+            )
 
-        legend_items.append(LegendItem(label="Avg Duration", renderers=[dummy_avg]))
-        legend_items.append(LegendItem(label="Max Duration", renderers=[dummy_max]))
+            p.add_layout(span_avg)
+            p.add_layout(span_max)
 
-    # === 背景区间 ===
-    bg_types = [
-        ("Roll Region", roll_ranges, "#ADD8E6", 0.3),
-        ("Drag Region", drag_ranges, "#FFA500", 0.25),
-        ("Jank Region", jank_ranges, "#FF0000", 0.15),
-    ]
+            dummy_avg = p.line(x=[0], y=[0], line_color="#888888", line_dash="dotted", line_width=1)
+            dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
 
-    for label, ranges, color, alpha in bg_types:
-        for rng in ranges or []:
-            p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color=color, fill_alpha=alpha))
-        dummy = p.rect(x=[0], y=[0], width=0, height=0, fill_color=color, fill_alpha=alpha)
-        legend_items.append(LegendItem(label=label, renderers=[dummy]))
+            legend_items.append(LegendItem(label=Value("Avg Duration"), renderers=[dummy_avg]))
+            legend_items.append(LegendItem(label=Value("Max Duration"), renderers=[dummy_max]))
 
-    # 添加统一图例
-    legend = Legend(items=legend_items, location="top_right", click_policy="hide")
-    p.add_layout(legend)
+        # 🟢 用 Quad 绘制背景区间
+        quad_top = y_end
+        quad_bottom = y_start
+        quad_types = [
+            ("Roll Region", roll_ranges, "#ADD8E6", 0.30),
+            ("Drag Region", drag_ranges, "#FFA500", 0.25),
+            ("Jank Region", jank_ranges, "#FF0000", 0.15),
+        ]
 
-    # 样式
-    p.legend.label_text_font_size = "10pt"
-    p.title.text_font_size = "16pt"
+        for label, ranges, color, alpha in quad_types:
+            if ranges:
+                quad_source = ColumnDataSource({
+                    "left": [r["start_ts"] for r in ranges],
+                    "right": [r["end_ts"] for r in ranges],
+                    "top": [quad_top] * len(ranges),
+                    "bottom": [quad_bottom] * len(ranges),
+                })
+                quad_renderer = p.quad(
+                    left="left", right="right", top="top", bottom="bottom",
+                    source=quad_source,
+                    fill_color=color,
+                    fill_alpha=alpha,
+                    line_alpha=0
+                )
+                legend_items.append(LegendItem(label=label, renderers=[quad_renderer]))
 
-    return p
+        # 🟢 图例设置
+        legend = Legend(items=legend_items, location="top_right", click_policy="hide")
+        p.add_layout(legend)
+
+        # 🟢 样式设定
+        p.legend.label_text_font_size = "10pt"
+        p.title.text_font_size = "16pt"
+
+        return p
 
     async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:
 
@@ -469,8 +489,8 @@ class Templater(object):
                 frames=segment,
                 x_start=x_start - padding,
                 x_close=x_close + padding,
-                roll_ranges=None,
-                drag_ranges=None,
+                roll_ranges=roll_ranges,  # todo 测试绘图性能
+                drag_ranges=drag_ranges,  # todo 测试绘图性能
                 jank_ranges=jank_ranges,
             )
             p.title.text = f"[Range {idx:02}] - [{seg_score}] - [{mk['level']}] - [{mk['label']}]"
@@ -495,8 +515,8 @@ class Templater(object):
             "tags": [
                 {
                     "fields": [
-                        {"label": "平均帧", "value": avg_fps, "unit": "FPS"},
-                        {"label": "掉帧率", "value": jank_rate, "unit": "%"}
+                        {"label": "掉帧率", "value": jank_rate, "unit": "%"},
+                        {"label": "平均帧", "value": avg_fps, "unit": "FPS"}
                     ],
                     "link": str(Path(const.SUMMARY) / data_dir / Path(file_path).name),
                 }
