@@ -23,7 +23,6 @@ class _Tracer(object):
     # Notes: ======================== MEM ========================
 
     async def extract_rss(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
-        # todo c.value / 1024.0 / 1024.0 AS rss_mb ?
         sql = f"""
                SELECT
                    c.ts / 1e6 AS time_sec,
@@ -40,8 +39,7 @@ class _Tracer(object):
 
     # Notes: ======================== GFX ========================
 
-    @staticmethod
-    async def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def extract_raw_frames(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -70,7 +68,7 @@ class _Tracer(object):
 
         return [
             {
-                "timestamp_ms": row.actual_ts / 1e6,
+                "timestamp_ms": (row.actual_ts / 1e6) - self.normalize_start_ts,
                 "duration_ms": row.actual_dur / 1e6,
                 "drop_count": (drop_count := max(0, round(row.actual_dur / int(1e9 / 60)) - 1)),
                 "is_jank": drop_count > 0,
@@ -82,30 +80,33 @@ class _Tracer(object):
             } for row in tp.query(sql)
         ]
 
-    @staticmethod
-    async def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def extract_roll_ranges(self, tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
             WHERE name LIKE '%Scroll%' OR name LIKE '%scroll%'
         """
         return [
-            {"start_ts": row.ts / 1e6, "end_ts": (row.ts + row.dur) / 1e6} for row in tp.query(sql)
+            {
+                "start_ts": (row.ts / 1e6) - self.normalize_start_ts, 
+                "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
+            } for row in tp.query(sql)
         ]
 
-    @staticmethod
-    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def extract_drag_ranges(self, tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
             WHERE name LIKE '%drag%' OR name LIKE '%Drag%'
         """
         return [
-            {"start_ts": row.ts / 1e6, "end_ts": (row.ts + row.dur) / 1e6} for row in tp.query(sql)
+            {
+                "start_ts": (row.ts / 1e6) - self.normalize_start_ts, 
+                "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
+            } for row in tp.query(sql)
         ]
 
-    @staticmethod
-    async def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
+    async def extract_vsync_sys_points(self, tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -129,14 +130,13 @@ class _Tracer(object):
 
             fps = round(1e9 / interval_ns, 2)
             fps_points.append({
-                "ts": ts_curr / 1e6,  # 转为 ms
+                "ts": (ts_curr / 1e6) - self.normalize_start_ts,  # 转为 ms
                 "fps": fps
             })
 
         return fps_points
 
-    @staticmethod
-    async def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
+    async def extract_vsync_app_points(self, tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -160,7 +160,7 @@ class _Tracer(object):
 
             fps = round(1e9 / interval_ns, 2)
             fps_points.append({
-                "ts": ts_curr / 1e6,  # 转为 ms
+                "ts": (ts_curr / 1e6) - self.normalize_start_ts,  # 转为 ms
                 "fps": fps
             })
 
