@@ -17,6 +17,9 @@ class _Tracer(object):
 
     normalize_start_ts: float = 0.0
 
+    async def set_trace_start_ts(self, tp: "TraceProcessor") -> None:
+        self.normalize_start_ts = float(list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts) / 1e6
+
     # Notes: ======================== MEM ========================
 
     async def extract_rss(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
@@ -38,7 +41,7 @@ class _Tracer(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def extract_primary_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -279,9 +282,9 @@ class GfxAnalyzer(_Tracer):
     """GFX"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        self.normalize_start_ts = list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts / 1e6
+        await self.set_trace_start_ts(tp)
         
-        raw_frames = await self.extract_primary_frames(tp, app_name)
+        raw_frames = await self.extract_raw_frames(tp, app_name)
 
         vsync_sys = await self.extract_vsync_sys_points(tp)  # 系统FPS
         vsync_app = await self.extract_vsync_app_points(tp)  # 应用FPS
@@ -312,7 +315,7 @@ class IonAnalyzer(_Tracer):
     """I/O"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        self.normalize_start_ts = list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts / 1e6
+        await self.set_trace_start_ts(tp)
         
         return {
             "metadata": {
