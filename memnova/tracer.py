@@ -18,7 +18,7 @@ class _Tracer(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def __extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
         # todo c.value / 1024.0 / 1024.0 AS rss_mb ?
         sql = f"""
                SELECT
@@ -36,7 +36,7 @@ class _Tracer(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def __extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
+    async def extract_primary_frames(tp: "TraceProcessor", layer_like: str = "") -> list[dict]:
         where_clause = f"WHERE a.layer_name LIKE '%{layer_like}%'" if layer_like else ""
 
         sql = f"""
@@ -80,7 +80,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def __extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -91,7 +91,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def __extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -102,7 +102,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def __extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
+    async def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -133,7 +133,7 @@ class _Tracer(object):
         return fps_points
 
     @staticmethod
-    async def __extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
+    async def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -164,7 +164,7 @@ class _Tracer(object):
         return fps_points
 
     @staticmethod
-    async def __mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
+    async def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
         jank_ranges = []
         count = 0
         start_ts = None
@@ -187,7 +187,7 @@ class _Tracer(object):
         return jank_ranges
 
     @staticmethod
-    async def __annotate_frames(
+    async def annotate_frames(
             frames: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
@@ -225,7 +225,7 @@ class _Tracer(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def __extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
+    async def extract_io(tp: "TraceProcessor") -> dict[str, list[dict]]:
         sql = """
             SELECT
                 ts / 1e9 AS time_sec,
@@ -245,7 +245,7 @@ class _Tracer(object):
         return grouped
 
     @staticmethod
-    async def __extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    async def extract_block(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT
                 slice.ts / 1e9 AS time_sec,
@@ -278,17 +278,17 @@ class GfxAnalyzer(_Tracer):
     """GFX"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        raw_frames = await self.__extract_primary_frames(tp, app_name)
+        raw_frames = await self.extract_primary_frames(tp, app_name)
 
-        vsync_sys = await self.__extract_vsync_sys_points(tp)  # 系统FPS
-        vsync_app = await self.__extract_vsync_app_points(tp)  # 应用FPS
+        vsync_sys = await self.extract_vsync_sys_points(tp)  # 系统FPS
+        vsync_app = await self.extract_vsync_app_points(tp)  # 应用FPS
 
-        roll_ranges = await self.__extract_roll_ranges(tp)  # 滑动区间
-        drag_ranges = await self.__extract_drag_ranges(tp)  # 拖拽区间
+        roll_ranges = await self.extract_roll_ranges(tp)  # 滑动区间
+        drag_ranges = await self.extract_drag_ranges(tp)  # 拖拽区间
 
-        jank_ranges = await self.__mark_consecutive_jank(raw_frames)  # 连续丢帧
+        jank_ranges = await self.mark_consecutive_jank(raw_frames)  # 连续丢帧
 
-        await self.__annotate_frames(
+        await self.annotate_frames(
             raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
         )
 
@@ -313,9 +313,9 @@ class IonAnalyzer(_Tracer):
             "metadata": {
                 "source": "perfetto", "app": app_name
             },
-            "io": await self.__extract_io(tp),
-            "rss": await self.__extract_rss(tp, app_name),
-            "block": await self.__extract_block(tp, app_name)
+            "io": await self.extract_io(tp),
+            "rss": await self.extract_rss(tp, app_name),
+            "block": await self.extract_block(tp, app_name)
         }
 
 
