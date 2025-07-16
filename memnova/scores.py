@@ -170,8 +170,8 @@ class Scores(object):
     def assess_io_score(
             io: dict,
             block: list,
-            swap_io_threshold: float = 10.0,
-            page_io_peak_threshold: float = 100.0,
+            swap_io_threshold: float = 10240.0,
+            page_io_peak_threshold: float = 102400.0,
             swap_active_ratio_threshold: float = 0.2
     ) -> dict:
 
