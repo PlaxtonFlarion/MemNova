@@ -29,6 +29,7 @@ from bokeh.models import (
     ColumnDataSource, HoverTool, Spacer, Span, Div,
     DatetimeTickFormatter, BoxAnnotation, Range1d
 )
+from bokeh.transform import factor_mark
 from memcore.cubicle import Cubicle
 from memnova.scores import Scores
 from memnova import const
@@ -314,90 +315,103 @@ class Templater(object):
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
 
-    @staticmethod
-    async def plot_gfx_analysis(
+    async def plot_gfx_analysis_enhanced(
             frames: list[dict],
             x_start: int | float,
             x_close: int | float,
             roll_ranges: typing.Optional[list[dict]],
             drag_ranges: typing.Optional[list[dict]],
             jank_ranges: list[dict]
-    ) -> typing.Any:
-
+    ):
+        
         for frame in frames:
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
+            frame["marker"] = frame.get("frame_type", "Unknown")
 
-        source = ColumnDataSource(pandas.DataFrame(frames))
+        df = pd.DataFrame(frames)
+        source = ColumnDataSource(df)
 
         p = figure(
             x_range=Range1d(x_start, x_close),
-            x_axis_label="时间 (ms)",
-            y_axis_label="帧耗时 (ms)",
+            x_axis_label="Time (ms)",
+            y_axis_label="Frame Duration (ms)",
             height=700,
             sizing_mode="stretch_width",
             tools="pan,wheel_zoom,box_zoom,reset,save",
-            toolbar_location="above"
+            toolbar_location="above",
+            output_backend="webgl"
         )
 
-        align_start = min(f["timestamp_ms"] for f in frames)
-        p.xaxis.axis_label = f"时间 (ms) - 起点 {align_start}ms"
-        p.xaxis.major_label_orientation = 0.5  # 约30度
+        align_start = int(df["timestamp_ms"].min())
+        p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
+        p.xaxis.major_label_orientation = 0.5
 
-        # 主帧折线图与散点
-        p.line(
-            "timestamp_ms", "duration_ms",
-            source=source, line_width=2, color="#A9A9A9", alpha=0.6
-        )
+        # 提取所有类型并匹配图形
+        frame_types = df["marker"].unique().tolist()
+        marker_shapes = ["circle", "square", "triangle", "diamond", "inverted_triangle"]
+        markers = marker_shapes[:len(frame_types)]
+
+        # 折线与散点图
+        p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
         p.scatter(
             "timestamp_ms", "duration_ms",
-            source=source, size=2, color="color", alpha=0.8, legend_label="帧耗时"
+            source=source,
+            size=4,
+            marker=factor_mark("marker", markers=markers, factors=frame_types),
+            color="color", alpha=0.8,
+            legend_field="marker"
         )
 
-        # Hover 显示信息
-        p.add_tools(HoverTool(tooltips=[
-            ("时间", "@timestamp_ms ms"),
-            ("耗时", "@duration_ms ms"),
-            ("掉帧", "@is_jank"),
-            ("类型", "@frame_type"),
-            ("GPU合成", "@gpu_composition"),
-            ("按时呈现", "@on_time_finish"),
-            ("系统FPS", "@fps_sys"),
-            ("应用FPS", "@fps_app"),
-            ("图层", "@layer_name"),
-        ]))
+        # Hover 中文提示
+        p.add_tools(HoverTool(tooltips="""
+            <div style="padding: 5px;">
+                <b>时间:</b> @timestamp_ms ms<br/>
+                <b>耗时:</b> @duration_ms ms<br/>
+                <b>掉帧:</b> @is_jank<br/>
+                <b>系统FPS:</b> @fps_sys<br/>
+                <b>应用FPS:</b> @fps_app<br/>
+                <b>图层:</b> @layer_name
+            </div>
+        """, mode='vline'))
 
-        # 16.67ms 阈值线
-        threshold_line = Span(
-            location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5
-        )
-        p.add_layout(threshold_line)
+        # 阈值线与统计线
+        p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
+        if "duration_ms" in df:
+            avg_duration = df["duration_ms"].mean()
+            max_duration = df["duration_ms"].max()
+            p.add_layout(Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1))
+            p.add_layout(Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1))
 
-        # 背景区间：滑动
+        # 背景区间标注
+        bg_legends = []
+
         for rng in roll_ranges or []:
-            p.add_layout(BoxAnnotation(
-                left=rng["start_ts"],
-                right=rng["end_ts"],
-                fill_color="#ADD8E6",
-                fill_alpha=0.3
-            ))
+            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
+            p.add_layout(box)
+            bg_legends.append(("Scroll", box))
 
-        # 背景区间：拖拽
         for rng in drag_ranges or []:
-            p.add_layout(BoxAnnotation(
-                left=rng["start_ts"],
-                right=rng["end_ts"],
-                fill_color="#FFA500",
-                fill_alpha=0.25
-            ))
+            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
+            p.add_layout(box)
+            bg_legends.append(("Drag", box))
 
-        # 背景区间：连续掉帧
         for rng in jank_ranges or []:
-            p.add_layout(BoxAnnotation(
-                left=rng["start_ts"],
-                right=rng["end_ts"],
-                fill_color="#FF0000",
-                fill_alpha=0.15
-            ))
+            box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15)
+            p.add_layout(box)
+            bg_legends.append(("Jank", box))
+
+        # 虚拟图例支持
+        dummy_renderers = []
+        legend_items = []
+
+        for label, box in bg_legends:
+            dummy = p.rect(x=[0], y=[0], width=0, height=0, fill_color=box.fill_color, fill_alpha=box.fill_alpha)
+            dummy_renderers.append(dummy)
+            legend_items.append(LegendItem(label=label, renderers=[dummy]))
+
+        if legend_items:
+            legend = Legend(items=legend_items, location="top_right")
+            p.add_layout(legend)
 
         p.legend.label_text_font_size = "10pt"
         p.title.text_font_size = "16pt"
