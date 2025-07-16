@@ -241,7 +241,7 @@ class _Tracer(object):
         """
         df = tp.query(sql).as_pandas_dataframe().dropna()
 
-        df["delta"] *= (4 / 1024)
+        df["delta"] *= 4  # 单位（KB）
         df["time_sec"] -= self.normalize_start_ts
         return {
             name: group[["time_sec", "delta"]].to_dict("records")
