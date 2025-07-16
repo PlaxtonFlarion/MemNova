@@ -315,22 +315,21 @@ class Templater(object):
         logger.info(f"{data_dir} Handler Done ...")
         return compilation
     
-async def plot_gfx_analysis(
-    frames: list[dict],
-    x_start: int | float,
-    x_close: int | float,
-    roll_ranges: typing.Optional[list[dict]],
-    drag_ranges: typing.Optional[list[dict]],
-    jank_ranges: list[dict]
-):
-    # 颜色标记帧是否掉帧
+    async def plot_gfx_analysis(
+        self,
+        frames: list[dict],
+        x_start: int | float,
+        x_close: int | float,
+        roll_ranges: typing.Optional[list[dict]],
+        drag_ranges: typing.Optional[list[dict]],
+        jank_ranges: list[dict]
+    ):
     for frame in frames:
         frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
     df = pandas.DataFrame(frames)
     source = ColumnDataSource(df)
 
-    # 创建图表
     p = figure(
         x_range=Range1d(x_start, x_close),
         x_axis_label="Time (ms)",
@@ -342,16 +341,23 @@ async def plot_gfx_analysis(
         output_backend="webgl"
     )
 
-    # 起始对齐
     align_start = int(df["timestamp_ms"].min())
     p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
     p.xaxis.major_label_orientation = 0.5
 
-    # 主线与帧耗时点
-    p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
-    p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
+    legend_items = []
 
-    # Hover 信息（中文）
+    # 主折线
+    line_renderer = p.line("timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6)
+    legend_items.append(LegendItem(label="Main Line", renderers=[line_renderer]))
+
+    # 正常帧 / 掉帧
+    normal_renderer = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="#32CD32", alpha=0.8, view=source.to_df()[df["is_jank"] == False])
+    jank_renderer = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="#FF4D4D", alpha=0.8, view=source.to_df()[df["is_jank"] == True])
+    legend_items.append(LegendItem(label="Normal Frames", renderers=[normal_renderer]))
+    legend_items.append(LegendItem(label="Jank Frames", renderers=[jank_renderer]))
+
+    # Hover 信息
     p.add_tools(HoverTool(tooltips="""
         <div style="padding: 5px;">
             <b>时间:</b> @timestamp_ms ms<br/>
@@ -363,43 +369,46 @@ async def plot_gfx_analysis(
         </div>
     """, mode="vline"))
 
-    # 阈值线与统计线
-    p.add_layout(Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5))
+    # === 辅助线 ===
+    span_threshold = Span(location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5)
+    p.add_layout(span_threshold)
+    dummy_threshold = p.line(x=[0], y=[0], line_color="#1E90FF", line_dash="dashed", line_width=1.5)
+    legend_items.append(LegendItem(label="Threshold Line (16.67ms)", renderers=[dummy_threshold]))
+
     if "duration_ms" in df:
         avg_duration = df["duration_ms"].mean()
         max_duration = df["duration_ms"].max()
-        p.add_layout(Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1))
-        p.add_layout(Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1))
 
-    # 背景区间标注并记录图例项
-    bg_legends = []
+        span_avg = Span(location=avg_duration, dimension="width", line_color="#888888", line_dash="dotted", line_width=1)
+        span_max = Span(location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1)
 
-    # Roll 区间
-    for rng in roll_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#ADD8E6", fill_alpha=0.3)
-        p.add_layout(box)
-    dummy_roll = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#ADD8E6", fill_alpha=0.3)
-    bg_legends.append(LegendItem(label="Scroll Region", renderers=[dummy_roll]))
+        p.add_layout(span_avg)
+        p.add_layout(span_max)
 
-    # Drag 区间
-    for rng in drag_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FFA500", fill_alpha=0.25)
-        p.add_layout(box)
-    dummy_drag = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FFA500", fill_alpha=0.25)
-    bg_legends.append(LegendItem(label="Drag Region", renderers=[dummy_drag]))
+        dummy_avg = p.line(x=[0], y=[0], line_color="#888888", line_dash="dotted", line_width=1)
+        dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
 
-    # Jank 区间
-    for rng in jank_ranges or []:
-        box = BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color="#FF0000", fill_alpha=0.15)
-        p.add_layout(box)
-    dummy_jank = p.rect(x=[0], y=[0], width=0, height=0, fill_color="#FF0000", fill_alpha=0.15)
-    bg_legends.append(LegendItem(label="Jank Region", renderers=[dummy_jank]))
+        legend_items.append(LegendItem(label="Avg Duration", renderers=[dummy_avg]))
+        legend_items.append(LegendItem(label="Max Duration", renderers=[dummy_max]))
 
-    # 添加图例
-    unified_legend = Legend(items=bg_legends, location="top_right")
-    p.add_layout(unified_legend)
+    # === 背景区间 ===
+    bg_types = [
+        ("Roll Region", roll_ranges, "#ADD8E6", 0.3),
+        ("Drag Region", drag_ranges, "#FFA500", 0.25),
+        ("Jank Region", jank_ranges, "#FF0000", 0.15),
+    ]
 
-    # 样式调整
+    for label, ranges, color, alpha in bg_types:
+        for rng in ranges or []:
+            p.add_layout(BoxAnnotation(left=rng["start_ts"], right=rng["end_ts"], fill_color=color, fill_alpha=alpha))
+        dummy = p.rect(x=[0], y=[0], width=0, height=0, fill_color=color, fill_alpha=alpha)
+        legend_items.append(LegendItem(label=label, renderers=[dummy]))
+
+    # 添加统一图例
+    legend = Legend(items=legend_items, location="top_right", click_policy="hide")
+    p.add_layout(legend)
+
+    # 样式
     p.legend.label_text_font_size = "10pt"
     p.title.text_font_size = "16pt"
 
