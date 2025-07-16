@@ -263,7 +263,7 @@ class _Tracer(object):
 
     @staticmethod
     async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
-        raise NotImplementedError("")  # todo
+        raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
 
 
 class MemAnalyzer(_Tracer):
