@@ -68,10 +68,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 5px;
             background-image: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
         }
-        .results-info > p:nth-child(1) {
+        .results-info > p:nth-child(1), .tag-detail > p:nth-child(1) {
             color: #df4b11;
         }
-        .results-info > p:nth-child(2) {
+        .results-info > p:nth-child(2), .tag-detail > p:nth-child(2) {
             color: #0b92ec;
         }
         .results-info p:hover {
@@ -119,7 +119,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             display: flex;
             justify-content: flex-end;
         }
-        .tag-detail a, .tag-line {
+        .tag-detail p, .tag-detail a {
             width: 20%;
             margin: 5px;
             padding: 3px 8px;
@@ -128,17 +128,17 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             justify-content: center;
             text-align: center;
         }
+        .tag-detail > p:nth-child(1):hover {
+            background: rgb(236, 79, 6);
+        }
+        .tag-detail > p:nth-child(2):hover {
+            background: rgb(6, 202, 236);
+        }
         .tag-line {
             background-image: linear-gradient(to top, #d5d4d0 0%, #d5d4d0 1%, #eeeeec 31%, #efeeec 75%, #e9e9e7 100%);
             border-radius: 20px;
-            color: #0b92ec;
         }
-        .tag-line:hover {
-            background: rgb(6, 202, 236);
-            transition: background 0.5s ease;
-            cursor: grab;
-            color: #fdfcfb;
-        }
+
         .tag-line.pass:hover {
             background: #2fe70a;
         }
@@ -259,7 +259,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         /* 时间 */
-        #time {
+        .time {
             margin-right: 10px;
             font-weight: bold;
             padding: 3px 5px;
