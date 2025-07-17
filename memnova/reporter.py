@@ -46,7 +46,7 @@ class Reporter(object):
 
         vault = vault or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
 
-        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{classify_type}_{vault}")
+        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{vault}_{classify_type}")
         if not (group_dir := Path(self.group_dir)).exists():
             group_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,8 +74,7 @@ class Reporter(object):
         Design.build_file_tree(html_file)
 
     @staticmethod
-    def mean_of_field(compilation: list[dict], keys: list[str]) -> dict:
-        result = {}
+    def mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
         for key in keys:
             # 提取所有 compilation 里的 fields 并找 label 以 key 结尾的值
             vals = [
@@ -85,8 +84,8 @@ class Reporter(object):
             ]
             # 计算均值
             if vals:
-                result[key] = float(np.mean(vals))
-        return result
+                return round(float(np.mean(vals)), 2)
+        return None
 
     @staticmethod
     def split_frames_by_time(frames: list[dict], segment_ms: int = 60000) -> list[list[dict]]:
@@ -106,7 +105,7 @@ class Reporter(object):
     # Workflow: ======================== Track ========================
 
     @staticmethod
-    async def track_rendering(
+    async def __track_rendering(
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str
@@ -154,16 +153,16 @@ class Reporter(object):
     ) -> dict:
 
         compilation = await asyncio.gather(
-            *(self.track_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__track_rendering(db, templater, data_dir) for data_dir in data_list)
         )
 
         fg_final = {
-            "前台峰值": (avg_fg_max := self.mean_of_field(compilation, ["FG_MAX"])),
-            "前台均值": (avg_fg_avg := self.mean_of_field(compilation, ["FG_AVG"])),
+            "前台峰值": (avg_fg_max := self.mean_of_field(compilation, ["FG-MAX"])),
+            "前台均值": (avg_fg_avg := self.mean_of_field(compilation, ["FG-AVG"])),
         }
         bg_final = {
-            "后台峰值": (avg_bg_max := self.mean_of_field(compilation, ["BG_MAX"])),
-            "后台均值": (avg_bg_avg := self.mean_of_field(compilation, ["BG_AVG"])),
+            "后台峰值": (avg_bg_max := self.mean_of_field(compilation, ["BG-MAX"])),
+            "后台均值": (avg_bg_avg := self.mean_of_field(compilation, ["BG-AVG"])),
         }
 
         conclusion = []
@@ -219,7 +218,7 @@ class Reporter(object):
     # Workflow: ======================== Lapse ========================
 
     @staticmethod
-    async def lapse_rendering(
+    async def __lapse_rendering(
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str
@@ -266,12 +265,12 @@ class Reporter(object):
     ) -> dict:
 
         compilation = await asyncio.gather(
-            *(self.lapse_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__lapse_rendering(db, templater, data_dir) for data_dir in data_list)
         )
 
         union_final = {
-            "内存峰值": self.mean_of_field(compilation, ["MEM_MAX"]),
-            "内存均值": self.mean_of_field(compilation, ["MEM_AVG"]),
+            "内存峰值": self.mean_of_field(compilation, ["MEM-MAX"]),
+            "内存均值": self.mean_of_field(compilation, ["MEM-AVG"]),
         }
 
         return {
@@ -297,7 +296,7 @@ class Reporter(object):
 
     # Workflow: ======================== Sleek ========================
 
-    async def sleek_rendering(
+    async def __sleek_rendering(
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
@@ -366,7 +365,6 @@ class Reporter(object):
             ]
         }
 
-    # 流畅度
     async def sleek_rendition(
             self,
             db: "aiosqlite.Connection",
@@ -376,7 +374,7 @@ class Reporter(object):
     ) -> typing.Optional[dict]:
 
         compilation = await asyncio.gather(
-            *(self.sleek_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__sleek_rendering(db, templater, data_dir) for data_dir in data_list)
         )
 
         return {

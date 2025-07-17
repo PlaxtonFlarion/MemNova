@@ -511,34 +511,26 @@ class Memrix(object):
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
         segment_router = {
-            "Track": {
-                "folder": "Track",
-                "render": "track_rendition",
-            },
-            "Lapse": {
-                "folder": "Lapse",
-                "render": "lapse_rendition",
-            },
-            "Sleek": {
-                "folder": "Sleek",
-                "render": "sleek_rendition",
-            }
+            "Track": "track_rendition",
+            "Lapse": "lapse_rendition",
+            "Sleek": "sleek_rendition"
         }
 
-        target = target_dir.name.split("_")[0]
+
+        if len(parts := target_dir.name.split("_")) != 2:
+            raise MemrixError(f"Unexpected directory name format: {target_dir.name}")
+        src, dst = parts
+
         try:
-            router = segment_router[target]
+            render = segment_router[dst]
         except KeyError:
-            raise MemrixError(f"Unsupported directory type: {target} ...")
+            raise MemrixError(f"Unsupported directory type: {src} ...")
 
-        folder = router["folder"]
-        render = router["render"]
-
-        reporter = Reporter(self.src_total_place, target_dir.name, folder, self.align)
+        reporter = Reporter(self.src_total_place, src, dst, self.align)
 
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
-                raise MemrixError(f"文件无效 {file}")
+                raise MemrixError(f"Missing valid data file: {file}")
 
         async with aiosqlite.connect(reporter.db_file) as db:
             templater = Templater(
@@ -547,7 +539,7 @@ class Memrix(object):
 
             team_data = await FileAssist.read_yaml(reporter.team_file)
             if not (data_list := team_data.get("file")):
-                raise MemrixError(f"No data scenario {data_list} ...")
+                raise MemrixError(f"No data scenario: {data_list} ...")
 
             rendition = await getattr(reporter, render)(db, templater, data_list, team_data)
 
