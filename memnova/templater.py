@@ -101,6 +101,21 @@ class Templater(object):
             group: str
     ) -> dict:
 
+        def extract_mode_blocks(df: "pandas.DataFrame") -> list[tuple["pandas.Timestamp", "pandas.Timestamp", str]]:
+            """根据 foreground 字段，提取所有连续前台/后台区块的 [start, end, label] 列表"""
+            blocks = []
+            if df.empty:
+                return blocks
+            
+            start_idx, cur_status = 0, df["foreground"].iloc[0]
+            
+            for i in range(1, len(df)):
+                if (v := df["foreground"].iloc[i]) != cur_status:
+                    blocks.append((df["x"].iloc[start_idx], df["x"].iloc[i-1], cur_status))
+                    start_idx, cur_status = i, v
+                    blocks.append((df["x"].iloc[start_idx], df["x"].iloc[-1], cur_status))
+            return blocks
+
         if not data_list:
             return {}
 
@@ -114,6 +129,24 @@ class Templater(object):
         df["x"] = pandas.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         df["activity"] = df["activity"].fillna("")
+
+        # 区块分色（你可自定义）
+        fg_color = "#D6ECFA"  # 前台区块淡蓝
+        bg_color = "#F4F6FB"  # 后台区块淡灰
+
+        # ...数据处理...
+        if blocks := extract_mode_blocks(df):
+            lefts = [b[0] for b in blocks]
+            rights = [b[1] for b in blocks]
+            colors = [fg_color if b[2] == "前台" else bg_color for b in blocks]
+            p.quad(
+                left=lefts, right=rights,
+                bottom=y_start, top=y_end,
+                fill_color=colors,
+                fill_alpha=0.10,
+                line_alpha=0
+            )
+        # ...后续 PSS/RSS/USS 主线等...
 
         y = df["pss"]
         max_value, min_value, avg_value = y.max(), y.min(), y.mean()
