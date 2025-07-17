@@ -11,10 +11,10 @@
 
 import os
 import numpy
-import pandas
 import typing
 import asyncio
 import aiosqlite
+import pandas as pd
 from pathlib import Path
 from loguru import logger
 from bokeh.layouts import column
@@ -25,8 +25,8 @@ from bokeh.plotting import (
     save, figure
 )
 from bokeh.models import (
-    ColumnDataSource, HoverTool, Spacer, Span, Div,
-    DatetimeTickFormatter, BoxAnnotation, Range1d
+    ColumnDataSource, Spacer, Span, Div,
+    DatetimeTickFormatter, Range1d, HoverTool
 )
 from memcore.cubicle import Cubicle
 from memnova.scores import Scores
@@ -149,11 +149,19 @@ class Templater(object):
         avg_color = "#6A4C93"  # 均值线（紫色）
         max_color = "#FF1D58"  # 峰值线（红色）
         min_color = "#009FFD"  # 谷值线（亮蓝）
-        tie_color = "#ECF8FF"  # 区间高亮（极淡蓝）
         # 区块分色
         fg_color = "#5BB8FF"  # 深蓝（前台）
         bg_color = "#BDBDBD"  # 深灰（后台）
 
+        # 绘图主对象
+        p = figure(
+            sizing_mode="stretch_both",
+            x_axis_type="datetime",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            title="Memory Usage over Time",
+            y_range=Range1d(y_start, y_end),
+        )
+        
         # 分区底色
         for _, row in block_stats.iterrows():
             color = fg_color if row["foreground"] == "前台" else bg_color
@@ -168,15 +176,6 @@ class Templater(object):
         )
         df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
         source = ColumnDataSource(df)
-
-        # 绘图主对象
-        p = figure(
-            sizing_mode="stretch_both",
-            x_axis_type="datetime",
-            tools="pan,wheel_zoom,box_zoom,reset,save",
-            title="Memory Usage over Time",
-            y_range=Range1d(y_start, y_end),
-        )
 
         # 主线PSS
         p.line(
@@ -352,7 +351,7 @@ class Templater(object):
         for frame in frames:
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
-        df = pandas.DataFrame(frames)
+        df = pd.DataFrame(frames)
         df["timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
    
