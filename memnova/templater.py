@@ -113,7 +113,7 @@ class Templater(object):
                 if (v := df["foreground"].iloc[i]) != cur_status:
                     blocks.append((df["x"].iloc[start_idx], df["x"].iloc[i-1], cur_status))
                     start_idx, cur_status = i, v
-                    blocks.append((df["x"].iloc[start_idx], df["x"].iloc[-1], cur_status))
+            blocks.append((df["x"].iloc[start_idx], df["x"].iloc[-1], cur_status))
             return blocks
 
         if not data_list:
