@@ -8,6 +8,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import pandas as pd
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -28,8 +29,10 @@ class Painter(object):
             output_path: str
     ) -> str:
 
-        columns = ["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
-        df = pd.DataFrame(data_list, columns=columns)
+        df = pd.DataFrame(
+            data_list, 
+            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
+        )
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         df["num_x"] = md.date2num(df["x"])
@@ -68,42 +71,41 @@ class Painter(object):
         jitter = result["jitter_index"]
         trend_score = result["trend_score"]
 
-        fig, ax = plt.subplots(figsize=(16, 6))
+        # 区块配色
+        fg_color = "#3386E6"
+        bg_color = "#757575"
+        fg_alpha = 0.22
+        bg_alpha = 0.18
 
-        # 设置 x 轴为时间格式
+        # ---- 绘图 ----
+        fig, ax = plt.subplots(figsize=(16, 6))
         ax.xaxis_date()
         ax.xaxis.set_major_formatter(md.DateFormatter("%H:%M:%S"))
         ax.xaxis.set_major_locator(md.AutoDateLocator())
 
-        # 主折线
-        ax.plot(timestamps, pss, color=line_color, linewidth=1.2, label="PSS")
+        # 区块底色
+        for _, row in block_stats.iterrows():
+            color = fg_color if row["foreground"] == "前台" else bg_color
+            alpha = fg_alpha if row["foreground"] == "前台" else bg_alpha
+            ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
+        # 主线
+        ax.plot(df["num_x"], df["pss"], color="#4074B4", linewidth=1.2, label="PSS")
+        # 滑动平均
+        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#3333AA", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg") 
         # 均值带
-        ax.axhspan(
-            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.3, label="Average Range"
-        )
-        # 均值线
+        ax.axhspan(avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range")
+        # 均值/极值线
         ax.axhline(y=avg_val, linestyle=":", color="#6666CC", linewidth=0.8)
-
-        # 最大值标注
         ax.axhline(y=max_val, linestyle=":", color="#FF4B00", linewidth=0.8)
-
-        # 最小值标注
         ax.axhline(y=min_val, linestyle=":", color="#00FF85", linewidth=0.8)
 
-        # 滑动窗口平均线
-        window_size = max(3, len(pss) // 20)
-        sliding_avg = [
-            sum(pss[max(0, i - window_size):i + 1]) / (i - max(0, i - window_size) + 1)
-            for i in range(len(pss))
-        ]
-        ax.plot(
-            timestamps, sliding_avg,
-            color="#3333AA",
-            linestyle="--",
-            linewidth=0.5,
-            alpha=0.8,
-            label="Sliding Avg"
+        # 极值点
+        ax.scatter(
+            df.loc[df["pss"] == max_val, "num_x"], [max_val], s=60, color="#FF1D58", zorder=3, label="Max"
+        )
+        ax.scatter(
+            df.loc[df["pss"] == min_val, "num_x"], [min_val], s=60, color="#009FFD", zorder=3, label="Min"
         )
 
         # 设置轴与样式
