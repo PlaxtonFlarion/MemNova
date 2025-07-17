@@ -28,9 +28,11 @@ from bokeh.layouts import column
 from jinja2 import (
     Environment, FileSystemLoader
 )
+from engine.tinker import Period
 from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.profile import Align
+from memnova.painter import Painter
 from memnova.scores import Scores
 from memnova.templater import Templater
 from memnova import const
@@ -53,6 +55,8 @@ class Reporter(object):
         self.db_file = os.path.join(self.total_dir, const.DB_FILE)
         self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{vault}.log")
         self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
+
+        self.background_tasks: list["asyncio.Task"] = []
 
     @staticmethod
     async def make_report(template: str, destination: str, *args, **kwargs) -> None:
@@ -102,39 +106,75 @@ class Reporter(object):
 
         return segment_list
 
-    # Workflow: ======================== Track ========================
+    # Workflow: ======================== Union ========================
 
-    @staticmethod
-    async def __track_rendering(
+    async def __share_folder(self) -> tuple["Path", "Path"]:
+        if not (images := Path(self.group_dir) / const.IMAGES_DIR).exists():
+            images.mkdir(parents=True, exist_ok=True)
+        if not (ionics := Path(self.group_dir) / const.IONICS_DIR).exists():
+            ionics.mkdir(parents=True, exist_ok=True)
+
+        return images, ionics
+
+    async def __classify_rendering(
+            self,
             db: "aiosqlite.Connection",
             templater: "Templater",
-            data_dir: str
+            data_dir: str,
+            images: "Path",
+            ionics: "Path",
+            priority: bool,
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        union_data_list, (joint, *_) = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+        union_data_list, (ion_data, *_), (joint, *_) = await asyncio.gather(
+            Cubicle.query_mem_data(db, data_dir),
+            Cubicle.query_ion_data(db, data_dir),
+            Cubicle.query_joint_data(db, data_dir)
         )
-        title, timestamp = joint
+        metadata, (io, rss, block), (title, timestamp) = {}, ion_data, joint
+
+        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        image_loc = images / f"{head}_image.png"
+        ionic_loc = ionics / f"{head}_ionic.png"
+
+        if priority:
+            image_task = asyncio.create_task(
+                Painter.draw_mem_metrics(union_data_list, str(image_loc)), name="draw mem metrics"
+            )
+            self.background_tasks.append(image_task)
+
+        ionic_task = asyncio.create_task(
+            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
+        )
+        self.background_tasks.append(ionic_task)
 
         df = pd.DataFrame(
             union_data_list,
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
         )
-        group_stats = (
-            df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count").reset_index()
-        )
 
-        bokeh_link = await templater.plot_mem_analysis(df, str(Path(group) / f"{data_dir}.html"))
-        logger.info(f"{data_dir} Handler Done ...")
+        if priority:
+            mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
-        return {
-            "subtitle": title or data_dir,
-            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
-            "tags": [
+            tag_lines = [
+                {
+                    "fields": [
+                        {"label": f"MEM-MAX: ", "value": f"{mem_max_pss:.2f}", "unit": "MB"},
+                        {"label": f"MEM-AVG: ", "value": f"{mem_avg_pss:.2f}", "unit": "MB"}
+                    ]
+                }
+            ]
+
+        else:
+            group_stats = (
+                df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count").reset_index()
+            )
+
+            tag_lines = [
                 {
                     "fields": [
                         {"label": f"{row['mode']}-MAX: ", "value": f"{row['max_pss']:.2f}", "unit": "MB"},
@@ -142,7 +182,17 @@ class Reporter(object):
                     ]
                 } for _, row in group_stats.iterrows()
             ]
+
+        bokeh_link = await templater.plot_mem_analysis(df, str(Path(group) / f"{data_dir}.html"))
+        logger.info(f"{data_dir} Handler Done ...")
+
+        return {
+            "subtitle": title or data_dir,
+            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
+            "tags": tag_lines
         }
+
+    # Workflow: ======================== Track ========================
 
     async def track_rendition(
             self,
@@ -152,8 +202,12 @@ class Reporter(object):
             team_data: dict
     ) -> dict:
 
+        priority, (images, ionics) = False, self.__share_folder()
+
         compilation = await asyncio.gather(
-            *(self.__track_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__classify_rendering(
+                db, templater, data_dir, images, ionics, priority
+            ) for data_dir in data_list)
         )
 
         fg_final = {
@@ -217,45 +271,6 @@ class Reporter(object):
 
     # Workflow: ======================== Lapse ========================
 
-    @staticmethod
-    async def __lapse_rendering(
-            db: "aiosqlite.Connection",
-            templater: "Templater",
-            data_dir: str
-    ) -> dict:
-
-        os.makedirs(
-            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
-        )
-
-        union_data_list, (joint, *_) = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
-        )
-        title, timestamp = joint
-
-        df = pd.DataFrame(
-            union_data_list,
-            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
-        )
-
-        mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
-
-        bokeh_link = await templater.plot_mem_analysis(df, str(Path(group) / f"{data_dir}.html"))
-        logger.info(f"{data_dir} Handler Done ...")
-
-        return {
-            "subtitle": title or data_dir,
-            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
-            "tags": [
-                {
-                    "fields": [
-                        {"label": f"MEM-MAX: ", "value": f"{mem_max_pss:.2f}", "unit": "MB"},
-                        {"label": f"MEM-AVG: ", "value": f"{mem_avg_pss:.2f}", "unit": "MB"}
-                    ]
-                }
-            ]
-        }
-
     async def lapse_rendition(
             self,
             db: "aiosqlite.Connection",
@@ -264,8 +279,12 @@ class Reporter(object):
             team_data: dict,
     ) -> dict:
 
+        priority, (images, ionics) = True, self.__share_folder()
+
         compilation = await asyncio.gather(
-            *(self.__lapse_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__classify_rendering(
+                db, templater, data_dir, images, ionics, priority
+            ) for data_dir in data_list)
         )
 
         union_final = {
@@ -300,18 +319,39 @@ class Reporter(object):
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
-            data_dir: str
+            data_dir: str,
+            images: "Path",
+            ionics: "Path",
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (frame_data, *_), (joint, *_) = await asyncio.gather(
-            Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+        (gfx_data, *_), (ion_data, *_), (joint, *_) = await asyncio.gather(
+            Cubicle.query_gfx_data(db, data_dir),
+            Cubicle.query_ion_data(db, data_dir),
+            Cubicle.query_joint_data(db, data_dir)
         )
-        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data.values()
+        metadata = {}
+        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = gfx_data.values()
+        io, rss, block = ion_data.values()
         title, timestamp = joint
+
+        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        image_loc = images / f"{head}_image.png"
+        ionic_loc = ionics / f"{head}_ionic.png"
+
+        image_task = asyncio.create_task(
+            Painter.draw_gfx_metrics(
+                metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(image_loc),
+            ), name="draw gfx metrics"
+        )
+        ionic_task = asyncio.create_task(
+            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
+        )
+        self.background_tasks.append(image_task)
+        self.background_tasks.append(ionic_task)
 
         # 平均帧
         avg_fps = round(
@@ -373,8 +413,10 @@ class Reporter(object):
             team_data: dict,
     ) -> typing.Optional[dict]:
 
+        images, ionics = self.__share_folder()
+
         compilation = await asyncio.gather(
-            *(self.__sleek_rendering(db, templater, data_dir) for data_dir in data_list)
+            *(self.__sleek_rendering(db, templater, data_dir, images, ionics) for data_dir in data_list)
         )
 
         return {

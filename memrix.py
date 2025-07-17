@@ -47,7 +47,6 @@ from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
-from memnova.painter import Painter
 from memnova.templater import Templater
 from memnova.reporter import Reporter
 from memnova.tracer import GfxAnalyzer, IonAnalyzer
@@ -145,7 +144,7 @@ class Memrix(object):
             package: str,
             reporter: "Reporter",
             team_name: str,
-    ) -> tuple["Path", "Path", "Path"]:
+    ) -> "Path":
 
         self.file_insert = 0
         self.file_folder = team_name
@@ -175,12 +174,8 @@ class Memrix(object):
 
         if not (traces := Path(reporter.group_dir) / const.TRACES_DIR).exists():
             traces.mkdir(parents=True, exist_ok=True)
-        if not (images := Path(reporter.group_dir) / const.IMAGES_DIR).exists():
-            images.mkdir(parents=True, exist_ok=True)
-        if not (ionics := Path(reporter.group_dir) / const.IONICS_DIR).exists():
-            ionics.mkdir(parents=True, exist_ok=True)
 
-        return traces, images, ionics
+        return traces
 
     async def sample_stop(self, reporter: "Reporter") -> None:
         if self.dumped and not self.dumped.is_set():
@@ -385,15 +380,13 @@ class Memrix(object):
         )
 
         team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
-        traces, images, ionics = await self.refresh(device, self.focus, reporter, team_name)
+        traces = await self.refresh(device, self.focus, reporter, team_name)
 
         # Notes: ========== 启动工具 ==========
         toolkit, ion = ToolKit(), IonAnalyzer()
 
         head = f"{title}_{now_format}" if (title := self.title) else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
-        image_loc = images / f"{head}_image.png"
-        ionic_loc = ionics / f"{head}_ionic.png"
 
         device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
@@ -424,12 +417,14 @@ class Memrix(object):
             logger.info(f"结束采样 ...")
             await perfetto.close()
 
-            union_data_list = await Cubicle.query_mem_data(db, self.file_folder)
-            await Painter.draw_mem_metrics(union_data_list, str(image_loc))
-
+            logger.info(f"提取样本 ...")
             with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
                 ion_data = await ion.extract_metrics(tp, self.focus)
-                await Painter.draw_ion_metrics(**ion_data, output_path=str(ionic_loc))
+                fmt_data = {k: json.dumps(v) for k, v in ion_data.items()}
+                logger.info(f"存储样本 ...")
+                await Cubicle.insert_ion_data(
+                    db, self.file_folder, self.align.label, Period.convert_time(now_format), fmt_data
+                )
 
         await asyncio.gather(watcher, self.sample_stop(reporter))
 
@@ -451,15 +446,13 @@ class Memrix(object):
         )
 
         team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
-        traces, images, ionics = await self.refresh(device, self.focus, reporter, team_name)
+        traces = await self.refresh(device, self.focus, reporter, team_name)
 
         # Notes: ========== 启动工具 ==========
         gfx, ion = GfxAnalyzer(), IonAnalyzer()
 
         head = f"{title}_{now_format}" if (title := self.title) else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
-        image_loc = images / f"{head}_image.png"
-        ionic_loc = ionics / f"{head}_ionic.png"
 
         device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
@@ -477,30 +470,31 @@ class Memrix(object):
         logger.info(f"结束采样 ...")
         await perfetto.close()
 
-        logger.info(f"解析样本 ...")
+        logger.info(f"提取样本 ...")
         with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
             gfx_data, ion_data = await asyncio.gather(
-                gfx.extract_metrics(tp, self.focus), ion.extract_metrics(tp, self.focus)
-            )
-            await asyncio.gather(
-                Painter.draw_gfx_metrics(**gfx_data, output_path=str(image_loc)),
-                Painter.draw_ion_metrics(**ion_data, output_path=str(ionic_loc))
+                gfx.extract_metrics(tp, self.focus),
+                ion.extract_metrics(tp, self.focus)
             )
 
-            fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+            ion_fmt_data = {k: json.dumps(v) for k, v in ion_data.items()}
 
-            logger.info(f"存储样本 ...")
             async with aiosqlite.connect(reporter.db_file) as db:
                 await Cubicle.create_gfx_table(db)
+                logger.info(f"存储样本 ...")
                 await asyncio.gather(
                     Cubicle.insert_joint_data(
                         db, self.file_folder, self.title, Period.convert_time(now_format)
                     ),
                     Cubicle.insert_gfx_data(
-                        db, self.file_folder, self.align.label, Period.convert_time(now_format), fmt_data
+                        db, self.file_folder, self.align.label, Period.convert_time(now_format), gfx_fmt_data
+                    ),
+                    Cubicle.insert_ion_data(
+                        db, self.file_folder, self.align.label, Period.convert_time(now_format), ion_fmt_data
                     )
                 )
-                self.file_insert += len(fmt_data)
+                self.file_insert += (len(gfx_fmt_data) + len(ion_fmt_data))
                 logger.info(f"Article {self.file_insert} data insert success")
 
         await asyncio.gather(watcher, self.sample_stop(reporter))
@@ -543,7 +537,8 @@ class Memrix(object):
 
             rendition = await getattr(reporter, render)(db, templater, data_list, team_data)
 
-            return await reporter.make_report(self.unity_template, templater.download, **rendition)
+            await reporter.make_report(self.unity_template, templater.download, **rendition)
+            await asyncio.gather(*reporter.background_tasks)
 
 
 class Perfetto(object):

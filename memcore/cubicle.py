@@ -10,6 +10,7 @@
 
 import json
 import typing
+import asyncio
 import aiosqlite
 
 
@@ -19,6 +20,7 @@ class Cubicle(object):
     joint_table = "joint_table"
     mem_data_table = "mem_data"
     gfx_data_table = "gfx_data"
+    ion_data_table = "ion_data"
 
     @staticmethod
     async def create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
@@ -61,10 +63,9 @@ class Cubicle(object):
 
     @staticmethod
     async def create_mem_table(db: "aiosqlite.Connection") -> None:
-        """
-        创建内存采样数据表，如果表不存在则自动创建。
-        """
-        await Cubicle.create_joint_table(db)
+        await asyncio.gather(
+            Cubicle.create_joint_table(db), Cubicle.create_ion_table(db)
+        )
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.mem_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
@@ -200,7 +201,9 @@ class Cubicle(object):
 
     @staticmethod
     async def create_gfx_table(db: "aiosqlite.Connection") -> None:
-        await Cubicle.create_joint_table(db)
+        await asyncio.gather(
+            Cubicle.create_joint_table(db), Cubicle.create_ion_table(db)
+        )
         await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
@@ -271,6 +274,67 @@ class Cubicle(object):
                     "jank_ranges": json.loads(jr),
                 }
                 for rf, vs, va, rr, dr, jr in rows
+            ]
+
+    # Notes: ======================== I/O ========================
+
+    @staticmethod
+    async def create_ion_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.ion_data_table} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_dir TEXT,
+            label TEXT,
+            timestamp TEXT,
+            io TEXT,
+            rss TEXT,
+            block TEXT)''')
+        await db.commit()
+
+    @staticmethod
+    async def insert_ion_data(
+            db: "aiosqlite.Connection",
+            data_dir: str,
+            label: str,
+            timestamp: str,
+            payload: dict
+    ) -> None:
+
+        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+            data_dir,
+            label,
+            timestamp,
+            io,
+            rss,
+            block) VALUES (?, ?, ?, ?, ?, ?)''', (
+                data_dir,
+                label,
+                timestamp,
+                payload["io"],
+                payload["rss"],
+                payload["block"]
+            )
+        )
+        await db.commit()
+
+    @staticmethod
+    async def query_ion_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+        sql = f"""
+            SELECT
+                io,
+                rss,
+                block
+            FROM {Cubicle.gfx_data_table}
+            WHERE data_dir = ?
+        """
+        async with db.execute(sql, (data_dir,)) as cursor:
+            rows = await cursor.fetchall()
+            return [
+                {
+                    "io": json.loads(io),
+                    "rss": json.loads(rss),
+                    "block": json.loads(block),
+                }
+                for io, rss, block in rows
             ]
 
 if __name__ == '__main__':
