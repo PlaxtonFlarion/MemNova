@@ -156,8 +156,8 @@ class Templater(object):
         min_color = "#009FFD"  # 谷值线（亮蓝）
         tie_color = "#ECF8FF"  # 区间高亮（极淡蓝）
         # 区块分色
-        fg_color = "#D6ECFA"  # 前台区块淡蓝
-        bg_color = "#F4F6FB"  # 后台区块淡灰
+        fg_color = "#5BB8FF"  # 深蓝（前台）
+        bg_color = "#BDBDBD"  # 深灰（后台）
 
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
@@ -196,7 +196,7 @@ class Templater(object):
         )
 
         # 极值点
-        p.scatter(
+        pss_spot = p.scatter(
             "x", "pss",
             source=source, size="sizes", color="colors", alpha=0.95
         )
@@ -225,7 +225,7 @@ class Templater(object):
                 left=lefts, right=rights,
                 bottom=y_start, top=y_end,
                 fill_color=colors,
-                fill_alpha=0.10,
+                fill_alpha=0.25,
                 line_alpha=0
             )
 
@@ -239,7 +239,9 @@ class Templater(object):
             ("当前页", "@activity"),
             ("优先级", "@foreground"),
         ]
-        hover = HoverTool(tooltips=tooltips, formatters={"@timestamp": "datetime"})
+        hover = HoverTool(
+            tooltips=tooltips, formatters={"@timestamp": "datetime"}, mode="mouse", renderers=[pss_spot]
+        )
         p.add_tools(hover)
 
         # 网格/坐标轴/主题
