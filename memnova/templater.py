@@ -195,6 +195,8 @@ class Templater(object):
         tooltips = [
             ("时间", "@timestamp{%H:%M:%S}"),
             ("PSS", "@pss{0.00} MB"),
+            ("RSS", "@rss{0.00} MB"),
+            ("USS", "@uss{0.00} MB"),
             ("当前页", "@activity"),
             ("优先级", "@foreground"),
         ]
