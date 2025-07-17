@@ -25,7 +25,7 @@ from bokeh.plotting import (
     save, figure
 )
 from bokeh.models import (
-    ColumnDataSource, HoverTool, Spacer, Span, Div, Value,
+    ColumnDataSource, HoverTool, Spacer, Span, Div,
     DatetimeTickFormatter, BoxAnnotation, Range1d, Legend, LegendItem
 )
 from memcore.cubicle import Cubicle
@@ -149,14 +149,14 @@ class Templater(object):
             sizing_mode="stretch_both",
             x_axis_type="datetime",
             tools="pan,wheel_zoom,box_zoom,reset,save",
-            title=f"{file_name.upper()} - Memory Usage over Time",
+            title="Memory Usage over Time",
             y_range=Range1d(y_start, y_end),
         )
 
         # 主线PSS
         p.line(
             "x", "pss",
-            source=source, line_width=2, color=pss_color, legend_label=f"PSS {file_name.upper()}"
+            source=source, line_width=2, color=pss_color, legend_label="PSS"
         )
 
         # 辅助线（RSS/USS）
@@ -172,7 +172,7 @@ class Templater(object):
         # 极值点
         p.scatter(
             "x", "pss",
-            source=source, size="sizes", color="colors", alpha=0.95, legend_label="Peak/Valley"
+            source=source, size="sizes", color="colors", alpha=0.95
         )
 
         # 均值/极值线
@@ -355,7 +355,7 @@ class Templater(object):
         line_renderer = p.line(
             "timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6
         )
-        legend_items.append(LegendItem(label=Value("Main Line"), renderers=[line_renderer]))
+        legend_items.append(LegendItem(label="Main Line", renderers=[line_renderer]))
 
         # 🟢 点图（已预填色）
         p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
@@ -379,7 +379,7 @@ class Templater(object):
         )
         p.add_layout(span_threshold)
         dummy_threshold = p.line(x=[0], y=[0], line_color="#1E90FF", line_dash="dashed", line_width=1.5)
-        legend_items.append(LegendItem(label=Value("16.67ms / 60 FPS"), renderers=[dummy_threshold]))
+        legend_items.append(LegendItem(label="16.67ms / 60 FPS", renderers=[dummy_threshold]))
 
         if "duration_ms" in df:
             avg_duration = df["duration_ms"].mean()
@@ -398,8 +398,8 @@ class Templater(object):
             dummy_avg = p.line(x=[0], y=[0], line_color="#888888", line_dash="dotted", line_width=1)
             dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
 
-            legend_items.append(LegendItem(label=Value("Avg Duration"), renderers=[dummy_avg]))
-            legend_items.append(LegendItem(label=Value("Max Duration"), renderers=[dummy_max]))
+            legend_items.append(LegendItem(label="Avg Duration", renderers=[dummy_avg]))
+            legend_items.append(LegendItem(label="Max Duration", renderers=[dummy_max]))
 
         # 🟢 用 Quad 绘制背景区间
         quad_top = y_end
