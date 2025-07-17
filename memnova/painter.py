@@ -28,20 +28,37 @@ class Painter(object):
             output_path: str
     ) -> str:
 
-        timestamp, _, pss, *_ = list(zip(*data_list))
+        columns = ["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
+        df = pd.DataFrame(data_list, columns=columns)
+        df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df = df.dropna(subset=["x"])
+        df["num_x"] = md.date2num(df["x"])
+        df["pss"] = pd.to_numeric(df["pss"], errors="coerce")
+        df = df.dropna(subset=["pss"])
 
-        timestamps = md.date2num(
-            [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S") for ts in timestamp]
-        )
+        # 滑动窗口平均
+        window_size = max(3, len(df)//20)
+        df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
-        # 计算统计值
-        max_val = max(pss)
-        min_val = min(pss)
-        avg_val = sum(pss) / len(pss)
+        # 全局统计
+        max_val, min_val, avg_val = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         y_range = max_val - min_val if max_val > min_val else 1
         offset = 0.1
         y_min = max(0, min_val - offset * y_range)
         y_max = max_val + offset * y_range
+
+        # 连续区块分组（只要 foreground 变就换一块）
+        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
+
+        # 区块统计
+        block_stats = df.groupby(["block_id", "foreground"]).agg(
+            start_time=("num_x", "first"),
+            end_time=("num_x", "last"),
+            avg_pss=("pss", "mean"),
+            max_pss=("pss", "max"),
+            min_pss=("pss", "min"),
+            size=("pss", "size"),
+        ).reset_index()
 
         # 判断内存趋势
         result = Scores.analyze_mem_trend(pss)
