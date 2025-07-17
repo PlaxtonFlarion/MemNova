@@ -350,7 +350,7 @@ class Templater(object):
         p.xaxis.major_label_orientation = 0.5
 
         # 🟢 主折线
-        line_renderer = p.line(
+        p.line(
             "timestamp_ms", "duration_ms", 
             source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line"
         )
@@ -377,6 +377,8 @@ class Templater(object):
             line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
         )
         if "duration_ms" in df:
+            avg_duration = df["duration_ms"].mean()
+            max_duration = df["duration_ms"].max()
             p.line(
                 [x_start, x_close], [avg_duration, avg_duration],
                 line_color="#8700FF", line_dash="dotted", line_width=1, legend_label="Avg Duration"
