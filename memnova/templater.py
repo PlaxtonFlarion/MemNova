@@ -357,7 +357,7 @@ class Templater(object):
         )
 
         # 🟢 点图（已预填色）
-        p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
+        spot = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
 
         # 🟢 Hover 信息
         p.add_tools(HoverTool(tooltips="""
@@ -370,7 +370,7 @@ class Templater(object):
                 <b>应用FPS:</b> @fps_app<br/>
                 <b>图层:</b> @layer_name
             </div>
-        """, mode="vline"))
+        """, mode="mouse", renderers=[spot]))
 
         # 🟢 阈值线 + 平均线 + 最大值线
         p.line(
