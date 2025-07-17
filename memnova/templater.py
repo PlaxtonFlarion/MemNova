@@ -130,24 +130,6 @@ class Templater(object):
         df = df.dropna(subset=["x"])
         df["activity"] = df["activity"].fillna("")
 
-        # 区块分色（你可自定义）
-        fg_color = "#D6ECFA"  # 前台区块淡蓝
-        bg_color = "#F4F6FB"  # 后台区块淡灰
-
-        # ...数据处理...
-        if blocks := extract_mode_blocks(df):
-            lefts = [b[0] for b in blocks]
-            rights = [b[1] for b in blocks]
-            colors = [fg_color if b[2] == "前台" else bg_color for b in blocks]
-            p.quad(
-                left=lefts, right=rights,
-                bottom=y_start, top=y_end,
-                fill_color=colors,
-                fill_alpha=0.10,
-                line_alpha=0
-            )
-        # ...后续 PSS/RSS/USS 主线等...
-
         window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
@@ -173,6 +155,9 @@ class Templater(object):
         max_color = "#FF1D58"  # 峰值线（红色）
         min_color = "#009FFD"  # 谷值线（亮蓝）
         tie_color = "#ECF8FF"  # 区间高亮（极淡蓝）
+        # 区块分色
+        fg_color = "#D6ECFA"  # 前台区块淡蓝
+        bg_color = "#F4F6FB"  # 后台区块淡灰
 
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
@@ -231,6 +216,18 @@ class Templater(object):
         p.add_layout(
             BoxAnnotation(bottom=min_value, top=max_value, fill_alpha=0.10, fill_color=tie_color)
         )
+
+        if blocks := extract_mode_blocks(df):
+            lefts = [b[0] for b in blocks]
+            rights = [b[1] for b in blocks]
+            colors = [fg_color if b[2] == "前台" else bg_color for b in blocks]
+            p.quad(
+                left=lefts, right=rights,
+                bottom=y_start, top=y_end,
+                fill_color=colors,
+                fill_alpha=0.10,
+                line_alpha=0
+            )
 
         # 悬浮提示
         tooltips = [
