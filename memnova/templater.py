@@ -152,6 +152,8 @@ class Templater(object):
         # 区块分色
         fg_color = "#5BB8FF"  # 深蓝（前台）
         bg_color = "#BDBDBD"  # 深灰（后台）
+        fg_alpha = 0.22
+        bg_alpha = 0.18
 
         # 绘图主对象
         p = figure(
@@ -165,10 +167,11 @@ class Templater(object):
         # 分区底色
         for _, row in block_stats.iterrows():
             color = fg_color if row["foreground"] == "前台" else bg_color
+            alpha = fg_alpha if row["foreground"] == "前台" else bg_alpha
             p.quad(
                 left=row["start_time"], right=row["end_time"],
                 bottom=y_start, top=y_end,
-                fill_color=color, fill_alpha=0.22, line_alpha=0
+                fill_color=color, fill_alpha=alpha, line_alpha=0
             )
 
         df["colors"] = df["pss"].apply(
