@@ -236,7 +236,6 @@ class Templater(object):
         viewer_div = self.generate_viewers()
         save(
             column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both")
-            if viewer_div else p
         )
 
         # 结果结构
