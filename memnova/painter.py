@@ -89,7 +89,7 @@ class Painter(object):
             ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
         # 主线
-        ax.plot(df["num_x"], df["pss"], color="#4074B4", linewidth=1.2, label="PSS")
+        ax.plot(df["num_x"], df["pss"], color=line_color, linewidth=1.2, label="PSS")
         # 滑动平均
         ax.plot(df["num_x"], df["pss_sliding_avg"], color="#3333AA", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg") 
         # 均值带
