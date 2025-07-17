@@ -278,7 +278,7 @@ class Painter(object):
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # === 左轴：RSS ===
-        rss_times = [d["time_sec"] for d in rss]
+        rss_times = [d["time_sec"] / 1000 for d in rss]
         rss_vals = [d["rss_mb"] for d in rss]
         ax1.plot(
             rss_times, rss_vals, color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
@@ -290,10 +290,10 @@ class Painter(object):
         ax2 = ax1.twinx()
         io_lines = []
 
-        def plot_io_line(series_name, color, marker, label):
+        def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]: 
             if not (data := io.get(series_name, [])):
                 return []
-            times = [d["time_sec"] for d in data]
+            times = [d["time_sec"] / 1000 for d in data]
             values = [d["delta"] for d in data]
             io_line = ax2.plot(
                 times, values, linestyle="--", linewidth=1.2, marker=marker, markersize=2, color=color, label=label
