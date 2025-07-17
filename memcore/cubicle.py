@@ -10,7 +10,6 @@
 
 import json
 import typing
-import asyncio
 import aiosqlite
 
 
@@ -75,7 +74,7 @@ class Cubicle(object):
             uid INTEGER,
             adj INTEGER,
             activity TEXT,
-            foreground INTEGER,
+            mode TEXT,
             graphics REAL,
             rss REAL,
             pss REAL,
@@ -124,7 +123,7 @@ class Cubicle(object):
             uid,
             adj,
             activity,
-            foreground,
+            mode,
             graphics,
             rss,
             pss,
@@ -155,7 +154,7 @@ class Cubicle(object):
                 remark_map["uid"],
                 remark_map["adj"],
                 remark_map["act"],
-                remark_map["frg"],
+                remark_map["mode"],
 
                 resume_map["Graphics"],
                 resume_map["TOTAL RSS"],
@@ -187,37 +186,15 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_mem_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            union_query: bool = False
-    ) -> typing.Union[tuple[list[tuple], list[tuple]], list[tuple]]:
-
-        async def fetch(sql) -> typing.Any:
-            async with db.execute(sql, (data_dir,)) as cursor:
-                return await cursor.fetchall()
-
-        if union_query:
-            union_sql = f"""
-                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
-                FROM {Cubicle.mem_data_table}
-                WHERE data_dir = ? AND pss != ''
-                ORDER BY timestamp ASC
-            """
-            return await fetch(union_sql)
-
-        else:
-            fg_sql = f"""
-                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
-                FROM {Cubicle.mem_data_table}
-                WHERE foreground = '前台' AND data_dir = ? AND pss != ''
-            """
-            bg_sql = f"""
-                SELECT timestamp, rss, pss, uss, opss, activity, adj, foreground
-                FROM {Cubicle.mem_data_table}
-                WHERE foreground = '后台' AND data_dir = ? AND pss != ''
-            """
-            return await asyncio.gather(fetch(fg_sql), fetch(bg_sql))
+    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
+        sql = f"""
+            SELECT timestamp, rss, pss, uss, opss, activity, adj, mode
+            FROM {Cubicle.mem_data_table}
+            WHERE data_dir = ? AND pss != ''
+            ORDER BY timestamp ASC
+        """
+        async with db.execute(sql, (data_dir,)) as cursor:
+            return await cursor.fetchall()
 
     # Notes: ======================== GFX ========================
 

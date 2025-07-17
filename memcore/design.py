@@ -685,7 +685,7 @@ class Design(object):
         }
 
         # 初始化状态
-        previous_state = memories["stt"]
+        previous_state = memories["mod"]
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
 
         # 分层（曼哈顿距离）
@@ -696,16 +696,16 @@ class Design(object):
                 layers[d_].append((r_, c_))
 
         def make_header() -> str:
-            if memories["stt"].lower().startswith("foreground"):
+            if memories["mod"].lower().startswith("foreground"):
                 sc = "#00FFAA"
-            elif memories["stt"].lower().startswith("background"):
+            elif memories["mod"].lower().startswith("background"):
                 sc = "#FF99CC"
             else:
                 sc = "#AF87FF"
 
             return textwrap.dedent(f"""\
                 [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
-                [{brand}::STT] [bold {sc}]{memories['stt'].upper()}[/]
+                [{brand}::MOD] [bold {sc}]{memories['mod'].upper()}[/]
                 [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
                 [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
                 [Foreground::Pulled] [#00FFAA]{memories['foreground']}[/]
@@ -728,7 +728,7 @@ class Design(object):
             return f"#{r:02X}{g:02X}{b:02X}"
 
         def render_grid() -> "Text":
-            colors = palette.get(memories["stt"], "*")
+            colors = palette.get(memories["mod"], "*")
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
 
             # 当前活跃区域（除中心）
@@ -740,7 +740,7 @@ class Design(object):
             embed_map = {}
             if len(active_positions) >= len(brand) * 4:
                 letters = list(brand)
-                brand_colors = palette["brand"].get(memories["stt"], "*")
+                brand_colors = palette["brand"].get(memories["mod"], "*")
 
                 if logo_transition > 0 and max_transition > 0:
                     t = logo_transition / max_transition
@@ -769,7 +769,7 @@ class Design(object):
                         grid[r][c] = f"[bold {color}]{ch}[/]"
 
             # 中心呼吸灯
-            pulse_colors = palette["pulse"].get(memories["stt"], "*")
+            pulse_colors = palette["pulse"].get(memories["mod"], "*")
             pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
             grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
 
@@ -782,7 +782,7 @@ class Design(object):
             pad = " " * (visual_center - (len(final_text) // 2))
             memories.update({
                 "msg": f"Memory Data {(memories['foreground'] + memories['background'])}",
-                "stt": "*",
+                "mod": "*",
                 "act": "*",
                 "pss": "*"
             })
@@ -814,9 +814,9 @@ class Design(object):
                 depth += direction
 
                 # 检测切换 → 启动 LOGO 渐隐/渐显
-                if memories["stt"] != previous_state:
+                if memories["mod"] != previous_state:
                     logo_transition = max_transition
-                    previous_state = memories["stt"]
+                    previous_state = memories["mod"]
 
                 if logo_transition > 0:
                     logo_transition -= 1

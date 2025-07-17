@@ -90,7 +90,7 @@ class Memrix(object):
         self.padding: str = "-" * 8
         self.memories: dict[str, typing.Union[str, int]] = {
             "msg": "*",
-            "stt": "*",
+            "mod": "*",
             "act": "*",
             "pss": "*",
             "foreground": 0,
@@ -205,7 +205,7 @@ class Memrix(object):
         if self.file_insert:
             fc = Design.build_file_tree(reporter.group_dir)
             Design.Doc.log(
-                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{reporter.group_dir}[/]"
+                f"Usage: [#00D787]{const.APP_NAME} --forge --focus [{fc}]{Path(reporter.group_dir).name}[/]"
             )
 
         logger.info(
@@ -264,7 +264,7 @@ class Memrix(object):
                 self.dumped.set()
                 self.memories.update({
                     "msg": (msg := f"Process -> {app_pid}"),
-                    "stt": "*",
+                    "mod": "*",
                     "act": "*",
                     "pss": "*"
                 })
@@ -282,7 +282,7 @@ class Memrix(object):
                 self.dumped.set()
                 self.memories.update({
                     "msg": (msg := f"Info -> {current_info_list}"),
-                    "stt": "*",
+                    "mod": "*",
                     "act": "*",
                     "pss": "*"
                 })
@@ -298,12 +298,12 @@ class Memrix(object):
                 "uid": uid, "adj": adj, "act": act
             })
             remark_map.update({
-                "frg": "前台" if self.focus in act else "前台" if int(adj) <= 0 else "后台"
+                "mode": "FG" if self.focus in act else "FG" if int(adj) <= 0 else "BG"
             })
 
-            state = "foreground" if remark_map["frg"] == "前台" else "background"
+            state = "foreground" if remark_map["mode"] == "FG" else "background"
             self.memories.update({
-                "stt": state,
+                "mod": state,
                 "act": act
             })
 
@@ -311,7 +311,7 @@ class Memrix(object):
             logger.info(f"UID: {remark_map['uid']}")
             logger.info(f"ADJ: {remark_map['adj']}")
             logger.info(f"{remark_map['act']}")
-            logger.info(f"{remark_map['frg']}")
+            logger.info(f"{remark_map['mode']}")
 
             for k, v in app_pid.member.items():
                 remark_map.update({"pid": k + " - " + v})
@@ -329,7 +329,7 @@ class Memrix(object):
                 self.dumped.set()
                 self.memories.update({
                     "msg": (msg := f"Resp -> {memory_result}"),
-                    "stt": "*",
+                    "mod": "*",
                     "act": "*",
                     "pss": "*"
                 })
@@ -357,7 +357,7 @@ class Memrix(object):
             else:
                 msg = f"Data insert skipped"
                 self.memories.update({
-                    "stt": "*",
+                    "mod": "*",
                     "act": "*",
                     "pss": "*"
                 })
@@ -375,7 +375,7 @@ class Memrix(object):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
         reporter = Reporter(
-            self.src_total_place, self.vault, const.TRACK_TREE_DIR if self.track else const.LAPSE_TREE_DIR
+            self.src_total_place, self.vault, (prefix := "Track" if self.track else "Lapse"), self.align
         )
 
         logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
@@ -384,7 +384,6 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        prefix = "Track" if self.track else "Lapse"
         team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         traces, images, ionics = await self.refresh(device, self.focus, reporter, team_name)
 
@@ -425,8 +424,8 @@ class Memrix(object):
             logger.info(f"结束采样 ...")
             await perfetto.close()
 
-            union_list = await Cubicle.query_mem_data(db, self.file_folder, union_query=True)
-            await Painter.draw_mem_metrics(union_list, str(image_loc))
+            union_data_list = await Cubicle.query_mem_data(db, self.file_folder)
+            await Painter.draw_mem_metrics(union_data_list, str(image_loc))
 
             with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
                 ion_data = await ion.extract_metrics(tp, self.focus)
@@ -442,7 +441,7 @@ class Memrix(object):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
         reporter = Reporter(
-            self.src_total_place, self.vault, const.SLEEK_TREE_DIR if self.sleek else const.SURGE_TREE_DIR
+            self.src_total_place, self.vault, (prefix := "Sleek" if self.sleek else "Surge"), self.align
         )
 
         logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
@@ -451,7 +450,6 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        prefix = "Sleek" if self.sleek else "Surge"
         team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
         traces, images, ionics = await self.refresh(device, self.focus, reporter, team_name)
 
@@ -509,38 +507,34 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self) -> None:
-        if not (target_dir := Path(self.focus)).exists():
+        if not (target_dir := Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR / self.focus).exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
         segment_router = {
-            const.TRACK_TREE_DIR: {
-                "folder": const.TRACK_TREE_DIR,
-                "method": "plot_mem_segments",
+            "Track": {
+                "folder": "Track",
                 "render": "track_rendition",
             },
-            const.LAPSE_TREE_DIR: {
-                "folder": const.LAPSE_TREE_DIR,
-                "method": "plot_mem_segments",
+            "Lapse": {
+                "folder": "Lapse",
                 "render": "lapse_rendition",
             },
-            const.SLEEK_TREE_DIR: {
-                "folder": const.SLEEK_TREE_DIR,
-                "method": "plot_gfx_segments",
+            "Sleek": {
+                "folder": "Sleek",
                 "render": "sleek_rendition",
             }
         }
 
-        parent_dir_name = target_dir.parent.name
+        target = target_dir.name.split("_")[0]
         try:
-            router = segment_router[parent_dir_name]
+            router = segment_router[target]
         except KeyError:
-            raise MemrixError(f"Unsupported directory type: {parent_dir_name} ...")
+            raise MemrixError(f"Unsupported directory type: {target} ...")
 
         folder = router["folder"]
-        method = router["method"]
         render = router["render"]
 
-        reporter = Reporter(self.src_total_place, target_dir.name, folder)
+        reporter = Reporter(self.src_total_place, target_dir.name, folder, self.align)
 
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
@@ -548,17 +542,14 @@ class Memrix(object):
 
         async with aiosqlite.connect(reporter.db_file) as db:
             templater = Templater(
-                db, os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
+                os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
 
             team_data = await FileAssist.read_yaml(reporter.team_file)
             if not (data_list := team_data.get("file")):
                 raise MemrixError(f"No data scenario {data_list} ...")
 
-            if not (report_list := await asyncio.gather(*(getattr(templater, method)(d) for d in data_list))):
-                raise MemrixError(f"No data scenario {report_list} ...")
-
-            rendition = getattr(reporter, render)(self.align, team_data, report_list)
+            rendition = await getattr(reporter, render)(db, templater, data_list, team_data)
 
             return await reporter.make_report(self.unity_template, templater.download, **rendition)
 

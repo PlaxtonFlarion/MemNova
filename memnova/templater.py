@@ -9,14 +9,10 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import os
 import numpy
 import typing
-import asyncio
-import aiosqlite
 import pandas as pd
 from pathlib import Path
-from loguru import logger
 from bokeh.layouts import column
 from bokeh.io import (
     curdoc, output_file
@@ -28,15 +24,12 @@ from bokeh.models import (
     ColumnDataSource, Spacer, Span, Div,
     DatetimeTickFormatter, Range1d, HoverTool
 )
-from memcore.cubicle import Cubicle
-from memnova.scores import Scores
 from memnova import const
 
 
 class Templater(object):
 
-    def __init__(self, db: "aiosqlite.Connection", download: str):
-        self.db = db
+    def __init__(self, download: str):
         self.download = download
 
     def generate_viewers(self) -> "Div":
@@ -92,20 +85,15 @@ class Templater(object):
         </div>
         """)
 
-    # Notes: ======================== MEM ========================
+    # Workflow: ======================== MEM ========================
 
     async def plot_mem_analysis(
             self,
-            file_name: str,
-            data_list: list[tuple],
-            group: str
-    ) -> dict:
+            df: "pd.DataFrame",
+            output_path: str
+    ) -> str:
 
         # 数据处理
-        df = pd.DataFrame(
-            data_list, 
-            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
-        )
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         df["pss"] = pd.to_numeric(df["pss"], errors="coerce")
@@ -118,7 +106,7 @@ class Templater(object):
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 区块分组
-        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
+        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
         # 主统计
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
@@ -133,7 +121,7 @@ class Templater(object):
             y_end = max_value + pad
 
         # 区块统计
-        block_stats = df.groupby(["block_id", "foreground"]).agg(
+        block_stats = df.groupby(["block_id", "mode"]).agg(
             start_time=("x", "first"),
             end_time=("x", "last"),
             avg_pss=("pss", "mean"),
@@ -163,11 +151,11 @@ class Templater(object):
             title="Memory Usage over Time",
             y_range=Range1d(y_start, y_end),
         )
-        
+
         # 分区底色
         for _, row in block_stats.iterrows():
-            color = fg_color if row["foreground"] == "前台" else bg_color
-            alpha = fg_alpha if row["foreground"] == "前台" else bg_alpha
+            color = fg_color if row["mode"] == "FG" else bg_color
+            alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
             p.quad(
                 left=row["start_time"], right=row["end_time"],
                 bottom=y_start, top=y_end,
@@ -226,7 +214,7 @@ class Templater(object):
             ("RSS", "@rss{0.00} MB"),
             ("USS", "@uss{0.00} MB"),
             ("当前页", "@activity"),
-            ("优先级", "@foreground"),
+            ("优先级", "@mode"),
         ]
         hover = HoverTool(
             tooltips=tooltips, formatters={"@timestamp": "datetime"}, mode="mouse", renderers=[pss_spot]
@@ -260,85 +248,14 @@ class Templater(object):
         curdoc().theme = "caliber"
 
         # 文件导出与布局
-        file_path = os.path.join(group, f"{file_name}_{Path(group).name}.html")
-        output_file(file_path)
+        output_file(output_path)
 
         viewer_div = self.generate_viewers()
-        save(
-            column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both")
-        )
+        save(column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both"))
 
-        # 结果结构
-        return {
-            "name": file_name,
-            "metrics": {
-                "MAX": round(float(max_value), 2),
-                "AVG": round(float(avg_value), 2),
-            },
-            "tags": [
-                {
-                    "fields": [
-                        {"label": f"{file_name}-MAX: ", "value": f"{float(max_value):.2f}", "unit": "MB"},
-                        {"label": f"{file_name}-AVG: ", "value": f"{float(avg_value):.2f}", "unit": "MB"},
-                    ],
-                    "link": str(Path(group) / Path(file_path).name)
-                }
-            ]
-        }
+        return output_path
 
-    async def plot_mem_segments(self, data_dir: str) -> dict[str, str]:
-        os.makedirs(
-            group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
-        )
-
-        if data_dir.startswith(const.TRACK_TREE_DIR.split("_")[0]):
-            (fg_list, bg_list), (joint, *_) = await asyncio.gather(
-                Cubicle.query_mem_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
-            )
-            title, timestamp = joint
-
-            fg_upshot, bg_upshot = await asyncio.gather(
-                *(self.plot_mem_analysis(name, data, group) for name, data in [("FG", fg_list), ("BG", bg_list)])
-            )
-
-            compilation = {
-                "subtitle": title or data_dir,
-                "tags": fg_upshot.get("tags", []) + bg_upshot.get("tags", []),
-                "metrics": {
-                    **({
-                           f"{fg_upshot['name']}-MAX": fg_upshot["metrics"]["MAX"],
-                           f"{fg_upshot['name']}-AVG": fg_upshot["metrics"]["AVG"]
-                       } if fg_upshot and fg_upshot.get("metrics") else {}),
-                    **({
-                           f"{bg_upshot['name']}-MAX": bg_upshot["metrics"]["MAX"],
-                           f"{bg_upshot['name']}-AVG": bg_upshot["metrics"]["AVG"]
-                       } if bg_upshot and bg_upshot.get("metrics") else {})
-                }
-            }
-
-        else:
-            union_list, (joint, *_) = await asyncio.gather(
-                Cubicle.query_mem_data(self.db, data_dir, union_query=True), Cubicle.query_joint_data(self.db, data_dir)
-            )
-            title, timestamp = joint
-
-            union_upshot = await self.plot_mem_analysis("MEM", union_list, group)
-
-            compilation = {
-                "subtitle": title or data_dir,
-                "tags": union_upshot.get("tags", []),
-                "metrics": {
-                    **({
-                           f"{union_upshot['name']}-MAX": union_upshot["metrics"]["MAX"],
-                           f"{union_upshot['name']}-AVG": union_upshot["metrics"]["AVG"]
-                       } if union_upshot and union_upshot.get("metrics") else {})
-                }
-            }
-
-        logger.info(f"{data_dir} Handler Done ...")
-        return compilation
-
-    # Notes: ======================== GFX ========================
+    # Workflow: ======================== GFX ========================
 
     @staticmethod
     async def plot_gfx_analysis(
@@ -357,7 +274,7 @@ class Templater(object):
         df = pd.DataFrame(frames)
         df["timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
-   
+
         # 🟢 动态 Y 轴范围
         y_avg = df["duration_ms"].mean()
         y_min = df["duration_ms"].min()
@@ -384,7 +301,7 @@ class Templater(object):
 
         # 🟢 主折线
         p.line(
-            "timestamp_ms", "duration_ms", 
+            "timestamp_ms", "duration_ms",
             source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line"
         )
 
@@ -445,93 +362,11 @@ class Templater(object):
         p.legend.location = "top_right"
         p.legend.click_policy = "hide"
         p.legend.label_text_font_size = "10pt"
-        
-        # 🟢 样式设定        
+
+        # 🟢 样式设定
         p.title.text_font_size = "16pt"
 
         return p
-
-    async def plot_gfx_segments(self, data_dir: str) -> typing.Optional[dict]:
-
-        def split_frames_by_time(frames: list[dict], segment_ms: int = 60000) -> list[list[dict]]:
-            frames = sorted(frames, key=lambda f: f["timestamp_ms"])
-            segment_list = []
-
-            start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
-            cur_start = start_ts
-            while cur_start < close_ts:
-                cur_end = cur_start + segment_ms
-                if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
-                    segment_list.append(seg)
-                cur_start = cur_end
-
-            return segment_list
-
-        os.makedirs(
-            group := os.path.join(self.download, const.SUMMARY, data_dir), exist_ok=True
-        )
-
-        (frame_data, *_), (joint, *_) = await asyncio.gather(
-            Cubicle.query_gfx_data(self.db, data_dir), Cubicle.query_joint_data(self.db, data_dir)
-        )
-        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_data.values()
-        title, timestamp = joint
-
-        # 平均帧
-        avg_fps = round(
-            sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2
-        )
-        # 掉帧率
-        jank_rate = round(
-            sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
-        )
-
-        conspiracy, segments = [], split_frames_by_time(raw_frames)
-
-        for idx, segment in enumerate(segments, start=1):
-            x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
-            padding = (x_close - x_start) * 0.05
-
-            if not (mk := Scores.score_segment(segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")):
-                continue
-
-            p = await self.plot_gfx_analysis(
-                frames=segment,
-                x_start=x_start - padding,
-                x_close=x_close + padding,
-                roll_ranges=roll_ranges,  # todo 测试绘图性能
-                drag_ranges=drag_ranges,  # todo 测试绘图性能
-                jank_ranges=jank_ranges,
-            )
-            p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}] - [{mk['label']}]"
-            p.title.text_color = mk["color"]
-            conspiracy.append(p)
-
-        if not conspiracy:
-            return None
-
-        file_path = os.path.join(group, f"{data_dir}.html")
-        output_file(file_path)
-
-        viewer_div = self.generate_viewers()
-        save(
-            column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width")
-        )
-
-        logger.info(f"{data_dir} Handler Done ...")
-
-        return {
-            "subtitle": title or data_dir,
-            "tags": [
-                {
-                    "fields": [
-                        {"label": "掉帧率", "value": jank_rate, "unit": "%"},
-                        {"label": "平均帧", "value": avg_fps, "unit": "FPS"}
-                    ],
-                    "link": str(Path(const.SUMMARY) / data_dir / Path(file_path).name),
-                }
-            ]
-        }
 
 
 if __name__ == '__main__':

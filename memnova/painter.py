@@ -29,7 +29,7 @@ class Painter(object):
     ) -> str:
 
         df = pd.DataFrame(
-            data_list, 
+            data_list,
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
         )
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
@@ -84,14 +84,14 @@ class Painter(object):
 
         # 区块底色
         for _, row in block_stats.iterrows():
-            color = fg_color if row["foreground"] == "前台" else bg_color
-            alpha = fg_alpha if row["foreground"] == "前台" else bg_alpha
+            color = fg_color if row["mode"] == "FG" else bg_color
+            alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
             ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
         # 主线
         ax.plot(df["num_x"], df["pss"], color=line_color, linewidth=1.2, label="PSS")
         # 滑动平均
-        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#3333AA", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg") 
+        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#3333AA", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg")
         # 均值带
         ax.axhspan(avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range")
         # 均值/极值线
@@ -290,7 +290,7 @@ class Painter(object):
         ax2 = ax1.twinx()
         io_lines = []
 
-        def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]: 
+        def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]:
             if not (data := io.get(series_name, [])):
                 return []
             times = [d["time_sec"] / 1000 for d in data]

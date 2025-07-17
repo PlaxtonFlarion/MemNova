@@ -34,13 +34,10 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 
 # ========【路径与资源配置】========
 TOTAL_DIR       = f"{APP_DESC}_Library"
-TRACK_TREE_DIR  = r"Track_Tree"
-LAPSE_TREE_DIR  = r"Lapse_Tree"
-SLEEK_TREE_DIR  = r"Sleek_Tree"
-SURGE_TREE_DIR  = r"Surge_Tree"
-TRACES_DIR      = f"{APP_DESC}_Traces"
-IMAGES_DIR      = f"{APP_DESC}_Images"
-IONICS_DIR      = f"{APP_DESC}_Ionics"
+TREE_DIR        = r"Tree"
+TRACES_DIR      = f"{APP_NAME}_traces"
+IMAGES_DIR      = f"{APP_NAME}_images"
+IONICS_DIR      = f"{APP_NAME}_ionics"
 SUMMARY         = r"Summary"
 DB_FILE         = f"{APP_NAME}_data.db"
 ALIGN           = f"{APP_NAME}_align.yaml"

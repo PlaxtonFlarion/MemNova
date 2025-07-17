@@ -107,7 +107,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         .subtitle {
-            width: 35%;
+            width: 40%;
             text-align: center;
         }
 
@@ -142,7 +142,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
         .tag-line:hover {
             cursor: grab;
-            transition: background 0.5s ease; 
+            transition: background 0.5s ease;
         }
 
         .tag-line.pass:hover {
@@ -155,6 +155,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         .access {
             display: flex;
+            flex-direction: column;
+            font-size: 1.8em;
+            font-weight: bold;
+            line-height: 2.0;
+            margin: 0.67em 0;
             color: #ffee00;
             text-decoration: none;
             border-radius: 20px;
@@ -247,6 +252,12 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             }
         }
 
+        /* 圆形标签容器 */
+        .seal-div {
+            display: flex;
+            width: 10%;
+            justify-content: center;
+        }
         /* 圆形标签 */
         .seal {
             border: 5px solid transparent;
@@ -255,11 +266,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             height: 30px;
             aspect-ratio: 1 / 1;
         }
-        .seal-pass-item {
+        .seal-pass {
             border: 5px solid rgb(118 179 33);
             box-shadow: 0px 0px 10px rgb(118 179 33);
         }
-        .seal-fail-item {
+        .seal-fail {
             border: 5px solid rgb(203, 80, 42);
             box-shadow: 0px 0px 10px rgb(203, 80, 42);
         }
@@ -370,9 +381,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     {% for res in report_list %}
     <div class="information">
         <div class="subtitle">
-            <h2>{{ res.subtitle }}</h2>
+            <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
         </div>
-        <div class="seal"></div>
+        <div class="seal-div">
+            <div class="seal"></div>
+        </div>
         <div class="details">
             {% for tag in res.tags %}
             <div class="tag-detail">
@@ -381,7 +394,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                         {{ field.label }} {{ field.value }} {{ field.unit }}
                     </p>
                 {% endfor %}
-                <a class="access" href="{{ tag.link }}" target="_blank">查看详情</a>
             </div>
             {% endfor %}
         </div>
