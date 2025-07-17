@@ -325,8 +325,9 @@ class Templater(object):
 
         df = pandas.DataFrame(frames)
         source = ColumnDataSource(df)
-
+   
         # 🟢 动态 Y 轴范围
+        y_avg = df["duration_ms"].mean()
         y_min = df["duration_ms"].min()
         y_max = df["duration_ms"].max()
         y_range = y_max - y_min
@@ -377,14 +378,12 @@ class Templater(object):
             line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
         )
         if "duration_ms" in df:
-            avg_duration = df["duration_ms"].mean()
-            max_duration = df["duration_ms"].max()
             p.line(
-                [x_start, x_close], [avg_duration, avg_duration],
+                [x_start, x_close], [y_avg, y_avg],
                 line_color="#8700FF", line_dash="dotted", line_width=1, legend_label="Avg Duration"
             )
             p.line(
-                [x_start, x_close], [max_duration, max_duration],
+                [x_start, x_close], [y_max, y_max],
                 line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label="Max Duration"
             )
 
