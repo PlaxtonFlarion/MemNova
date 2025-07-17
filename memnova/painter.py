@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from loguru import logger
-from datetime import datetime
 from memnova.scores import Scores
 
 
