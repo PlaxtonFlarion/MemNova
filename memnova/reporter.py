@@ -108,7 +108,7 @@ class Reporter(object):
 
     # Workflow: ======================== Union ========================
 
-    async def __share_folder(self) -> tuple["Path", "Path"]:
+    def __share_folder(self) -> tuple["Path", "Path"]:
         if not (images := Path(self.group_dir) / const.IMAGES_DIR).exists():
             images.mkdir(parents=True, exist_ok=True)
         if not (ionics := Path(self.group_dir) / const.IONICS_DIR).exists():
