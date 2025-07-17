@@ -170,7 +170,7 @@ class Painter(object):
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # === 背景区块绘制 ===
-        def draw_background(ranges: list[dict], color: str):
+        def draw_background(ranges: list[dict], color: str) -> None:
             for r in ranges:
                 ax1.axvspan(r["start_ts"], r["end_ts"], color=color, alpha=0.12)
 
