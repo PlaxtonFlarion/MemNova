@@ -26,7 +26,7 @@ from bokeh.plotting import (
 )
 from bokeh.models import (
     ColumnDataSource, HoverTool, Spacer, Span, Div,
-    DatetimeTickFormatter, BoxAnnotation, Range1d, Legend
+    DatetimeTickFormatter, BoxAnnotation, Range1d
 )
 from memcore.cubicle import Cubicle
 from memnova.scores import Scores
@@ -324,6 +324,7 @@ class Templater(object):
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
         df = pandas.DataFrame(frames)
+        df["timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
    
         # 🟢 动态 Y 轴范围
@@ -362,8 +363,8 @@ class Templater(object):
         # 🟢 Hover 信息
         p.add_tools(HoverTool(tooltips="""
             <div style="padding: 5px;">
-                <b>时间:</b> @timestamp_ms ms<br/>
-                <b>耗时:</b> @duration_ms ms<br/>
+                <b>时间:</b> @timestamp_s{0.0} s<br/>
+                <b>耗时:</b> @duration_ms{0.000} ms<br/>
                 <b>掉帧:</b> @is_jank<br/>
                 <b>类型:</b> @frame_type<br/>
                 <b>系统FPS:</b> @fps_sys<br/>
