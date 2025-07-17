@@ -50,9 +50,8 @@ class Painter(object):
         y_min = max(0, min_val - offset * y_range)
         y_max = max_val + offset * y_range
 
-        # 连续区块分组（只要 foreground 变就换一块）
-        block_flag: "pd.Series" = (df["foreground"] != df["foreground"].shift())
-        df["block_id"] = block_flag.cumsum()
+        # 区块分组
+        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
 
         # 区块统计
         block_stats = df.groupby(["block_id", "foreground"]).agg(
