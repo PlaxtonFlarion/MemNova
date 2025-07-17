@@ -101,43 +101,28 @@ class Templater(object):
             group: str
     ) -> dict:
 
-        def extract_mode_blocks(df: "pandas.DataFrame") -> list[tuple["pandas.Timestamp", "pandas.Timestamp", str]]:
-            """根据 foreground 字段，提取所有连续前台/后台区块的 [start, end, label] 列表"""
-            blocks = []
-            if df.empty:
-                return blocks
-            
-            start_idx, cur_status = 0, df["foreground"].iloc[0]
-            
-            for i in range(1, len(df)):
-                if (v := df["foreground"].iloc[i]) != cur_status:
-                    blocks.append((df["x"].iloc[start_idx], df["x"].iloc[i-1], cur_status))
-                    start_idx, cur_status = i, v
-            blocks.append((df["x"].iloc[start_idx], df["x"].iloc[-1], cur_status))
-            return blocks
-
-        if not data_list:
-            return {}
-
         # 数据处理
-        df = pandas.DataFrame(
-            data_list,
+        df = pd.DataFrame(
+            data_list, 
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
         )
-
-        # 处理异常时间格式
-        df["x"] = pandas.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
+        df["pss"] = pd.to_numeric(df["pss"], errors="coerce")
+        df["rss"] = pd.to_numeric(df["rss"], errors="coerce")
+        df["uss"] = pd.to_numeric(df["uss"], errors="coerce")
         df["activity"] = df["activity"].fillna("")
 
+        # 滑动窗口平均
         window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
-        y = df["pss"]
-        max_value, min_value, avg_value = y.max(), y.min(), y.mean()
+        # 区块分组
+        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
 
+        # 主统计
+        max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         value_span = max_value - min_value
-
         if value_span < 1e-6:
             pad = max(20, 0.05 * max_value)
             y_start = max(0, min_value - pad)
@@ -146,6 +131,16 @@ class Templater(object):
             pad = max(10, 0.12 * value_span)
             y_start = max(0, min_value - pad)
             y_end = max_value + pad
+
+        # 区块统计
+        block_stats = df.groupby(["block_id", "foreground"]).agg(
+            start_time=("x", "first"),
+            end_time=("x", "last"),
+            avg_pss=("pss", "mean"),
+            max_pss=("pss", "max"),
+            min_pss=("pss", "min"),
+            count=("pss", "size"),
+        ).reset_index()
 
         # 配色与视觉分区
         pss_color = "#4074B4"  # 主线 PSS（深蓝，突出）
@@ -158,6 +153,15 @@ class Templater(object):
         # 区块分色
         fg_color = "#5BB8FF"  # 深蓝（前台）
         bg_color = "#BDBDBD"  # 深灰（后台）
+
+        # 分区底色
+        for _, row in block_stats.iterrows():
+            color = fg_color if row["foreground"] == "前台" else bg_color
+            p.quad(
+                left=row["start_time"], right=row["end_time"],
+                bottom=y_start, top=y_end,
+                fill_color=color, fill_alpha=0.22, line_alpha=0
+            )
 
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
@@ -211,23 +215,6 @@ class Templater(object):
         p.add_layout(
             Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
         )
-
-        # 区间高亮
-        p.add_layout(
-            BoxAnnotation(bottom=min_value, top=max_value, fill_alpha=0.10, fill_color=tie_color)
-        )
-
-        if blocks := extract_mode_blocks(df):
-            lefts = [b[0] for b in blocks]
-            rights = [b[1] for b in blocks]
-            colors = [fg_color if b[2] == "前台" else bg_color for b in blocks]
-            p.quad(
-                left=lefts, right=rights,
-                bottom=y_start, top=y_end,
-                fill_color=colors,
-                fill_alpha=0.25,
-                line_alpha=0
-            )
 
         # 悬浮提示
         tooltips = [
