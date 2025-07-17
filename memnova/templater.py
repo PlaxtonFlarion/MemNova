@@ -395,7 +395,7 @@ class Templater(object):
             p.add_layout(span_avg)
             p.add_layout(span_max)
 
-            dummy_avg = p.line(x=[0], y=[0], line_color="#888888", line_dash="dotted", line_width=1)
+            dummy_avg = p.line(x=[0], y=[0], line_color="#8700FF", line_dash="dotted", line_width=1)
             dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
 
             legend_items.append(LegendItem(label="Avg Duration", renderers=[dummy_avg]))
