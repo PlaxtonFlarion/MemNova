@@ -26,7 +26,7 @@ from bokeh.plotting import (
 )
 from bokeh.models import (
     ColumnDataSource, HoverTool, Spacer, Span, Div,
-    DatetimeTickFormatter, BoxAnnotation, Range1d, Legend, LegendItem
+    DatetimeTickFormatter, BoxAnnotation, Range1d, Legend
 )
 from memcore.cubicle import Cubicle
 from memnova.scores import Scores
@@ -349,13 +349,11 @@ class Templater(object):
         p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
         p.xaxis.major_label_orientation = 0.5
 
-        legend_items = []
-
         # 🟢 主折线
         line_renderer = p.line(
-            "timestamp_ms", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6
+            "timestamp_ms", "duration_ms", 
+            source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line"
         )
-        legend_items.append(LegendItem(label="Main Line", renderers=[line_renderer]))
 
         # 🟢 点图（已预填色）
         p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
@@ -374,36 +372,22 @@ class Templater(object):
         """, mode="vline"))
 
         # 🟢 阈值线 + 平均线 + 最大值线
-        span_threshold = Span(
-            location=16.67, dimension="width", line_color="#1E90FF", line_dash="dashed", line_width=1.5
+        p.line(
+            [x_start, x_close], [16.67, 16.67],
+            line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
         )
-        p.add_layout(span_threshold)
-        dummy_threshold = p.line(x=[0], y=[0], line_color="#1E90FF", line_dash="dashed", line_width=1.5)
-        legend_items.append(LegendItem(label="16.67ms / 60 FPS", renderers=[dummy_threshold]))
-
         if "duration_ms" in df:
-            avg_duration = df["duration_ms"].mean()
-            max_duration = df["duration_ms"].max()
-
-            span_avg = Span(
-                location=avg_duration, dimension="width", line_color="#8700FF", line_dash="dotted", line_width=1
+            p.line(
+                [x_start, x_close], [avg_duration, avg_duration],
+                line_color="#8700FF", line_dash="dotted", line_width=1, legend_label="Avg Duration"
             )
-            span_max = Span(
-                location=max_duration, dimension="width", line_color="#FF69B4", line_dash="dashed", line_width=1
+            p.line(
+                [x_start, x_close], [max_duration, max_duration],
+                line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label="Max Duration"
             )
-
-            p.add_layout(span_avg)
-            p.add_layout(span_max)
-
-            dummy_avg = p.line(x=[0], y=[0], line_color="#8700FF", line_dash="dotted", line_width=1)
-            dummy_max = p.line(x=[0], y=[0], line_color="#FF69B4", line_dash="dashed", line_width=1)
-
-            legend_items.append(LegendItem(label="Avg Duration", renderers=[dummy_avg]))
-            legend_items.append(LegendItem(label="Max Duration", renderers=[dummy_max]))
 
         # 🟢 用 Quad 绘制背景区间
-        quad_top = y_end
-        quad_bottom = y_start
+        quad_top, quad_bottom = y_end, y_start
         quad_types = [
             ("Roll Region", roll_ranges, "#ADD8E6", 0.30),
             ("Drag Region", drag_ranges, "#FFA500", 0.25),
@@ -418,21 +402,18 @@ class Templater(object):
                     "top": [quad_top] * len(ranges),
                     "bottom": [quad_bottom] * len(ranges),
                 })
-                quad_renderer = p.quad(
+                p.quad(
                     left="left", right="right", top="top", bottom="bottom",
-                    source=quad_source,
-                    fill_color=color,
-                    fill_alpha=alpha,
-                    line_alpha=0
+                    source=quad_source, fill_color=color, fill_alpha=alpha, line_alpha=0,
+                    legend_label=label
                 )
-                legend_items.append(LegendItem(label=label, renderers=[quad_renderer]))
 
         # 🟢 图例设置
-        legend = Legend(items=legend_items, location="top_right", click_policy="hide")
-        p.add_layout(legend)
-
-        # 🟢 样式设定
+        p.legend.location = "top_right"
+        p.legend.click_policy = "hide"
         p.legend.label_text_font_size = "10pt"
+        
+        # 🟢 样式设定        
         p.title.text_font_size = "16pt"
 
         return p
