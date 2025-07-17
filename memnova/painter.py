@@ -51,7 +51,8 @@ class Painter(object):
         y_max = max_val + offset * y_range
 
         # 连续区块分组（只要 foreground 变就换一块）
-        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
+        block_flag: "pd.Series" = (df["foreground"] != df["foreground"].shift())
+        df["block_id"] = block_flag.cumsum()
 
         # 区块统计
         block_stats = df.groupby(["block_id", "foreground"]).agg(
@@ -64,7 +65,7 @@ class Painter(object):
         ).reset_index()
 
         # 判断内存趋势
-        result = Scores.analyze_mem_trend(pss)
+        result = Scores.analyze_mem_trend(df["pss"])
 
         line_color = result["color"]
         trend_label = result["trend"]
