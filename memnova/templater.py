@@ -148,6 +148,9 @@ class Templater(object):
             )
         # ...后续 PSS/RSS/USS 主线等...
 
+        window_size = max(3, len(df) // 20)
+        df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
+
         y = df["pss"]
         max_value, min_value, avg_value = y.max(), y.min(), y.mean()
 
@@ -202,6 +205,11 @@ class Templater(object):
             source=source, line_width=1, color=uss_color, alpha=0.6, legend_label="USS", line_dash="dotted"
         )
 
+        p.line(
+            "x", "pss_sliding_avg",
+            source=source, line_width=2, color="#3333AA", line_dash="dotdash", alpha=0.85, legend_label="Sliding Avg"
+        )
+
         # 极值点
         p.scatter(
             "x", "pss",
@@ -227,6 +235,7 @@ class Templater(object):
         # 悬浮提示
         tooltips = [
             ("时间", "@timestamp{%H:%M:%S}"),
+            ("滑窗均值", "@pss_sliding_avg{0.00} MB"),
             ("PSS", "@pss{0.00} MB"),
             ("RSS", "@rss{0.00} MB"),
             ("USS", "@uss{0.00} MB"),
