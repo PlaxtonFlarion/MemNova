@@ -176,6 +176,21 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0 6px 16px rgba(47, 231, 10, 0.45);
             cursor: pointer;
         }
+        /* 默认 forward 样式，无论是否有 pass */
+        .tag-detail > p.forward {
+            background: linear-gradient(135deg, #ffe259 0%, #ffa751 100%);
+            color: #000000;
+            box-shadow: 0 4px 12px rgba(255, 165, 81, 0.4);
+            transition: all 0.3s ease;
+        }
+        /* forward 的统一悬浮态，包含 pass.forward 组合 */
+        .tag-detail > p.forward:hover {
+            background: linear-gradient(135deg, #ffb75e 0%, #ed8f03 100%);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(255, 143, 3, 0.5);
+            cursor: pointer;
+        }
 
         .access {
             display: flex;
@@ -206,10 +221,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .access:visited:hover {
             color: #ffffff;
             background-color: #009e89;
-        }
-
-        .parse {
-            background: rgb(236, 213, 6);
         }
 
         /* 复制标签 */
@@ -514,7 +525,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             // 绑定所有 .tag-line 的点击事件
             document.querySelectorAll('.tag-line').forEach(function (el) {
                 el.addEventListener('click', function () {
-                    el.classList.toggle('parse');
+                    el.classList.toggle('forward');
                 });
             });
         });
