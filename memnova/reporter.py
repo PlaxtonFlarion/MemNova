@@ -358,7 +358,7 @@ class Reporter(object):
             sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2
         )
         # 掉帧率
-        jank_rate = round(
+        jnk_fps = round(
             sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
         )
 
@@ -398,8 +398,8 @@ class Reporter(object):
             "tags": [
                 {
                     "fields": [
-                        {"label": "掉帧率", "value": jank_rate, "unit": "%"},
-                        {"label": "平均帧", "value": avg_fps, "unit": "FPS"}
+                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"},
+                        {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
                     ]
                 }
             ]
