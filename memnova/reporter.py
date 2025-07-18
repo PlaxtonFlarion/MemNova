@@ -135,7 +135,7 @@ class Reporter(object):
             Cubicle.query_ion_data(db, data_dir),
             Cubicle.query_joint_data(db, data_dir)
         )
-        metadata, (io, rss, block), (title, timestamp) = {}, ion_data, joint
+        metadata, (io, rss, block), (title, timestamp) = {}, ion_data.values(), joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         image_loc = images / f"{head}_image.png"
