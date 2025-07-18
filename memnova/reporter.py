@@ -160,6 +160,8 @@ class Reporter(object):
         if priority:
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
+            seal = {}
+
             tag_lines = [
                 {
                     "fields": [
@@ -174,6 +176,16 @@ class Reporter(object):
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
             )
+
+            gs, all_ok = group_stats.set_index("mode"), True
+            if "FG" in gs.index:
+                all_ok &= gs.loc["FG", "max_pss"] < self.align.fg_max
+                all_ok &= gs.loc["FG", "avg_pss"] < self.align.fg_avg
+            if "BG" in gs.index:
+                all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
+                all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
+
+            seal = {**({"seal": "current-pass" if all_ok else {"seal": "current-fail"}})}
 
             tag_lines = [
                 {
@@ -190,7 +202,8 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
-            "tags": tag_lines
+            "tags": tag_lines,
+            **seal
         }
 
     # Workflow: ======================== Track ========================
@@ -229,7 +242,7 @@ class Reporter(object):
             conclusion.append("后台峰值超标")
         if avg_bg_avg and avg_bg_avg > self.align.bg_avg:
             conclusion.append("后台均值超标")
-        expiry = {"text": "Fail", "class": "fail-tag"} if conclusion else {"text": "Pass", "class": "pass-tag"}
+        expiry = {"text": "Fail", "class": "expiry-fail"} if conclusion else {"text": "Pass", "class": "expiry-pass"}
 
         return {
             "title": f"{const.APP_DESC} Information",
@@ -238,7 +251,7 @@ class Reporter(object):
                 {
                     "label": "测试时间",
                     "value": [
-                        {"text": team_data.get("time", "Unknown"), "class": "time"} 
+                        {"text": team_data.get("time", "Unknown"), "class": "time"}
                     ]
                 },
                 {
@@ -303,11 +316,15 @@ class Reporter(object):
             "major_summary_items": [
                 {
                     "label": "测试时间",
-                    "value": [team_data.get("time", "Unknown")]
+                    "value": [
+                        {"text": team_data.get("time", "Unknown"), "class": "time"}
+                    ]
                 },
                 {
                     "label": "准出标准",
-                    "value": [self.align.criteria]
+                    "value": [
+                        {"text": self.align.criteria, "class": "criteria"}
+                    ]
                 }
             ],
             "minor_summary_items": [
@@ -444,11 +461,15 @@ class Reporter(object):
             "major_summary_items": [
                 {
                     "label": "测试时间",
-                    "value": [team_data.get("time", "Unknown")]
+                    "value": [
+                        {"text": team_data.get("time", "Unknown"), "class": "time"}
+                    ]
                 },
                 {
                     "label": "准出标准",
-                    "value": [self.align.criteria]
+                    "value": [
+                        {"text": self.align.criteria, "class": "criteria"}
+                    ]
                 }
             ],
             "report_list": compilation

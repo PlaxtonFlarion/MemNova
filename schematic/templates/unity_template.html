@@ -56,6 +56,170 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             flex-direction: column;
         }
 
+        .highlight {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            color: #5b4100;
+            background: linear-gradient(135deg, #fff6cc 0%, #ffeb99 100%);
+            box-shadow: 0 2px 6px rgba(255, 215, 0, 0.15);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .highlight:hover {
+            background: linear-gradient(135deg, #fff2a8 0%, #ffe680 100%);
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .message {
+            display: flex;
+            align-items: center;
+        }
+
+        .schema {
+            width: fit-content;
+            white-space: nowrap;
+            margin: 5px 8px;
+            padding: 4px 10px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #dff1ff 0%, #8ec5fc 100%);
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(142, 197, 252, 0.25);
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+        }
+        .schema:hover {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            color: #000000;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(142, 197, 252, 0.4);
+            transform: translateY(-1px);
+        }
+        .schema p {
+            margin: 0;
+        }
+        .schema-msg {
+            display: flex;
+        }
+        .schema-msg p {
+            margin: 0 8px;
+        }
+
+        /* 摘要容器内标签全局通用样式 */
+        .time,
+        .expiry-pass, .expiry-fail,
+        .max-threshold, .avg-threshold,
+        .refer {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        /* 摘要容器内标签全局悬浮样式 */
+        .time:hover,
+        .expiry-pass:hover, .expiry-fail:hover,
+        .max-threshold:hover, .avg-threshold:hover,
+        .refer:hover {
+            transform: translateY(-1px);
+            cursor: default;
+        }
+
+        /* 时间 */
+        .time {
+            color: #2f2f2f;
+            background: linear-gradient(135deg, #f7f5f2 0%, #e0d4c3 100%);
+            box-shadow: 0 2px 6px rgba(160, 140, 110, 0.1);
+        }
+        .time:hover {
+            background: linear-gradient(135deg, #ede0cd 0%, #d6c0a9 100%);
+            color: #1a1a1a;
+            box-shadow: 0 4px 10px rgba(160, 140, 110, 0.2);
+        }
+
+        /* 结论 */
+        .expiry-pass, .expiry-fail {
+            color: #ffffff;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .expiry-pass {
+            background: linear-gradient(135deg, #b6f57e 0%, #89e403 100%);
+            box-shadow: 0 2px 6px rgba(137, 228, 3, 0.25);
+        }
+        .expiry-fail {
+            background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
+            box-shadow: 0 2px 6px rgba(232, 65, 24, 0.25);
+        }
+        .expiry-pass:hover, .expiry-fail:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 参考 */
+        .max-threshold, .avg-threshold {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        /* ⛳ 最大阈值标签：柔和红 */
+        .max-threshold {
+            background: linear-gradient(135deg, #fbe2e2 0%, #f5bcbc 100%);
+            box-shadow: 0 2px 6px rgba(245, 188, 188, 0.25);
+            color: #872e2e;
+        }
+        /* 📊 平均阈值标签：克制蓝 */
+        .avg-threshold {
+            background: linear-gradient(135deg, #e2ecf9 0%, #c3d9f6 100%);
+            box-shadow: 0 2px 6px rgba(180, 200, 240, 0.25);
+            color: #1e3f66;
+        }
+        .max-threshold:hover, .avg-threshold:hover {
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 标准 */
+        .criteria {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            font-weight: 600;
+            font-style: italic;
+            font-size: 13px;
+            color: #4a4a4a;
+            padding: 4px 10px;
+            background: none;
+            box-shadow: none;
+            border-radius: 0;
+            margin: 0;
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+        .criteria::before {
+            content: "📐"; /* 可替换为 ∷ / ≡ / ⚖️ */
+            font-style: normal;
+            font-size: 14px;
+            opacity: 0.6;
+            transform: translateY(1px);
+        }
+        .criteria:hover {
+            color: #000000;
+            transform: translateY(-1px);
+            cursor: default;
+        }
+
+        /* 通用 */
+        .refer {
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #e0ecf8 0%, #c7dfff 100%);
+            box-shadow: 0 2px 6px rgba(150, 180, 255, 0.15);
+        }
+        .refer:hover {
+            background: linear-gradient(135deg, #c2dbff 0%, #a7c3f5 100%);
+            box-shadow: 0 4px 10px rgba(130, 160, 255, 0.25);
+            color: #000000;
+        }
+
         .results-info {
             display: flex;
             align-items: center;
@@ -89,21 +253,32 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .results-info p.pass:hover {
             background: #2fe70a;
         }
-        
-        .highlight {
-            padding: 4px 10px;
+
+        /* 复制标签 */
+        .fg-copy, .bg-copy {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 6px 10px;
+            border: none;
             border-radius: 6px;
             font-weight: 600;
+            font-size: 14px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            box-shadow: 0 2px 6px rgba(253, 160, 133, 0.4);
+            transition: all 0.3s ease;
             font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            color: #5b4100;
-            background: linear-gradient(135deg, #fff6cc 0%, #ffeb99 100%);
-            box-shadow: 0 2px 6px rgba(255, 215, 0, 0.15);
-            transition: background 0.3s ease, box-shadow 0.3s ease;
+            user-select: none;
         }
-        .highlight:hover {
-            background: linear-gradient(135deg, #fff2a8 0%, #ffe680 100%);
-            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
+        .fg-copy:hover, .bg-copy:hover {
+            cursor: pointer;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            box-shadow: 0 4px 12px rgba(166, 193, 238, 0.5);
             transform: translateY(-1px);
+        }
+        .fg-copy:active, .bg-copy:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         /* 主要 */
@@ -125,6 +300,61 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .subtitle {
             width: 30%;
             text-align: center;
+        }
+
+        /* 链接 */
+        .access {
+            display: flex;
+            flex-direction: column;
+            font-size: 1.8em;
+            font-weight: bold;
+            line-height: 1.8;
+            margin: 10px 0;
+            color: #00bfa6; /* 初始色调：水绿色 */
+            text-decoration: none;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .access:hover {
+            color: #ffffff;
+            background-color: #00bfa6;
+            box-shadow: 0 4px 12px rgba(0, 191, 166, 0.3);
+            cursor: pointer;
+            transform: translateY(-1px);
+        }
+        .access:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(0, 191, 166, 0.5);
+        }
+        .access:visited {
+            color: #009e89; /* 略暗的访问后色 */
+         }
+        .access:visited:hover {
+            color: #ffffff;
+            background-color: #009e89;
+        }
+
+        /* 圆形标签容器 */
+        .seal-div {
+            display: flex;
+            width: 10%;
+            justify-content: center;
+        }
+        /* 圆形标签 */
+        .seal {
+            border: 5px solid transparent;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            aspect-ratio: 1 / 1;
+        }
+        .current-pass {
+            border: 5px solid rgb(118 179 33);
+            box-shadow: 0px 0px 10px rgb(118 179 33);
+        }
+        .current-fail {
+            border: 5px solid rgb(203, 80, 42);
+            box-shadow: 0px 0px 10px rgb(203, 80, 42);
         }
 
         .details {
@@ -182,7 +412,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             transform: translateY(-1px);
             box-shadow: 0 6px 16px rgba(47, 231, 10, 0.45);
         }
-        /* 默认 forward 样式，无论是否有 pass */
+        /* 默认 forward 样式 */
         .tag-detail > p.forward {
             background: linear-gradient(135deg, #ffe259 0%, #ffa751 100%);
             color: #000000;
@@ -194,64 +424,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             color: #ffffff;
             transform: translateY(-1px);
             box-shadow: 0 6px 16px rgba(255, 143, 3, 0.5);
-        }
-
-        .access {
-            display: flex;
-            flex-direction: column;
-            font-size: 1.8em;
-            font-weight: bold;
-            line-height: 1.8;
-            margin: 10px 0;
-            color: #00bfa6; /* 初始色调：水绿色 */
-            text-decoration: none;
-            border-radius: 20px;
-            transition: all 0.3s ease;
-        }
-        .access:hover {
-            color: #ffffff;
-            background-color: #00bfa6;
-            box-shadow: 0 4px 12px rgba(0, 191, 166, 0.3);
-            cursor: pointer;
-            transform: translateY(-1px);
-        }
-        .access:active {
-            transform: scale(0.96);
-            box-shadow: 0 2px 6px rgba(0, 191, 166, 0.5);
-        }
-        .access:visited {
-            color: #009e89; /* 略暗的访问后色 */
-         }
-        .access:visited:hover {
-            color: #ffffff;
-            background-color: #009e89;
-        }
-
-        /* 复制标签 */
-        .fg-copy, .bg-copy {
-            display: inline-block;
-            padding: 8px 16px;
-            margin: 6px 10px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            color: #ffffff;
-            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-            box-shadow: 0 2px 6px rgba(253, 160, 133, 0.4);
-            transition: all 0.3s ease;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            user-select: none;
-        }
-        .fg-copy:hover, .bg-copy:hover {
-            cursor: pointer;
-            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
-            box-shadow: 0 4px 12px rgba(166, 193, 238, 0.5);
-            transform: translateY(-1px);
-        }
-        .fg-copy:active, .bg-copy:active {
-            transform: scale(0.95);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         /* 提示 */
@@ -267,205 +439,49 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 5px;
         }
 
-        /* 页面加载 */
-        #page-loading {
+        /* 加载动画 */
+        .loading-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255,255,255,0.8);
+            inset: 0;
+            background: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             z-index: 9999;
-            display: none;
-            justify-content: center;
-            align-items: center;
+            transition: opacity 0.5s ease;
         }
 
+        /* 容器：柱状波动横排 */
+        .bar-container {
+            display: flex;
+            align-items: flex-end;
+            height: 100px;
+            gap: 6px;
+        }
+
+        /* 单柱波浪动画 */
         .bar {
-            background-color: #3498db;
+            width: 12px;
             height: 80px;
-            width: 20px;
-            margin: 0 2px;
-            animation: wave 0.6s infinite alternate;
-        }
-        .bar:nth-child(2) {
-            animation-delay: 0.1s;
-        }
-        .bar:nth-child(3) {
-            animation-delay: 0.2s;
-        }
-        .bar:nth-child(4) {
-            animation-delay: 0.3s;
-        }
-        .bar:nth-child(5) {
-            animation-delay: 0.4s;
-        }
-        @keyframes wave {
-            to {
-                height: 40px;
-            }
-        }
-
-        /* 圆形标签容器 */
-        .seal-div {
-            display: flex;
-            width: 10%;
-            justify-content: center;
-        }
-        /* 圆形标签 */
-        .seal {
-            border: 5px solid transparent;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            aspect-ratio: 1 / 1;
-        }
-        .seal-pass {
-            border: 5px solid rgb(118 179 33);
-            box-shadow: 0px 0px 10px rgb(118 179 33);
-        }
-        .seal-fail {
-            border: 5px solid rgb(203, 80, 42);
-            box-shadow: 0px 0px 10px rgb(203, 80, 42);
-        }
-
-        /* 时间 */
-        .time {
-            padding: 4px 10px;
-            font-weight: 500;
-            color: #2f2f2f;
             border-radius: 6px;
-            background: linear-gradient(135deg, #f7f5f2 0%, #e0d4c3 100%);
-            box-shadow: 0 2px 6px rgba(160, 140, 110, 0.1);
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
-        }
-        .time:hover {
-            background: linear-gradient(135deg, #ede0cd 0%, #d6c0a9 100%);
-            color: #1a1a1a;
-            box-shadow: 0 4px 10px rgba(160, 140, 110, 0.2);
-            transform: translateY(-1px);
-            cursor: grab;
+            background: linear-gradient(180deg, #fbc2eb 0%, #a6c1ee 100%);
+            transform-origin: bottom center;
+            animation: pulseWave 1s ease-in-out;
+            animation-fill-mode: both;
         }
 
-        /* ✅ 通用标签样式（time / threshold） */
-        .max-threshold, .avg-threshold {
-            padding: 4px 10px;
-            font-weight: 500;
-            border-radius: 6px;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        }
-        /* ⛳ 最大阈值标签：柔和红 */
-        .max-threshold {
-            color: #872e2e;
-            background: linear-gradient(135deg, #fbe2e2 0%, #f5bcbc 100%);
-            box-shadow: 0 2px 6px rgba(245, 188, 188, 0.25);
-        }
-        /* 📊 平均阈值标签：克制蓝 */
-        .avg-threshold {
-            color: #1e3f66;
-            background: linear-gradient(135deg, #e2ecf9 0%, #c3d9f6 100%);
-            box-shadow: 0 2px 6px rgba(180, 200, 240, 0.25);
-        }
-        .max-threshold:hover, .avg-threshold:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-            cursor: grab;
-        }
+        /* 依次延迟 */
+        .bar:nth-child(1) { animation-delay: 0s; }
+        .bar:nth-child(2) { animation-delay: 0.15s; }
+        .bar:nth-child(3) { animation-delay: 0.3s; }
+        .bar:nth-child(4) { animation-delay: 0.45s; }
+        .bar:nth-child(5) { animation-delay: 0.6s; }
 
-        .message {
-            display: flex;
-            align-items: center;
-        }
-
-        .schema {
-            width: fit-content;
-            white-space: nowrap;
-            margin: 5px 8px;
-            padding: 4px 10px;
-            font-weight: 600;
-            color: #1a1a1a;
-            background: linear-gradient(135deg, #dff1ff 0%, #8ec5fc 100%);
-            border-radius: 6px;
-            box-shadow: 0 2px 6px rgba(142, 197, 252, 0.25);
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
-        }
-        .schema:hover {
-            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            color: #000000;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(142, 197, 252, 0.4);
-            transform: translateY(-1px);
-        }        
-        .schema p {
-            margin: 0;
-        }
-        .schema-msg {
-            display: flex;            
-        }
-        .schema-msg p {
-            margin: 0 8px;
-        }
-
-        .pass-tag, .fail-tag {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            color: #ffffff;
-            transition: background 0.3s ease, box-shadow 0.3s ease;
-        }
-        .pass-tag {
-            background: linear-gradient(135deg, #b6f57e 0%, #89e403 100%);
-            box-shadow: 0 2px 6px rgba(137, 228, 3, 0.25);
-        }
-        .fail-tag {
-            background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
-            box-shadow: 0 2px 6px rgba(232, 65, 24, 0.25);
-        }
-        .pass-tag:hover, .fail-tag:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
-            cursor: grab;
-        }
-
-        .criteria {
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-            color: #2e3c48;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #f1f1f1 0%, #dcdcdc 100%);
-            box-shadow: 0 2px 6px rgba(120, 120, 120, 0.08);
-            transition: all 0.3s ease;
-        }
-        .criteria:hover {
-            background: linear-gradient(135deg, #e0e0e0 0%, #c5c5c5 100%);
-            color: #1a1a1a;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 10px rgba(100, 100, 100, 0.1);
-        }
-        
-        .refer {
-            padding: 5px 12px;
-            font-weight: 600;
-            color: #1a1a1a;
-            border-radius: 6px;
-            white-space: nowrap;
-            background: linear-gradient(135deg, #e0ecf8 0%, #c7dfff 100%);
-            box-shadow: 0 2px 6px rgba(150, 180, 255, 0.15);
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
-        }
-        .refer:hover {
-            background: linear-gradient(135deg, #c2dbff 0%, #a7c3f5 100%);
-            transform: translateY(-1px);
-            color: #000000;
-            box-shadow: 0 4px 10px rgba(130, 160, 255, 0.25);
-            cursor: pointer;
+        @keyframes pulseWave {
+            0%   { transform: scaleY(1); opacity: 0.2; }
+            30%  { transform: scaleY(1.6); opacity: 1; }
+            60%  { transform: scaleY(0.6); opacity: 0.5; }
+            100% { transform: scaleY(1); opacity: 0.2; }
         }
     </style>
 </head>
@@ -475,79 +491,93 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         <h1 id="headline">{{ headline }}</h1>
     </div>
 
-    <!--摘要信息显示1-->
+    <!--主摘要信息显示-->
     {% if major_summary_items %}
     <div class="summary-container">
         <div id="major-summary">
             {% for item in major_summary_items %}
             <div class="message">
-                <div class="schema">
-                    <p>{{ item.label }}</p>
-                </div>
-                <div class="schema-msg">
-                    {% for i in item.value %}
-                        <p class="{{ i.class if i.class is defined else 'refer' }}">{{ i.text }}</p>
-                    {% endfor %}
-                </div>
+                {% if item.label %}
+                    <div class="schema">
+                        <p>{{ item.label }}</p>
+                    </div>
+                {% endif %}
+                {% if item.value %}
+                    <div class="schema-msg">
+                        {% for i in item.value %}
+                            <p class="{{ i.class if i.class is defined else 'refer' }}">{{ i.text }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!--摘要信息显示2-->
+    <!--副摘要信息显示-->
     {% if minor_summary_items %}
     <div class="summary-container">
         <div id="minor-summary">
             {% for item in minor_summary_items %}
                 {% if item.value %}
-                <div class="results-info">
-                    {% for i in item.value %}
-                        <p>{{ i }}</p>
-                    {% endfor %}
-                    {% if item.class %}
-                        <button class="{{ item.class }}">Copy</button>
-                    {% endif %}
-                </div>
+                    <div class="results-info">
+                        {% for i in item.value %}
+                            <p>{{ i }}</p>
+                        {% endfor %}
+                        {% if item.class %}
+                            <button class="{{ item.class }}">Copy</button>
+                        {% endif %}
+                    </div>
                 {% endif %}
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!--主要信息显示-->
+    <!--报告信息-->
     {% for res in report_list %}
     <div class="information">
-        <div class="subtitle">
-            <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
-        </div>
-        <div class="seal-div">
-            <div class="seal"></div>
-        </div>
-        <div class="details">
-            {% for tag in res.tags %}
-            <div class="tag-detail">
-                {% for field in tag.fields %}
-                    <p data-label="{{ field.label }}" data-value="{{ field.value }}" class="tag-line">
-                        {{ field.label }} {{ field.value }} {{ field.unit }}
-                    </p>
+        {% if res.subtitle and res.subtitle_link %}
+            <div class="subtitle">
+                <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
+            </div>
+        {% endif %}
+        {% if res.seal %}
+            <div class="seal-div">
+                <div class="seal {{ res.seal }}"></div>
+            </div>
+        {% endif %}
+        {% if res.tags %}
+            <div class="details">
+                {% for tag in res.tags %}
+                    {% if tag.fields %}
+                        <div class="tag-detail">
+                            {% for field in tag.fields %}
+                                {% if field.label and field.value and field.unit %}
+                                    <p class="tag-line">{{ field.label }} {{ field.value }} {{ field.unit }}</p>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        {% endif %}
     </div>
     {% endfor %}
 
-    <!--提示标签-->
+    <!--提示信息-->
     <div id="notification"></div>
 
     <!--页面加载-->
-    <div id="page-loading">
-        <div class="bar"></div>
-        <div class="bar"></div>
-        <div class="bar"></div>
-        <div class="bar"></div>
-        <div class="bar"></div>
+    <div class="loading-overlay" id="loading">
+        <div class="bar-container">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
     </div>
 
     <script>
@@ -623,13 +653,19 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             });
         });
 
+        window.addEventListener("load", () => {
+            showLoadingAnimation();
+        });
+
         // 加载动画
         function showLoadingAnimation() {
-            const loadingElement = document.getElementById('page-loading');
-            loadingElement.style.display = 'flex';
-            setTimeout(() => {
-                loadingElement.style.display = 'none';
-            }, 1000);
+            const loading = document.getElementById("loading");
+            if (loading) {
+                setTimeout(() => {
+                    loading.style.opacity = "0";
+                    setTimeout(() => loading.remove(), 500); // 动画后移除节点
+                }, 2000); // 显示 2 秒
+            }
         }
     </script>
 </body>

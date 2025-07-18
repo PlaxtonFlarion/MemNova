@@ -33,9 +33,13 @@ class Templater(object):
         self.download = download
 
     def generate_viewers(self) -> "Div":
-        traces_path = Path(self.download).parent.resolve() / const.TRACES_DIR
-        images_path = Path(self.download).parent.resolve() / const.IMAGES_DIR
-        ionics_path = Path(self.download).parent.resolve() / const.IONICS_DIR
+        parent = Path(self.download).parent.resolve()
+
+        traces_path = parent / const.TRACES_DIR
+        images_path = parent / const.IMAGES_DIR
+        ionics_path = parent / const.IONICS_DIR
+
+        logs = [f for f in parent.glob("*.log") if f.is_file()]
 
         viewers = [
             {
@@ -53,6 +57,11 @@ class Templater(object):
                 "url": f"file:///{ionics_path.as_posix()}",
                 "color": "#4CAF50"
             },
+            {**({{
+                     "label": "➤ 日志 查看",
+                     "url": f"file:///{logs[0].as_posix()}",
+                     "color": "#4CAF50"
+                 } if logs else {}})},
             {
                 "label": "➤ UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
