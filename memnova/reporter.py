@@ -407,11 +407,13 @@ class Reporter(object):
             "tags": [
                 {
                     "fields": [
-                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"},
-                        {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
-                    ],
-                    "fields": [
                         {"label": "MIN: ", "value": min_fps, "unit": "FPS"},
+                        {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
+                    ]
+                },
+                {
+                    "fields": [
+                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"},
                         {"label": "P95: ", "value": p95_fps, "unit": "FPS"}
                     ]
                 }
