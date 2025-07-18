@@ -380,19 +380,15 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         .refer {
-            display: inline-block;
             padding: 5px 12px;
-            margin: 4px 6px 4px 0;
-            font-size: 13px;
             font-weight: 600;
             color: #1a1a1a;
-            border-radius: 8px;
+            border-radius: 6px;
             white-space: nowrap;
             background: linear-gradient(135deg, #e0ecf8 0%, #c7dfff 100%);
             box-shadow: 0 2px 6px rgba(150, 180, 255, 0.15);
             font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
             transition: all 0.3s ease;
-            user-select: none;
         }
         .refer:hover {
             background: linear-gradient(135deg, #c2dbff 0%, #a7c3f5 100%);
@@ -420,7 +416,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 </div>
                 <div class="schema-msg">
                     {% for i in item.value %}
-                        <p>{{ i }}</p>
+                        <p class="refer">{{ i }}</p>
                     {% endfor %}
                 </div>
             </div>
