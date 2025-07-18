@@ -229,7 +229,7 @@ class Reporter(object):
             conclusion.append("后台峰值超标")
         if avg_bg_avg and avg_bg_avg > self.align.bg_avg:
             conclusion.append("后台均值超标")
-        expiry = ["Fail"] if conclusion else ["Pass"]
+        expiry = {"text": "Fail", "class": "fail-tag"} if conclusion else {"text": "Pass", "class": "pass-tag"}
 
         return {
             "title": f"{const.APP_DESC} Information",
@@ -237,24 +237,30 @@ class Reporter(object):
             "major_summary_items": [
                 {
                     "label": "测试时间",
-                    "value": [team_data.get("time", "Unknown")]
+                    "value": [
+                        {"text": team_data.get("time", "Unknown"), "class": "time"} 
+                    ]
                 },
                 {
                     "label": "测试结论",
-                    "value": expiry + conclusion,
+                    "value": [
+                        [expiry] + [{"text": c, "class": "fail-tag"} for c in conclusion]
+                    ]
                 },
                 {
                     "label": "参考标准",
                     "value": [
-                        f"FG-MAX: {self.align.fg_max:.2f} MB",
-                        f"FG-AVG: {self.align.fg_avg:.2f} MB",
-                        f"BG-MAX: {self.align.bg_max:.2f} MB",
-                        f"BG-AVG: {self.align.bg_avg:.2f} MB",
+                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
+                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
+                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
+                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
                     ]
                 },
                 {
                     "label": "准出标准",
-                    "value": [self.align.criteria]
+                    "value": [
+                        {"text": self.align.criteria, "class": "criteria"}
+                    ]
                 }
             ],
             "minor_summary_items": [
