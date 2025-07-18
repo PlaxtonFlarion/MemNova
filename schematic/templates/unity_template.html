@@ -61,28 +61,36 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             align-items: center;
         }
         .results-info p {
-            width: 220px;
-            font-weight: bold;
-            padding: 5px 20px;
-            margin: 5px;
-            border-radius: 5px;
-            background-image: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+            width: 240px;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 10px 24px;
+            margin: 8px;
+            border-radius: 8px;
+            color: #333333;
+            background: linear-gradient(135deg, #f9f9f9, #e0d8cf);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
         }
         .results-info > p:nth-child(1), .tag-detail > p:nth-child(1) {
-            color: #df4b11;
+            color: #c0392b; /* 深砖红 */
         }
         .results-info > p:nth-child(2), .tag-detail > p:nth-child(2) {
-            color: #0b92ec;
+            color: #2980b9; /* 深湖蓝 */
         }
         .results-info p:hover {
-            color: #fdfcfb;
+            color: #ffffff;
             cursor: grab;
-            background-image: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+            background: linear-gradient(135deg, #8ec5fc 0%, #e0c3fc 100%);
+            box-shadow: 0 6px 16px rgba(142, 197, 252, 0.4);
+            transform: translateY(-2px);
         }
         .results-info p.pass:hover {
             background: #2fe70a;
         }
-        .result-highlight {
+        
+        .highlight {
             margin-left: 20px;
             padding: 3px 5px;
             border-radius: 5px;
