@@ -299,7 +299,7 @@ class Cubicle(object):
             payload: dict
     ) -> None:
 
-        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.ion_data_table} (
             data_dir,
             label,
             timestamp,
@@ -323,7 +323,7 @@ class Cubicle(object):
                 io,
                 rss,
                 block
-            FROM {Cubicle.gfx_data_table}
+            FROM {Cubicle.ion_data_table}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:
