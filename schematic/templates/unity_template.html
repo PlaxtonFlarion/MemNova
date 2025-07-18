@@ -129,15 +129,23 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             display: flex;
             justify-content: flex-end;
         }
-        .tag-detail p, .tag-detail a {
+        .tag-line {
             width: 20%;
-            margin: 5px;
-            padding: 3px 8px;
-            font-weight: bold;
-            align-items: center;
-            justify-content: center;
             text-align: center;
+            padding: 8px 18px;
+            margin: 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            background: #f5f5f5;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
         }
+        .tag-line:hover {
+            cursor: grab;
+        }
+        
         .tag-detail > p:nth-child(1):hover {
             color: #fdfcfb;
             background: rgb(236, 79, 6);
