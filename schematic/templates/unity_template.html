@@ -91,11 +91,19 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
         
         .highlight {
-            margin-left: 20px;
-            padding: 3px 5px;
-            border-radius: 5px;
-            background-color: #ffe000;
-            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            color: #5b4100;
+            background: linear-gradient(135deg, #fff6cc 0%, #ffeb99 100%);
+            box-shadow: 0 2px 6px rgba(255, 215, 0, 0.15);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .highlight:hover {
+            background: linear-gradient(135deg, #fff2a8 0%, #ffe680 100%);
+            box-shadow: 0 4px 10px rgba(255, 215, 0, 0.2);
+            transform: translateY(-1px);
         }
 
         /* 主要 */
@@ -424,6 +432,18 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transform: translateY(-1px);
             cursor: grab;
+        }
+
+        .criteria {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #2e3c48;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f1f1f1 0%, #dcdcdc 100%);
+            box-shadow: 0 2px 6px rgba(120, 120, 120, 0.08);
+            transition: all 0.3s ease;
         }
         
         .refer {
