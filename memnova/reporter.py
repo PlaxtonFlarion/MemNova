@@ -171,7 +171,8 @@ class Reporter(object):
 
         else:
             group_stats = (
-                df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count").reset_index()
+                df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
+                .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
             )
 
             tag_lines = [
