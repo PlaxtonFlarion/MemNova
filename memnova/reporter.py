@@ -362,6 +362,14 @@ class Reporter(object):
         jnk_fps = round(
             sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
         )
+        # 最低帧率
+        min_fps = round(
+            min(fps for f in raw_frames if (fps := f["fps_app"])), 2
+        )
+        # 95分位帧率
+        p95_fps = round(
+            float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2
+        )
 
         conspiracy, segments = [], self.split_frames_by_time(raw_frames)
 
@@ -401,6 +409,10 @@ class Reporter(object):
                     "fields": [
                         {"label": "JNK: ", "value": jnk_fps, "unit": "%"},
                         {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
+                    ],
+                    "fields": [
+                        {"label": "MIN: ", "value": min_fps, "unit": "FPS"},
+                        {"label": "P95: ", "value": p95_fps, "unit": "FPS"}
                     ]
                 }
             ]
