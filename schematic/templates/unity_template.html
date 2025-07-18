@@ -408,10 +408,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         <div id="major-summary">
             {% for item in major_summary_items %}
             <div class="message">
-                <p class="schema">{{ item.label }}</p>
-                {% for i in item.value %}
-                    <p>{{ i }}</p>
-                {% endfor %}
+                <div class="schema">
+                    <p class="schema">{{ item.label }}</p>
+                </div>
+                <div class="schema-msg">
+                    {% for i in item.value %}
+                        <p>{{ i }}</p>
+                    {% endfor %}
+                </div>
             </div>
             {% endfor %}
         </div>
