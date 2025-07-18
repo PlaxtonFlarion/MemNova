@@ -379,20 +379,27 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background: #e7470a;
         }
 
-        .refer:nth-child(2), .refer:nth-child(3), .refer:nth-child(4), .refer:nth-child(5) {
-            padding: 3px 5px;
-            border-radius: 5px;
-            font-weight: bold;
-            background-image: linear-gradient(to top, #f3e7e9 0%, #e3eeff 99%, #e3eeff 100%);
+        .refer {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 4px 6px 4px 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a1a;
+            border-radius: 8px;
+            white-space: nowrap;
+            background: linear-gradient(135deg, #e0ecf8 0%, #c7dfff 100%);
+            box-shadow: 0 2px 6px rgba(150, 180, 255, 0.15);
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+            user-select: none;
         }
-        .refer:nth-child(2), .refer:nth-child(4) {
-            color: #df4b11;
-        }
-        .refer:nth-child(3), .refer:nth-child(5) {
-            color: #0b92ec;
-        }
-        .refer:nth-child(3), .refer:nth-child(4), .refer:nth-child(5) {
-            margin-left: 5px;
+        .refer:hover {
+            background: linear-gradient(135deg, #c2dbff 0%, #a7c3f5 100%);
+            transform: translateY(-1px);
+            color: #000000;
+            box-shadow: 0 4px 10px rgba(130, 160, 255, 0.25);
+            cursor: pointer;
         }
     </style>
 </head>
