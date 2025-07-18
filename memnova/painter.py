@@ -70,6 +70,13 @@ class Painter(object):
         jitter = result["jitter_index"]
         trend_score = result["trend_score"]
 
+        # 配色与视觉分区
+        pss_color = "#3A5C83"   # 主线 PSS（深蓝灰）
+        rss_color = "#6C7A89"   # RSS 辅助线（灰蓝/亚麻灰）
+        uss_color = "#8EABDD"   # USS 辅助线（淡蓝紫/天青）
+        avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
+        max_color = "#FFB86C"   # 峰值线（温暖橙/沙金色）
+        min_color = "#50FA7B"   # 谷值线（绿色/薄荷绿）
         # 区块配色
         fg_color = "#3386E6"
         bg_color = "#757575"
@@ -95,9 +102,9 @@ class Painter(object):
         # 均值带
         ax.axhspan(avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range")
         # 均值/极值线
-        ax.axhline(y=avg_val, linestyle=":", color="#6666CC", linewidth=0.8)
-        ax.axhline(y=max_val, linestyle=":", color="#FF4B00", linewidth=0.8)
-        ax.axhline(y=min_val, linestyle=":", color="#00FF85", linewidth=0.8)
+        ax.axhline(y=avg_val, linestyle=":", color=avg_color, linewidth=0.8)
+        ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
+        ax.axhline(y=min_val, linestyle=":", color=min_color, linewidth=0.8)
 
         # 极值点
         ax.scatter(
@@ -120,9 +127,9 @@ class Painter(object):
             Line2D([0], [0], color="none", label=f"Trend: {trend_label}"),
             Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
             Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
-            Line2D([0], [0], color="#FF4B00", label=f"PSS MAX: {max_val:.2f} MB"),
-            Line2D([0], [0], color="#6666CC", label=f"PSS AVG: {avg_val:.2f} MB"),
-            Line2D([0], [0], color="#00FF85", label=f"PSS MIN: {min_val:.2f} MB"),
+            Line2D([0], [0], color=avg_color, label=f"PSS AVG: {avg_val:.2f} MB"),
+            Line2D([0], [0], color=max_color, label=f"PSS MAX: {max_val:.2f} MB"),
+            Line2D([0], [0], color=min_color, label=f"PSS MIN: {min_val:.2f} MB"),
             Line2D([0], [0], color="#3333AA", label=f"Sliding Avg"),
             Line2D([0], [0], color=line_color, label="PSS Line")
         ]
