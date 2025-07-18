@@ -186,7 +186,7 @@ class Templater(object):
 
         p.line(
             "x", "pss_sliding_avg",
-            source=source, line_width=2, color="#3333AA", line_dash="dotdash", alpha=0.85, legend_label="Sliding Avg"
+            source=source, line_width=2, color="#A8BFFF", line_dash="dotdash", alpha=0.85, legend_label="Sliding Avg"
         )
 
         # 极值点
