@@ -131,12 +131,12 @@ class Templater(object):
         ).reset_index()
 
         # 配色与视觉分区
-        pss_color = "#4074B4"  # 主线 PSS（深蓝，突出）
-        rss_color = "#E07B39"  # RSS 辅助线（橙色）
-        uss_color = "#6BCB77"  # USS 辅助线（草绿色）
-        avg_color = "#6A4C93"  # 均值线（紫色）
-        max_color = "#FF1D58"  # 峰值线（红色）
-        min_color = "#009FFD"  # 谷值线（亮蓝）
+        pss_color = "#3A5C83"   # 主线 PSS（深蓝灰）
+        rss_color = "#6C7A89"   # RSS 辅助线（灰蓝/亚麻灰）
+        uss_color = "#8EABDD"   # USS 辅助线（淡蓝紫/天青）
+        avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
+        max_color = "#FFB86C"   # 峰值线（温暖橙/沙金色）
+        min_color = "#50FA7B"   # 谷值线（绿色/薄荷绿）
         # 区块分色
         fg_color = "#5BB8FF"  # 深蓝（前台）
         bg_color = "#BDBDBD"  # 深灰（后台）
