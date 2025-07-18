@@ -343,6 +343,36 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             cursor: grab;
         }
 
+        /* ✅ 通用标签样式（time / threshold） */
+        .max-threshold, .avg-threshold {
+            display: inline-block;
+            padding: 5px 12px;
+            margin: 4px 6px 4px 0;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        /* ⛳ 最大阈值标签：柔和红 */
+        .max-threshold {
+            color: #872e2e;
+            background: linear-gradient(135deg, #fbe2e2 0%, #f5bcbc 100%);
+            box-shadow: 0 2px 6px rgba(245, 188, 188, 0.25);
+        }
+        /* 📊 平均阈值标签：克制蓝 */
+        .avg-threshold {
+            color: #1e3f66;
+            background: linear-gradient(135deg, #e2ecf9 0%, #c3d9f6 100%);
+            box-shadow: 0 2px 6px rgba(180, 200, 240, 0.25);
+        }
+        .max-threshold:hover, .avg-threshold:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            cursor: grab;
+        }
+
         .message {
             display: flex;
             align-items: center;
