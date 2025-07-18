@@ -50,10 +50,10 @@ class Painter(object):
         y_max = max_val + offset * y_range
 
         # 区块分组
-        df["block_id"] = (df["foreground"] != df["foreground"].shift()).cumsum()
+        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
         # 区块统计
-        block_stats = df.groupby(["block_id", "foreground"]).agg(
+        block_stats = df.groupby(["block_id", "mode"]).agg(
             start_time=("num_x", "first"),
             end_time=("num_x", "last"),
             avg_pss=("pss", "mean"),
