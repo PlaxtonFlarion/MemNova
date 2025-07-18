@@ -258,11 +258,11 @@ class Reporter(object):
             ],
             "minor_summary_items": [
                 {
-                    "value": [f"{k}: {v} MB" for k, v in fg_final.items() if v],
+                    "value": [f"{k}: {v:.2f} MB" for k, v in fg_final.items() if v],
                     "class": "fg-copy"
                 },
                 {
-                    "value": [f"{k}: {v} MB" for k, v in bg_final.items() if v],
+                    "value": [f"{k}: {v:.2f} MB" for k, v in bg_final.items() if v],
                     "class": "bg-copy"
                 }
             ],
@@ -307,7 +307,7 @@ class Reporter(object):
             ],
             "minor_summary_items": [
                 {
-                    "value": [f"{k}: {v} MB" for k, v in union_final.items() if v]
+                    "value": [f"{k}: {v:.2f} MB" for k, v in union_final.items() if v]
                 }
             ],
             "report_list": compilation
