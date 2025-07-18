@@ -71,9 +71,6 @@ class Painter(object):
         trend_score = result["trend_score"]
 
         # 配色与视觉分区
-        pss_color = "#3A5C83"   # 主线 PSS（深蓝灰）
-        rss_color = "#6C7A89"   # RSS 辅助线（灰蓝/亚麻灰）
-        uss_color = "#8EABDD"   # USS 辅助线（淡蓝紫/天青）
         avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
         max_color = "#FFB86C"   # 峰值线（温暖橙/沙金色）
         min_color = "#50FA7B"   # 谷值线（绿色/薄荷绿）
@@ -98,7 +95,7 @@ class Painter(object):
         # 主线
         ax.plot(df["num_x"], df["pss"], color=line_color, linewidth=1.2, label="PSS")
         # 滑动平均
-        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#3333AA", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg")
+        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg")
         # 均值带
         ax.axhspan(avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range")
         # 均值/极值线
@@ -130,7 +127,7 @@ class Painter(object):
             Line2D([0], [0], color=avg_color, label=f"PSS AVG: {avg_val:.2f} MB"),
             Line2D([0], [0], color=max_color, label=f"PSS MAX: {max_val:.2f} MB"),
             Line2D([0], [0], color=min_color, label=f"PSS MIN: {min_val:.2f} MB"),
-            Line2D([0], [0], color="#3333AA", label=f"Sliding Avg"),
+            Line2D([0], [0], color="#A8BFFF", label=f"Sliding Avg"),
             Line2D([0], [0], color=line_color, label="PSS Line")
         ]
 
