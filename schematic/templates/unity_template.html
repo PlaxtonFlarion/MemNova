@@ -340,11 +340,31 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         .schema {
             white-space: nowrap;
-            margin-right: 10px;
-            font-weight: bold;
-            padding: 3px 5px;
-            border-radius: 5px;
-            background: #8ec5fc;
+            margin: 5px 8px;
+            padding: 4px 10px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: linear-gradient(135deg, #dff1ff 0%, #8ec5fc 100%);
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(142, 197, 252, 0.25);
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+        }
+        .schema:hover {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            color: #000000;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(142, 197, 252, 0.4);
+            transform: translateY(-1px);
+        }        
+        .schema p {
+            margin: 0;
+        }
+        .schema-msg {
+            display: flex;            
+        }
+        .schema-msg p {
+            margin: 0 8px;
         }
 
         .test-pass-tag, .test-fail-tag {
@@ -352,10 +372,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 5px;
             font-weight: bold;
         }
-        .test-pass-tag {
+        .pass-tag {
             background: #9ce70a;
         }
-        .test-fail-tag {
+        .fail-tag {
             background: #e7470a;
         }
 
