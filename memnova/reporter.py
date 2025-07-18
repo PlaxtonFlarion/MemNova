@@ -243,9 +243,7 @@ class Reporter(object):
                 },
                 {
                     "label": "测试结论",
-                    "value": [
-                        [expiry] + [{"text": c, "class": "fail-tag"} for c in conclusion]
-                    ]
+                    "value": [expiry] + [{"text": c, "class": "highlight"} for c in conclusion]
                 },
                 {
                     "label": "参考标准",
