@@ -416,7 +416,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 </div>
                 <div class="schema-msg">
                     {% for i in item.value %}
-                        <p class="refer">{{ i }}</p>
+                        <p class="{{ i.class if i.class is defined else 'refer' }}">{{ i.text }}</p>
                     {% endfor %}
                 </div>
             </div>
