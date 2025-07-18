@@ -392,13 +392,15 @@ class Memrix(object):
         target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
 
         async with aiosqlite.connect(reporter.db_file) as db:
-            await Cubicle.create_mem_table(db)
+            await Cubicle.create_tables(db)
             await Cubicle.insert_joint_data(
                 db, self.file_folder, self.title, Period.convert_time(now_format)
             )
 
             self.animation_task = asyncio.create_task(
-                self.design.memory_wave(self.memories, self.task_close_event)
+                self.design.memory_wave(
+                    self.memories, animation_event := asyncio.Event()
+                )
             )
 
             perfetto: "Perfetto" = Perfetto(
@@ -425,6 +427,7 @@ class Memrix(object):
                 await Cubicle.insert_ion_data(
                     db, self.file_folder, self.align.label, Period.convert_time(now_format), fmt_data
                 )
+            animation_event.set()
 
         await asyncio.gather(watcher, self.sample_stop(reporter))
 
@@ -481,7 +484,7 @@ class Memrix(object):
             ion_fmt_data = {k: json.dumps(v) for k, v in ion_data.items()}
 
             async with aiosqlite.connect(reporter.db_file) as db:
-                await Cubicle.create_gfx_table(db)
+                await Cubicle.create_tables(db)
                 logger.info(f"存储样本 ...")
                 await asyncio.gather(
                     Cubicle.insert_joint_data(

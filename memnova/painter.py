@@ -25,7 +25,9 @@ class Painter(object):
     @staticmethod
     async def draw_mem_metrics(
             data_list: list[tuple],
-            output_path: str
+            output_path: str,
+            *_,
+            **kwargs
     ) -> str:
 
         df = pd.DataFrame(
@@ -63,12 +65,7 @@ class Painter(object):
         ).reset_index()
 
         # 判断内存趋势
-        result = Scores.analyze_mem_trend(df["pss"])
-
-        line_color = result["color"]
-        trend_label = result["trend"]
-        jitter = result["jitter_index"]
-        trend_score = result["trend_score"]
+        trend, trend_score, jitter, pss_color, *_ = kwargs.values()
 
         # 配色与视觉分区
         avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
@@ -93,7 +90,7 @@ class Painter(object):
             ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
         # 主线
-        ax.plot(df["num_x"], df["pss"], color=line_color, linewidth=1.2, label="PSS")
+        ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
         # 滑动平均
         ax.plot(df["num_x"], df["pss_sliding_avg"], color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg")
         # 均值带
@@ -121,14 +118,14 @@ class Painter(object):
 
         # 构造伪图例项（作为文字说明）
         legend_items = [
-            Line2D([0], [0], color="none", label=f"Trend: {trend_label}"),
+            Line2D([0], [0], color="none", label=f"Trend: {trend}"),
             Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
             Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
             Line2D([0], [0], color=avg_color, label=f"PSS AVG: {avg_val:.2f} MB"),
             Line2D([0], [0], color=max_color, label=f"PSS MAX: {max_val:.2f} MB"),
             Line2D([0], [0], color=min_color, label=f"PSS MIN: {min_val:.2f} MB"),
             Line2D([0], [0], color="#A8BFFF", label=f"Sliding Avg"),
-            Line2D([0], [0], color=line_color, label="PSS Line")
+            Line2D([0], [0], color=pss_color, label="PSS Line")
         ]
 
         # 展示图例

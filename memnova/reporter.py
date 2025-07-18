@@ -141,21 +141,31 @@ class Reporter(object):
         image_loc = images / f"{head}_image.png"
         ionic_loc = ionics / f"{head}_ionic.png"
 
-        if priority:
-            image_task = asyncio.create_task(
-                Painter.draw_mem_metrics(union_data_list, str(image_loc)), name="draw mem metrics"
-            )
-            self.background_tasks.append(image_task)
-
-        ionic_task = asyncio.create_task(
-            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
-        )
-        self.background_tasks.append(ionic_task)
-
         df = pd.DataFrame(
             union_data_list,
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
         )
+
+        if priority:
+            leak = Scores.analyze_mem_trend(df["pss"])
+            leak_result = {
+                "trend": leak["trend"], "trend_score": leak["trend_score"],
+                "jitter": leak["jitter"], "pss_color": leak["pss_color"]
+            }
+            leak_data = {**({"group": leak_result["trend"] if leak_result else {}})}
+
+            image_task = asyncio.create_task(
+                Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak_result), name="draw mem metrics"
+            )
+            self.background_tasks.append(image_task)
+
+            ionic_task = asyncio.create_task(
+                Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
+            )
+            self.background_tasks.append(ionic_task)
+
+        else:
+            leak_data = {}
 
         if priority:
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
@@ -203,6 +213,7 @@ class Reporter(object):
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
             "tags": tag_lines,
+            **leak_data,
             **seal
         }
 
@@ -415,6 +426,11 @@ class Reporter(object):
 
         if not conspiracy:
             return {}
+
+        # todo 最终得分写入报告
+        final_score = Scores.score_segment(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+        )
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
