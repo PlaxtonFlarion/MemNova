@@ -404,18 +404,28 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             margin: 0 8px;
         }
 
-        .test-pass-tag, .test-fail-tag {
-            padding: 3px 5px;
-            border-radius: 5px;
-            font-weight: bold;
+        .pass-tag, .fail-tag {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            color: #ffffff;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .pass-tag {
-            background: #9ce70a;
+            background: linear-gradient(135deg, #b6f57e 0%, #89e403 100%);
+            box-shadow: 0 2px 6px rgba(137, 228, 3, 0.25);
         }
         .fail-tag {
-            background: #e7470a;
+            background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
+            box-shadow: 0 2px 6px rgba(232, 65, 24, 0.25);
         }
-
+        .pass-tag:hover, .fail-tag:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            cursor: grab;
+        }
+        
         .refer {
             padding: 5px 12px;
             font-weight: 600;
