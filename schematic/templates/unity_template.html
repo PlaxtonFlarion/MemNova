@@ -200,19 +200,29 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         /* 复制标签 */
         .fg-copy, .bg-copy {
-            border-radius: 5px;
-            margin: 6px 10px 6px 10px;
-            padding: 5px 10px;
-            font-weight: bold;
-            background: #cfe608;
-        }
-        .fg-copy:hover, .bg-copy:hover {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+            box-shadow: 0 2px 6px rgba(253, 160, 133, 0.4);
+            transition: all 0.3s ease;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            user-select: none;
+       }
+       .fg-copy:hover, .bg-copy:hover {
             cursor: pointer;
-            background: #e6cf08;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            box-shadow: 0 4px 12px rgba(166, 193, 238, 0.5);
+            transform: translateY(-1px);
         }
         .fg-copy:active, .bg-copy:active {
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         /* 提示 */
