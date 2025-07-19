@@ -159,7 +159,7 @@ class Reporter(object):
                 {
                     "fields": [
                         {"text": f"Trend: {leak['trend']}", "class": "refer"},
-                        {"text": f"Score: {leak['trend_socre']}", "class": "refer"}
+                        {"text": f"Score: {leak['trend_score']}", "class": "refer"}
                     ]
                 },
                 {
