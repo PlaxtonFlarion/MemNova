@@ -37,7 +37,7 @@ class Painter(object):
         df = df.dropna(subset=["pss"])
 
         # 滑动窗口平均
-        window_size = max(3, len(df)//20)
+        window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 全局统计
