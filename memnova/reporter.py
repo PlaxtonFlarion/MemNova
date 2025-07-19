@@ -132,12 +132,12 @@ class Reporter(object):
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        union_data_list, (ion_data, *_), (joint, *_) = await asyncio.gather(
+        union_data_list, (io_data, *_), (joint, *_) = await asyncio.gather(
             Cubicle.query_mem_data(db, data_dir),
             Cubicle.query_io_data(db, data_dir),
             Cubicle.query_joint_data(db, data_dir)
         )
-        metadata, (io, rss, block), (title, timestamp) = {}, ion_data.values(), joint
+        metadata, (io, rss, block), (title, timestamp) = {}, io_data.values(), joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         image_loc = images / f"{head}_image.png"
@@ -361,14 +361,14 @@ class Reporter(object):
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (gfx_data, *_), (ion_data, *_), (joint, *_) = await asyncio.gather(
+        (gfx_data, *_), (io_data, *_), (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir),
             Cubicle.query_io_data(db, data_dir),
             Cubicle.query_joint_data(db, data_dir)
         )
         metadata = {}
         raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = gfx_data.values()
-        io, rss, block = ion_data.values()
+        io, rss, block = io_data.values()
         title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
