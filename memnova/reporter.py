@@ -162,7 +162,7 @@ class Reporter(object):
             ]
 
             image_task = asyncio.create_task(
-                Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak), name="draw mem metrics"
+                Painter.draw_mem_metrics(df, str(image_loc), **leak), name="draw mem metrics"
             )
             self.background_tasks.append(image_task)
 
