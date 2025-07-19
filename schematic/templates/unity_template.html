@@ -333,16 +333,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         /* 圆形标签容器 */
         .seal-div {
             display: flex;
+            flex-direction: column;
             width: 10%;
-            justify-content: center;
+            align-items: center;
         }
         /* 圆形标签 */
         .seal {
-            border: 5px solid transparent;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            aspect-ratio: 1 / 1;
+            margin: 1px 0;
         }
         .current-pass {
             border: 5px solid rgb(118 179 33);
@@ -541,7 +538,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         {% endif %}
         {% if res.seal %}
             <div class="seal-div">
-                <div class="seal {{ res.seal }}"></div>
+                <p class="seal {{ res.seal }}"></p>
             </div>
         {% endif %}
         {% if res.tags %}
