@@ -203,7 +203,9 @@ class Reporter(object):
             evaluate = [
                 {
                     "fields": [
-                        {"text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
+                        {
+                            "text": "Pass", "class": "expiry-pass"
+                        } if all_ok else {"text": "Fail", "class": "expiry-fail"}
                     ]
                 }
             ]
