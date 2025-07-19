@@ -72,8 +72,8 @@ class Memrix(object):
 
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
-        self.track, self.forge, *_ = args
-        _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
+        self.storm, self.sleek, self.forge, *_ = args
+        _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -134,9 +134,7 @@ class Memrix(object):
             device: "Device",
             reporter: "Reporter",
             package: str,
-            team_name: str,
-            *args,
-            **__
+            team_name: str
     ) -> "Path":
 
         self.file_insert = 0
@@ -163,7 +161,6 @@ class Memrix(object):
             scene = {
                 "time": format_before_time,
                 "mark": device.serial,
-                "type": ",".join(args),
                 "file": [self.file_folder]
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
@@ -209,40 +206,37 @@ class Memrix(object):
     async def sample_analyze(
             self,
             track_gfx: bool,
-            track_io: bool,
             db: "aiosqlite.Connection",
             trace_loc: typing.Union["Path", str],
             now_time: str,
     ) -> None:
 
-        if not track_gfx or not track_io:
+        if not track_gfx:
             return None
 
         gfx_fmt_data, io_fmt_data, now_time = {}, {}, Period.convert_time(now_time)
 
         with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-            if track_gfx:
-                gfx_analyzer = GfxAnalyzer()
-                gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
-                gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-                await Cubicle.insert_gfx_data(
-                    db, self.file_folder, self.align.label, now_time, gfx_fmt_data
-                )
+            gfx_analyzer = GfxAnalyzer()
+            gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
+            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+            await Cubicle.insert_gfx_data(
+                 db, self.file_folder, self.align.label, now_time, gfx_fmt_data
+            )
 
-            if track_io:
-                io_analyzer = IoAnalyzer()
-                io_data = await io_analyzer.extract_metrics(tp, self.focus)
-                io_fmt_data = {k: json.dumps(v) for k, v in io_data.items()}
-                await Cubicle.insert_io_data(
-                    db, self.file_folder, self.align.label, now_time, io_fmt_data
-                )
+            io_analyzer = IoAnalyzer()
+            io_data = await io_analyzer.extract_metrics(tp, self.focus)
+            io_fmt_data = {k: json.dumps(v) for k, v in io_data.items()}
+            await Cubicle.insert_io_data(
+                db, self.file_folder, self.align.label, now_time, io_fmt_data
+            )
 
         self.file_insert += (len(gfx_fmt_data) + len(io_fmt_data))
         logger.info(f"Article {self.file_insert} data insert success")
 
     async def memory_collector(
             self,
-            enable_collector: bool,
+            track_mem: bool,
             device: "Device",
             db: "aiosqlite.Connection",
     ) -> None:
@@ -397,7 +391,7 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        if not enable_collector:
+        if not track_mem:
             return None
 
         toolkit: "ToolKit" = ToolKit()
@@ -408,13 +402,11 @@ class Memrix(object):
             await asyncio.sleep(self.align.speed)
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
-    async def track_core_task(self, device: "Device", *args, **__) -> None:
+    async def track_core_task(self, device: "Device") -> None:
 
         # Workflow: ========== 检查配置 ==========
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
-
-        track_mem, track_gfx, track_io, *_ = args
 
         reporter = Reporter(self.src_total_place, self.vault, self.align)
 
@@ -428,7 +420,7 @@ class Memrix(object):
         head = f"{self.title}_{now_time}" if self.title else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
-        perfetto = Perfetto(track_gfx or track_io, device, self.ft_file, str(trace_loc))
+        perfetto = Perfetto(self.sleek, device, self.ft_file, str(trace_loc))
 
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
@@ -441,12 +433,12 @@ class Memrix(object):
             await perfetto.start()
 
             watcher = asyncio.create_task(self.watcher())
-            await self.memory_collector(track_mem, device, db)
+            await self.memory_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
             await perfetto.close()
-            await self.sample_analyze(track_gfx, track_io, db, trace_loc, now_time)
+            await self.sample_analyze(self.sleek, db, trace_loc, now_time)
 
             animation_event.set()
 
@@ -756,7 +748,7 @@ async def main() -> typing.Any:
     await align.load_align()
 
     positions = (
-        cmd_lines.track, cmd_lines.forge,
+        cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
         cmd_lines.focus, cmd_lines.vault, cmd_lines.title, cmd_lines.hprof,
     )
     keywords = {
@@ -773,23 +765,8 @@ async def main() -> typing.Any:
 
     memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
-    if cmd_lines.track:
-        track_mem, track_gfx, track_io = "", "", ""
-
-        for typer in cmd_lines.track:
-            match typer:
-                case "mem":
-                    track_mem = "mem"
-                case "gfx":
-                    track_gfx = "gfx"
-                case "io":
-                    track_io = "io"
-                case _:
-                    raise MemrixError(f"Type: {typer} -> not allowed in {const.ALLOWED_TYPES}")
-
-        return await arithmetic(
-            memrix.track_core_task, track_mem, track_gfx, track_io
-        )
+    if cmd_lines.storm or cmd_lines.sleek:
+        return await arithmetic(memrix.track_core_task)
 
     elif cmd_lines.forge:
         return await memrix.observation()
