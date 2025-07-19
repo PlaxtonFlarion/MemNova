@@ -440,7 +440,7 @@ class Memrix(object):
             await self.task_close_event.wait()
 
             await perfetto.close()
-            await self.sample_analyze(self.sleek, db, trace_loc, now_time)
+            await self.sample_analyze(db, trace_loc, now_time)
 
             animation_event.set()
 
@@ -498,13 +498,11 @@ class Perfetto(object):
 
     def __init__(
             self,
-            enable_perfetto: bool,
             device: "Device",
             ft_file: typing.Union["Path", str],
             trace_loc: typing.Union["Path", str]
     ) -> None:
 
-        self.__enable_perfetto = enable_perfetto
         self.__device = device
         self.__ft_file = str(ft_file)
         self.__trace_loc = str(trace_loc)
@@ -521,9 +519,6 @@ class Perfetto(object):
             logger.info(line.decode(const.CHARSET).strip())
 
     async def start(self) -> None:
-        if not self.__enable_perfetto:
-            return None
-
         unique_id = uuid.uuid4().hex[:8]
         self.__device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
         self.__target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
@@ -538,9 +533,6 @@ class Perfetto(object):
         _ = asyncio.create_task(self.__error_stream())
 
     async def close(self) -> None:
-        if not self.__enable_perfetto or not self.__transports:
-            return None
-
         await self.__device.perfetto_close()
         await self.__device.pull(self.__target_folder, self.__trace_loc)
         await self.__device.remove(self.__target_folder)
