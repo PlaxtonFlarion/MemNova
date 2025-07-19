@@ -61,7 +61,7 @@ class Painter(object):
         ).reset_index()
 
         # 判断内存趋势
-        trend, trend_score, jitter, *_, pss_color = kwargs.values()
+        trend, trend_score, jitter, r_squared, slope, pss_color = kwargs.values()
 
         # 配色与视觉分区
         avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
@@ -128,10 +128,11 @@ class Painter(object):
             Line2D([0], [0], color="none", label=f"Trend: {trend}"),
             Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
             Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
-            Line2D([0], [0], color=avg_color, label=f"PSS AVG: {avg_val:.2f} MB"),
-            Line2D([0], [0], color=max_color, label=f"PSS MAX: {max_val:.2f} MB"),
-            Line2D([0], [0], color=min_color, label=f"PSS MIN: {min_val:.2f} MB"),
-            Line2D([0], [0], color="#A8BFFF", label=f"Sliding Avg"),
+            Line2D([0], [0], color="none", label=f"Slope: {slope:.4f}"),
+            Line2D([0], [0], color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"),
+            Line2D([0], [0], color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"),
+            Line2D([0], [0], color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"),
+            Line2D([0], [0], color="#A8BFFF", linestyle="--", label=f"Sliding Avg"),
             Line2D([0], [0], color=pss_color, label="PSS Line")
         ]
 
