@@ -155,10 +155,19 @@ class Reporter(object):
 
         if leak_mode:
             leak = Scores.analyze_mem_trend(df["pss"])
-            seal = [
-                {"text": f"Trend: {leak['trend']}", "class": "refer"},
-                {"text": f"Score: {leak['trend_score']}", "class": "refer"},
-                {"text": f"Shake: {leak['jitter_index']}", "class": "refer"}
+            evaluate = [
+                {
+                    "fields": [
+                        {"text": f"Trend: {leak['trend']}", "class": "refer"},
+                        {"text": f"Score: {leak['trend_socre']}", "class": "refer"}
+                    ]
+                },
+                {
+                    "fields": [
+                        {"text": f"Shake: {leak['jitter_index']}", "class": "refer"},
+                        {"text": f"Slope: {leak['slope']}", "class": "refer"}
+                    ]
+                }
             ]
 
             image_task = asyncio.create_task(
@@ -191,8 +200,12 @@ class Reporter(object):
                 all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
                 all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
 
-            seal = [
-                {"text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
+            evaluate = [
+                {
+                    "fields": [
+                        {"text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
+                    ]
+                }
             ]
 
             tag_lines = [
@@ -210,7 +223,7 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
-            "seal": seal,
+            "evaluate": evaluate,
             "tags": tag_lines
         }
 
@@ -439,9 +452,13 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
-            "seal": [
-                {"text": f"Score: {mkt['score']}", "class": "refer"},
-                {"text": f"Level: {mkt['level']}", "class": "refer"}
+            "evaluate": [
+                {
+                    "fields": [
+                        {"text": f"Score: {mkt['score']}", "class": "refer"},
+                        {"text": f"Level: {mkt['level']}", "class": "refer"}
+                    ]
+                }
             ],
             "tags": [
                 {
