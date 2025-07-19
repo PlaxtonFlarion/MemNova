@@ -57,11 +57,11 @@ class Templater(object):
                 "url": f"file:///{ionics_path.as_posix()}",
                 "color": "#4CAF50"
             },
-            {**({{
+            {**({
                      "label": "➤ 日志 查看",
                      "url": f"file:///{logs[0].as_posix()}",
                      "color": "#4CAF50"
-                 } if logs else {}})},
+                 } if logs else {})},
             {
                 "label": "➤ UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
