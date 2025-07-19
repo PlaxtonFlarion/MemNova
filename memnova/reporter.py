@@ -221,10 +221,11 @@ class Reporter(object):
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_list: str,
-            team_data: dict
+            team_data: dict,
+            leak_mode: bool
     ) -> dict:
 
-        leak_mode, (images, ionics) = False, self.__share_folder()
+        images, ionics = self.__share_folder()
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(
@@ -303,9 +304,10 @@ class Reporter(object):
             templater: "Templater",
             data_list: str,
             team_data: dict,
+            leak_mode: bool
     ) -> dict:
 
-        leak_mode, (images, ionics) = True, self.__share_folder()
+        images, ionics = self.__share_folder()
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(
@@ -351,7 +353,7 @@ class Reporter(object):
             templater: "Templater",
             data_dir: str,
             images: "Path",
-            ionics: "Path",
+            ionics: "Path"
     ) -> dict:
 
         os.makedirs(
@@ -440,7 +442,7 @@ class Reporter(object):
             "seal": [
                 {"text": f"Score: {mkt['score']}", "class": "refer"},
                 {"text": f"Level: {mkt['level']}", "class": "refer"}
-            ]
+            ],
             "tags": [
                 {
                     "fields": [
