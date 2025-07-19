@@ -24,16 +24,12 @@ class Painter(object):
 
     @staticmethod
     async def draw_mem_metrics(
-            data_list: list[tuple],
+            df: "pd.DataFrame",
             output_path: str,
             *_,
             **kwargs
     ) -> str:
 
-        df = pd.DataFrame(
-            data_list,
-            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "foreground"]
-        )
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         df["num_x"] = md.date2num(df["x"])
@@ -65,7 +61,7 @@ class Painter(object):
         ).reset_index()
 
         # 判断内存趋势
-        trend, trend_score, jitter, pss_color, *_ = kwargs.values()
+        trend, trend_score, jitter, *_, pss_color = kwargs.values()
 
         # 配色与视觉分区
         avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
