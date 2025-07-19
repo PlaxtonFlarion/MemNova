@@ -415,7 +415,7 @@ class Memrix(object):
         )
 
         team_name = f"Track_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, reporter, self.focus, team_name, *args, **__)
+        traces = await self.refresh(device, reporter, self.focus, team_name)
 
         head = f"{self.title}_{now_time}" if self.title else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
@@ -588,7 +588,7 @@ async def main() -> typing.Any:
         ):
             logger.debug(f"Authorize: {resp}")
 
-    async def arithmetic(function: typing.Callable, *args, **kwargs) -> None:
+    async def arithmetic(function: typing.Callable) -> None:
         """
         执行通用异步任务函数。
         """
@@ -601,7 +601,7 @@ async def main() -> typing.Any:
 
         signal.signal(signal.SIGINT, memrix.task_clean_up)
 
-        return await function(device, *args, **kwargs)
+        return await function(device)
 
     # Notes: ========== Start from here ==========
     Design.startup_logo()
