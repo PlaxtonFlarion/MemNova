@@ -94,6 +94,41 @@ class Reporter(object):
         return None
 
     @staticmethod
+    def split_frames_with_ranges(
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            segment_ms: int = 60000
+    ) -> list[tuple]:
+        
+        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
+        start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
+        
+        segment_list = []
+        
+        cur_start = start_ts
+        while cur_start < close_ts:
+            cur_end = cur_start + segment_ms
+            segment_frames = [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]
+            if segment_frames:
+                roll_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in roll_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                drag_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in drag_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                jank_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in jank_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                segment_list.append((segment_frames, roll_in, drag_in, jank_in, cur_start, cur_end))
+            cur_start = cur_end
+        return segment_list
+
+    @staticmethod
     def split_frames_by_time(frames: list[dict], segment_ms: int = 60000) -> list[list[dict]]:
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
         segment_list = []
@@ -419,10 +454,12 @@ class Reporter(object):
             float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2
         )
 
-        conspiracy, segments = [], self.split_frames_by_time(raw_frames)
+        conspiracy, segments = [], self.split_frames_with_ranges(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges
+        )
 
-        for idx, segment in enumerate(segments, start=1):
-            x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
+        for idx, (segment, roll, drag, jank, x_start, x_close) in enumerate(segments, start=1):
+            # x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
             padding = (x_close - x_start) * 0.05
 
             if not (mk := Scores.score_segment(segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")):
@@ -432,9 +469,9 @@ class Reporter(object):
                 frames=segment,
                 x_start=x_start - padding,
                 x_close=x_close + padding,
-                roll_ranges=roll_ranges,
-                drag_ranges=drag_ranges,
-                jank_ranges=jank_ranges
+                roll_ranges=roll,
+                drag_ranges=drag,
+                jank_ranges=jank
             )
             p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}] - [{mk['label']}]"
             p.title.text_color = mk["color"]
