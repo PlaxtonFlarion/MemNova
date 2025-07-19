@@ -139,7 +139,7 @@ class Reporter(object):
         )
         metadata, (io, rss, block), (title, timestamp) = {}, io_data.values(), joint
 
-        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        head = f"{title}_{timestamp}" if title else data_dir
         image_loc = images / f"{head}_image.png"
         ionic_loc = ionics / f"{head}_ionic.png"
 
@@ -368,7 +368,9 @@ class Reporter(object):
             templater: "Templater",
             data_dir: str,
             images: "Path",
-            ionics: "Path"
+            ionics: "Path",
+            *_,
+            **__
     ) -> dict:
 
         os.makedirs(
@@ -385,7 +387,7 @@ class Reporter(object):
         io, rss, block = io_data.values()
         title, timestamp = joint
 
-        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        head = f"{title}_{timestamp}" if title else data_dir
         image_loc = images / f"{head}_image.png"
         ionic_loc = ionics / f"{head}_ionic.png"
 
@@ -484,6 +486,8 @@ class Reporter(object):
             templater: "Templater",
             data_list: str,
             team_data: dict,
+            *_,
+            **__
     ) -> typing.Optional[dict]:
 
         images, ionics = self.__share_folder()
