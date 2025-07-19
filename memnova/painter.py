@@ -86,11 +86,20 @@ class Painter(object):
             ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
         # 主线
-        ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
+        ax.plot(
+            df["num_x"], df["pss"], 
+            color=pss_color, linewidth=1.2, label="PSS"
+        )
         # 滑动平均
-        ax.plot(df["num_x"], df["pss_sliding_avg"], color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg")
+        ax.plot(
+            df["num_x"], df["pss_sliding_avg"], 
+            color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
+        )
         # 均值带
-        ax.axhspan(avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range")
+        ax.axhspan(
+            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, 
+            color="#D0D0FF", alpha=0.25, label="Average Range"
+        )
         # 均值/极值线
         ax.axhline(y=avg_val, linestyle=":", color=avg_color, linewidth=0.8)
         ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
@@ -98,10 +107,12 @@ class Painter(object):
 
         # 极值点
         ax.scatter(
-            df.loc[df["pss"] == max_val, "num_x"], [max_val], s=60, color="#FF1D58", zorder=3, label="Max"
+            df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"], 
+            s=60, color="#FF1D58", zorder=3, label="Max"
         )
         ax.scatter(
-            df.loc[df["pss"] == min_val, "num_x"], [min_val], s=60, color="#009FFD", zorder=3, label="Min"
+            df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"], 
+            s=60, color="#009FFD", zorder=3, label="Min"
         )
 
         # 设置轴与样式
