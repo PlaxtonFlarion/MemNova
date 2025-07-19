@@ -329,15 +329,15 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background-color: #009e89;
         }
 
-        /* 圆形标签容器 */
-        .seal-div {
+        /* 评估标签容器 */
+        .evaluate {
             display: flex;
             flex-direction: column;
             width: 20%;
             align-items: center;
             justify-content: center;
         }
-        /* 圆形标签 */
+        /* 评估标签 */
         .seal {
             width: 120px;
             margin: 2px 0;
@@ -538,7 +538,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
             </div>
         {% endif %}
-        <div class="seal-div">
+        <div class="evaluate">
             {% for s in res.seal %}
                 <p class="seal {{ s.class }}">{{ s.text }}</p>
             {% endfor %}
