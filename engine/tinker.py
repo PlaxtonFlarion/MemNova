@@ -303,6 +303,12 @@ class Period(object):
 
     @staticmethod
     def compress_time(dt: "datetime") -> str:
+        if isinstance(dt, str):
+            # 可自适应格式，也可以指定格式如 "%Y-%m-%d %H:%M:%S"
+            try:
+                dt = datetime.fromisoformat(dt)
+            except ValueError:
+                dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
         return dt.strftime("%Y%m%d%H%M%S")
 
 
