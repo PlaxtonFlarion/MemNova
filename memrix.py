@@ -408,13 +408,15 @@ class Memrix(object):
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-        reporter = Reporter(self.src_total_place, self.vault, self.align)
+        reporter = Reporter(
+            self.src_total_place, self.vault, prefix := "Storm" if self.storm else "Sleek", self.align
+        )
 
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"Track_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        team_name = f"{Storm}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await self.refresh(device, reporter, self.focus, team_name)
 
         head = f"{self.title}_{now_time}" if self.title else self.file_folder
