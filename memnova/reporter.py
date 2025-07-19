@@ -148,6 +148,11 @@ class Reporter(object):
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
         )
 
+        ionic_task = asyncio.create_task(
+            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
+        )
+        self.background_tasks.append(ionic_task)
+
         if leak_mode:
             leak = Scores.analyze_mem_trend(df["pss"])
             leak_result = {
@@ -160,11 +165,6 @@ class Reporter(object):
                 Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak_result), name="draw mem metrics"
             )
             self.background_tasks.append(image_task)
-
-            ionic_task = asyncio.create_task(
-                Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
-            )
-            self.background_tasks.append(ionic_task)
 
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
