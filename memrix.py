@@ -779,11 +779,11 @@ async def main() -> typing.Any:
         for typer in cmd_lines.track:
             match typer:
                 case "mem":
-                    track_mem = True, "mem"
+                    track_mem = "mem"
                 case "gfx":
-                    track_gfx = True, "gfx"
+                    track_gfx = "gfx"
                 case "io":
-                    track_io = True, "io"
+                    track_io = "io"
                 case _:
                     raise MemrixError(f"Type: {typer} -> not allowed in {const.ALLOWED_TYPES}")
 
