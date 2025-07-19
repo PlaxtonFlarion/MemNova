@@ -211,18 +211,16 @@ class Memrix(object):
             now_time: str,
     ) -> None:
 
-        if not track_gfx:
-            return None
-
         gfx_fmt_data, io_fmt_data, now_time = {}, {}, Period.convert_time(now_time)
 
         with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-            gfx_analyzer = GfxAnalyzer()
-            gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
-            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-            await Cubicle.insert_gfx_data(
-                 db, self.file_folder, self.align.label, now_time, gfx_fmt_data
-            )
+            if track_gfx:
+                gfx_analyzer = GfxAnalyzer()
+                gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
+                gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+                await Cubicle.insert_gfx_data(
+                    db, self.file_folder, self.align.label, now_time, gfx_fmt_data
+                )
 
             io_analyzer = IoAnalyzer()
             io_data = await io_analyzer.extract_metrics(tp, self.focus)
