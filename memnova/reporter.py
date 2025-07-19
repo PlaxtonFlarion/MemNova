@@ -155,20 +155,18 @@ class Reporter(object):
 
         if leak_mode:
             leak = Scores.analyze_mem_trend(df["pss"])
-            leak_result = {
-                "trend": leak["trend"], "trend_score": leak["trend_score"],
-                "jitter": leak["jitter"], "pss_color": leak["pss_color"]
-            }
-            leak_data = {**({"group": leak_result if leak_result else {}})}
+            seal = [
+                {"text": f"Trend: {leak['trend']}", "class": "refer"},
+                {"text": f"Score: {leak['trend_score']}", "class": "refer"},
+                {"text": f"Shake: {leak['jitter_index']}", "class": "refer"}
+            ]
 
             image_task = asyncio.create_task(
-                Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak_result), name="draw mem metrics"
+                Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak), name="draw mem metrics"
             )
             self.background_tasks.append(image_task)
 
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
-
-            seal = {}
 
             tag_lines = [
                 {
@@ -195,7 +193,9 @@ class Reporter(object):
                 all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
                 all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
 
-            seal = {**({"seal": "current-pass" if all_ok else "current-fail"})}
+            seal = [
+                "text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
+            ]
 
             tag_lines = [
                 {
@@ -212,9 +212,8 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
-            "tags": tag_lines,
-            **leak_data,
-            **seal
+            "seal": seal,
+            "tags": tag_lines
         }
 
     # Workflow: ======================== Track ========================
