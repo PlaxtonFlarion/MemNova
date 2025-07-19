@@ -40,7 +40,7 @@ from memnova import const
 
 class Reporter(object):
 
-    def __init__(self, src_total_place: str, vault: str, align: "Align"):
+    def __init__(self, src_total_place: str, vault: str, classify_type: str, align: "Align"):
         self.total_dir = os.path.join(src_total_place, const.TOTAL_DIR)
         self.before_time = time.time()
 
@@ -48,7 +48,7 @@ class Reporter(object):
 
         vault = vault or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
 
-        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, vault)
+        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{vault}_{classify_type}")
         if not (group_dir := Path(self.group_dir)).exists():
             group_dir.mkdir(parents=True, exist_ok=True)
 
