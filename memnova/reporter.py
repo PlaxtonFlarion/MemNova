@@ -459,10 +459,9 @@ class Reporter(object):
         )
 
         for idx, (segment, roll, drag, jank, x_start, x_close) in enumerate(segments, start=1):
-            # x_start, x_close = segment[0]["timestamp_ms"], segment[-1]["timestamp_ms"]
             padding = (x_close - x_start) * 0.05
 
-            if not (mk := Scores.score_segment(segment, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")):
+            if not (mk := Scores.score_segment(segment, roll, drag, jank, fps_key="fps_app")):
                 continue
 
             p = await templater.plot_gfx_analysis(
