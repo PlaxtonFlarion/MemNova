@@ -427,8 +427,7 @@ class Reporter(object):
         if not conspiracy:
             return {}
 
-        # todo 最终得分写入报告
-        final_score = Scores.score_segment(
+        mkt = Scores.score_segment(
             raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
         )
 
@@ -441,6 +440,10 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
+            "seal": [
+                {"text": f"Score: {mkt['score']}", "class": "refer"},
+                {"text": f"Level: {mkt['level']}", "class": "refer"}
+            ]
             "tags": [
                 {
                     "fields": [
