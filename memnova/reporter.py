@@ -195,7 +195,7 @@ class Reporter(object):
                 all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
                 all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
 
-            seal = {**({"seal": "current-pass" if all_ok else {"seal": "current-fail"}})}
+            seal = {**({"seal": "current-pass" if all_ok else "current-fail"})}
 
             tag_lines = [
                 {
