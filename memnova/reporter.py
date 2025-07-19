@@ -139,7 +139,7 @@ class Reporter(object):
         )
         metadata, (io, rss, block), (title, timestamp) = {}, io_data.values(), joint
 
-        head = f"{title}_{timestamp}" if title else data_dir
+        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         image_loc = images / f"{head}_image.png"
         ionic_loc = ionics / f"{head}_ionic.png"
 
@@ -387,7 +387,7 @@ class Reporter(object):
         io, rss, block = io_data.values()
         title, timestamp = joint
 
-        head = f"{title}_{timestamp}" if title else data_dir
+        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         image_loc = images / f"{head}_image.png"
         ionic_loc = ionics / f"{head}_ionic.png"
 
