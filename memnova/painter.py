@@ -179,13 +179,13 @@ class Painter(object):
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # === 背景区块绘制 ===
-        def draw_background(ranges: list[dict], color: str) -> None:
+        def draw_background(ranges: list[dict], color: str, alpha: float) -> None:
             for r in ranges:
-                ax1.axvspan(r["start_ts"], r["end_ts"], color=color, alpha=0.12)
+                ax1.axvspan(r["start_ts"], r["end_ts"], color=color, alpha=alpha)
 
-        draw_background(roll_ranges, "#A2C8E6")   # 滑动
-        draw_background(drag_ranges, "#FFD39B")   # 拖拽
-        draw_background(jank_ranges, "#F5A9A9")   # 掉帧
+        draw_background(roll_ranges, "#A2C8E6", 0.12)   # 滑动区
+        draw_background(drag_ranges, "#FFD39B", 0.16)   # 拖拽区
+        draw_background(jank_ranges, "#F24C4C", 0.32)   # 掉帧区，最突出
 
         # === 帧耗时主线 ===
         line_color = "#585858"
