@@ -232,8 +232,8 @@ class Memrix(object):
                     db, self.file_folder, self.align.label, now_time, io_fmt_data
                 )
 
-            self.file_insert += (len(gfx_fmt_data) + len(io_fmt_data))
-            logger.info(f"Article {self.file_insert} data insert success")
+        self.file_insert += (len(gfx_fmt_data) + len(io_fmt_data))
+        logger.info(f"Article {self.file_insert} data insert success")
 
     async def memory_collector(
             self,
@@ -449,11 +449,11 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self) -> None:
-        if not (target_dir := Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR / self.focus).exists():
+        original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
+        if not (target_dir := original / self.focus).exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
         reporter = Reporter(self.src_total_place, self.focus, self.align)
-
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"Missing valid data file: {file}")
