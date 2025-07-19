@@ -329,27 +329,18 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background-color: #009e89;
         }
 
-        /* 评估标签容器 */
+        /* 评估标签 */
         .evaluate {
             display: flex;
-            flex-direction: column;
             width: 20%;
             align-items: center;
             justify-content: center;
         }
-        /* 评估标签 */
+        .seal-wrapper {
+            margin: 0 10px;
+        }
         .seal {
-            width: 120px;
-            margin: 2px 0;
-            text-align: start;
-        }
-        .current-pass {
-            border: 5px solid rgb(118 179 33);
-            box-shadow: 0px 0px 10px rgb(118 179 33);
-        }
-        .current-fail {
-            border: 5px solid rgb(203, 80, 42);
-            box-shadow: 0px 0px 10px rgb(203, 80, 42);
+            margin: 5px 0;
         }
 
         .details {
@@ -539,8 +530,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             </div>
         {% endif %}
         <div class="evaluate">
-            {% for s in res.seal %}
-                <p class="seal {{ s.class }}">{{ s.text }}</p>
+            {% for eva in res.evaluate %}
+                {% if eva.fields %}
+                    <div class="seal-wrapper">
+                        {% for field in eva.fields %}
+                            <p class="seal {{ field.class }}">{{ field.text }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             {% endfor %}
         </div>
         {% if res.tags %}
