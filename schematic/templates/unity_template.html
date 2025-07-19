@@ -339,7 +339,9 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
         /* 圆形标签 */
         .seal {
+            width: 120px;
             margin: 2px 0;
+            text-align: start;
         }
         .current-pass {
             border: 5px solid rgb(118 179 33);
@@ -536,13 +538,11 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
             </div>
         {% endif %}
-        {% if res.seal %}
-            <div class="seal-div">
-                {% for s in res.seal %}
-                    <p class="seal {{ s.class }}">{{ s.text }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
+        <div class="seal-div">
+            {% for s in res.seal %}
+                <p class="seal {{ s.class }}">{{ s.text }}</p>
+            {% endfor %}
+        </div>
         {% if res.tags %}
             <div class="details">
                 {% for tag in res.tags %}
