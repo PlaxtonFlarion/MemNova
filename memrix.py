@@ -135,6 +135,8 @@ class Memrix(object):
             reporter: "Reporter",
             package: str,
             team_name: str,
+            *args,
+            **__
     ) -> "Path":
 
         self.file_insert = 0
@@ -159,7 +161,10 @@ class Memrix(object):
             scene["file"].append(self.file_folder)
         else:
             scene = {
-                "time": format_before_time, "mark": device.serial, "file": [self.file_folder]
+                "time": format_before_time,
+                "mark": device.serial,
+                "type": ",".join(args),
+                "file": [self.file_folder]
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
 
@@ -409,6 +414,8 @@ class Memrix(object):
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
+        track_mem, track_gfx, track_io, *_ = args
+
         reporter = Reporter(self.src_total_place, self.vault, self.align)
 
         logger.info(
@@ -416,12 +423,10 @@ class Memrix(object):
         )
 
         team_name = f"Track_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, reporter, self.focus, team_name)
+        traces = await self.refresh(device, reporter, self.focus, team_name, *args, **__)
 
         head = f"{self.title}_{now_time}" if self.title else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
-
-        track_mem, track_gfx, track_io, *_ = args
 
         perfetto = Perfetto(track_gfx or track_io, device, self.ft_file, str(trace_loc))
 
@@ -458,34 +463,37 @@ class Memrix(object):
             if not Path(file).is_file():
                 raise MemrixError(f"Missing valid data file: {file}")
 
-        # todo 文件夹不分类后该怎么自适应报告
+        team_data = await FileAssist.read_yaml(reporter.team_file)
+
         segment_router = {
-            "Track": "track_rendition",
-            "Lapse": "lapse_rendition",
-            "Sleek": "sleek_rendition"
+            "mem": "lapse_rendition" if self.hprof else "mem_rendition",
+            "gfx": "gfx_rendition",
         }
 
-        if len(parts := target_dir.name.split("_")) != 2:
-            raise MemrixError(f"Unexpected directory name format: {target_dir.name}")
-        src, dst = parts
+        if not (classify_type := team_data.get("type")):
+            raise MemrixError(f"No data classify type: {classify_type} ...")
 
-        try:
-            render = segment_router[dst]
-        except KeyError:
-            raise MemrixError(f"Unsupported directory type: {src} ...")
+        renderers = []
+        for i in classify_type.strip().split(","):
+            try:
+                renderers.append(segment_router[i])
+            except KeyError:
+                raise MemrixError(f"Unexpected name format: {i} ...")
 
         async with aiosqlite.connect(reporter.db_file) as db:
             templater = Templater(
                 os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
             )
 
-            team_data = await FileAssist.read_yaml(reporter.team_file)
             if not (data_list := team_data.get("file")):
                 raise MemrixError(f"No data scenario: {data_list} ...")
 
-            rendition = await getattr(reporter, render)(db, templater, data_list, team_data)
-
-            await reporter.make_report(self.unity_template, templater.download, **rendition)
+            for rendition in await asyncio.gather(
+                *(getattr(reporter, render)(db, templater, data_list, team_data) for render in renderers)
+            ):
+                await reporter.make_report(
+                    self.unity_template, templater.download, **rendition
+                )
             await asyncio.gather(*reporter.background_tasks)
 
 
@@ -766,16 +774,16 @@ async def main() -> typing.Any:
     memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
     if cmd_lines.track:
-        track_mem, track_gfx, track_io = False, False, False
+        track_mem, track_gfx, track_io = "", "", ""
 
         for typer in cmd_lines.track:
             match typer:
                 case "mem":
-                    track_mem = True
+                    track_mem = True, "mem"
                 case "gfx":
-                    track_gfx = True
+                    track_gfx = True, "gfx"
                 case "io":
-                    track_io = True
+                    track_io = True, "io"
                 case _:
                     raise MemrixError(f"Type: {typer} -> not allowed in {const.ALLOWED_TYPES}")
 

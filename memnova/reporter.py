@@ -125,7 +125,7 @@ class Reporter(object):
             data_dir: str,
             images: "Path",
             ionics: "Path",
-            priority: bool,
+            leak_mode: bool,
     ) -> dict:
 
         os.makedirs(
@@ -148,13 +148,13 @@ class Reporter(object):
             columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
         )
 
-        if priority:
+        if leak_mode:
             leak = Scores.analyze_mem_trend(df["pss"])
             leak_result = {
                 "trend": leak["trend"], "trend_score": leak["trend_score"],
                 "jitter": leak["jitter"], "pss_color": leak["pss_color"]
             }
-            leak_data = {**({"group": leak_result["trend"] if leak_result else {}})}
+            leak_data = {**({"group": leak_result if leak_result else {}})}
 
             image_task = asyncio.create_task(
                 Painter.draw_mem_metrics(union_data_list, str(image_loc), **leak_result), name="draw mem metrics"
@@ -166,10 +166,6 @@ class Reporter(object):
             )
             self.background_tasks.append(ionic_task)
 
-        else:
-            leak_data = {}
-
-        if priority:
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
             seal = {}
@@ -184,6 +180,8 @@ class Reporter(object):
             ]
 
         else:
+            leak_data = {}
+
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -221,7 +219,7 @@ class Reporter(object):
 
     # Workflow: ======================== Track ========================
 
-    async def track_rendition(
+    async def mem_rendition(
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
@@ -229,11 +227,11 @@ class Reporter(object):
             team_data: dict
     ) -> dict:
 
-        priority, (images, ionics) = False, self.__share_folder()
+        leak_mode, (images, ionics) = False, self.__share_folder()
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(
-                db, templater, data_dir, images, ionics, priority
+                db, templater, data_dir, images, ionics, leak_mode
             ) for data_dir in data_list)
         )
 
@@ -310,11 +308,11 @@ class Reporter(object):
             team_data: dict,
     ) -> dict:
 
-        priority, (images, ionics) = True, self.__share_folder()
+        leak_mode, (images, ionics) = True, self.__share_folder()
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(
-                db, templater, data_dir, images, ionics, priority
+                db, templater, data_dir, images, ionics, leak_mode
             ) for data_dir in data_list)
         )
 
@@ -350,7 +348,7 @@ class Reporter(object):
 
     # Workflow: ======================== Sleek ========================
 
-    async def __sleek_rendering(
+    async def __gfx_rendering(
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
@@ -459,7 +457,7 @@ class Reporter(object):
             ]
         }
 
-    async def sleek_rendition(
+    async def gfx_rendition(
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
@@ -470,7 +468,7 @@ class Reporter(object):
         images, ionics = self.__share_folder()
 
         compilation = await asyncio.gather(
-            *(self.__sleek_rendering(db, templater, data_dir, images, ionics) for data_dir in data_list)
+            *(self.__gfx_rendering(db, templater, data_dir, images, ionics) for data_dir in data_list)
         )
 
         return {
