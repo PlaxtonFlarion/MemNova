@@ -13,8 +13,9 @@ import os
 import re
 import sys
 import stat
-import time
 import json
+import time
+import uuid
 import typing
 import signal
 import shutil
@@ -49,7 +50,7 @@ from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.templater import Templater
 from memnova.reporter import Reporter
-from memnova.tracer import GfxAnalyzer, IonAnalyzer
+from memnova.tracer import GfxAnalyzer, IoAnalyzer
 from memnova import const
 
 
@@ -71,8 +72,8 @@ class Memrix(object):
 
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
-        self.track, self.lapse, self.sleek, self.surge, self.forge, *_ = args
-        _, _, _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
+        self.track, self.forge, *_ = args
+        _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -128,21 +129,11 @@ class Memrix(object):
             server.close()
             await server.wait_closed()
 
-    async def profile(self, device: "Device", heaped: str) -> None:
-        max_file = 0
-        while self.task_close_event.is_set() or max_file >= 10:
-            target = f"/data/local/temp/Hprof_{time.strftime('%Y%m%d%H%M%S')}.hprof"
-            await device.dump_heap(self.focus, target)
-            await device.pull(target, heaped)
-            await device.remove(target)
-            max_file += 1
-            await asyncio.sleep(180)
-
     async def refresh(
             self,
             device: "Device",
-            package: str,
             reporter: "Reporter",
+            package: str,
             team_name: str,
     ) -> "Path":
 
@@ -210,17 +201,53 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    # """星痕律动 / 星落浮影"""
-    async def mem_dump_task(self, device: "Device") -> None:
+    async def sample_analyze(
+            self,
+            track_gfx: bool,
+            track_io: bool,
+            db: "aiosqlite.Connection",
+            trace_loc: typing.Union["Path", str],
+            now_time: str,
+    ) -> None:
+
+        if not track_gfx or not track_io:
+            return None
+
+        gfx_fmt_data, io_fmt_data, now_time = {}, {}, Period.convert_time(now_time)
+
+        with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
+            if track_gfx:
+                gfx_analyzer = GfxAnalyzer()
+                gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
+                gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+                await Cubicle.insert_gfx_data(
+                    db, self.file_folder, self.align.label, now_time, gfx_fmt_data
+                )
+
+            if track_io:
+                io_analyzer = IoAnalyzer()
+                io_data = await io_analyzer.extract_metrics(tp, self.focus)
+                io_fmt_data = {k: json.dumps(v) for k, v in io_data.items()}
+                await Cubicle.insert_io_data(
+                    db, self.file_folder, self.align.label, now_time, io_fmt_data
+                )
+
+            self.file_insert += (len(gfx_fmt_data) + len(io_fmt_data))
+            logger.info(f"Article {self.file_insert} data insert success")
+
+    async def memory_collector(
+            self,
+            enable_collector: bool,
+            device: "Device",
+            db: "aiosqlite.Connection",
+    ) -> None:
 
         async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
             if not (memory := await device.memory_info(self.focus)):
                 return None
 
             logger.info(f"Dump -> [{pid}] - [{self.focus}]")
-            resume_map: dict = {}
-            memory_map: dict = {}
-            memory_vms: dict = {}
+            resume_map, memory_map, memory_vms = {}, {}, {}
 
             if match_memory := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", memory, re.S):
                 toolkit.text_content = (clean_memory := re.sub(r"\s+", " ", match_memory.group()))
@@ -272,7 +299,7 @@ class Memrix(object):
             logger.info(msg)
 
             if not all(current_info_list := await asyncio.gather(
-                    device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
+                device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
             )):
                 self.dumped.set()
                 self.memories.update({
@@ -312,7 +339,7 @@ class Memrix(object):
                 remark_map.update({"pid": k + " - " + v})
 
             if all(memory_result := await asyncio.gather(
-                    *(flash_memory(k) for k in list(app_pid.member.keys()))
+                *(flash_memory(k) for k in list(app_pid.member.keys()))
             )):
                 muster = defaultdict(lambda: defaultdict(float))
                 for result in memory_result:
@@ -365,140 +392,58 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        # Notes: ========== Start from here ==========
+        if not enable_collector:
+            return None
+
+        toolkit: "ToolKit" = ToolKit()
+
+        self.dumped = asyncio.Event()
+        while not self.task_close_event.is_set():
+            await flash_memory_launch()
+            await asyncio.sleep(self.align.speed)
+
+    # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
+    async def track_core_task(self, device: "Device", *args, **__) -> None:
+
+        # Workflow: ========== 检查配置 ==========
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
-        reporter = Reporter(
-            self.src_total_place, self.vault, (prefix := "Track" if self.track else "Lapse"), self.align
-        )
-
-        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        reporter = Reporter(self.src_total_place, self.vault, self.align)
 
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, self.focus, reporter, team_name)
+        team_name = f"Track_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        traces = await self.refresh(device, reporter, self.focus, team_name)
 
-        # Notes: ========== 启动工具 ==========
-        toolkit, ion = ToolKit(), IonAnalyzer()
-
-        head = f"{title}_{now_format}" if (title := self.title) else self.file_folder
+        head = f"{self.title}_{now_time}" if self.title else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
-        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
+        track_mem, track_gfx, track_io, *_ = args
 
+        perfetto = Perfetto(track_gfx or track_io, device, self.ft_file, str(trace_loc))
+
+        # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
-            await Cubicle.create_tables(db)
-            await Cubicle.insert_joint_data(
-                db, self.file_folder, self.title, Period.convert_time(now_format)
+            await Cubicle.initialize_tables(
+                db, self.file_folder, self.title, Period.convert_time(now_time)
             )
-
             self.animation_task = asyncio.create_task(
-                self.design.memory_wave(
-                    self.memories, animation_event := asyncio.Event()
-                )
+                self.design.memory_wave(self.memories, animation_event := asyncio.Event())
             )
-
-            perfetto: "Perfetto" = Perfetto(
-                self.ft_file, device, device_folder, target_folder, str(trace_loc)
-            )
-            logger.info(f"开始采样 ...")
             await perfetto.start()
 
             watcher = asyncio.create_task(self.watcher())
+            await self.memory_collector(track_mem, device, db)
 
-            self.dumped = asyncio.Event()
-            while not self.task_close_event.is_set():
-                await flash_memory_launch()
-                await asyncio.sleep(self.align.speed)
+            await self.task_close_event.wait()
 
-            logger.info(f"结束采样 ...")
             await perfetto.close()
+            await self.sample_analyze(track_gfx, track_io, db, trace_loc, now_time)
 
-            logger.info(f"提取样本 ...")
-            with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-                ion_data = await ion.extract_metrics(tp, self.focus)
-                fmt_data = {k: json.dumps(v) for k, v in ion_data.items()}
-                logger.info(f"存储样本 ...")
-                await Cubicle.insert_ion_data(
-                    db, self.file_folder, self.align.label, Period.convert_time(now_format), fmt_data
-                )
             animation_event.set()
-
-        await asyncio.gather(watcher, self.sample_stop(reporter))
-
-    # """帧影流光 / 引力回廊"""
-    async def gfx_dump_task(self, device: "Device") -> None:
-
-        # Notes: ========== Start from here ==========
-        if not (check := await device.examine_pkg(self.focus)):
-            raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
-
-        reporter = Reporter(
-            self.src_total_place, self.vault, (prefix := "Sleek" if self.sleek else "Surge"), self.align
-        )
-
-        logger.add(reporter.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
-
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
-        )
-
-        team_name = f"{prefix}_Data_{(now_format := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, self.focus, reporter, team_name)
-
-        # Notes: ========== 启动工具 ==========
-        gfx, ion = GfxAnalyzer(), IonAnalyzer()
-
-        head = f"{title}_{now_format}" if (title := self.title) else self.file_folder
-        trace_loc = traces / f"{head}_trace.perfetto-trace"
-
-        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        target_folder = f"/data/misc/perfetto-traces/trace_{now_format}.perfetto-trace"
-
-        perfetto: "Perfetto" = Perfetto(
-            self.ft_file, device, device_folder, target_folder, str(trace_loc)
-        )
-        logger.info(f"开始采样 ...")
-        await perfetto.start()
-
-        watcher = asyncio.create_task(self.watcher())
-
-        await self.task_close_event.wait()
-
-        logger.info(f"结束采样 ...")
-        await perfetto.close()
-
-        logger.info(f"提取样本 ...")
-        with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-            gfx_data, ion_data = await asyncio.gather(
-                gfx.extract_metrics(tp, self.focus),
-                ion.extract_metrics(tp, self.focus)
-            )
-
-            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-            ion_fmt_data = {k: json.dumps(v) for k, v in ion_data.items()}
-
-            async with aiosqlite.connect(reporter.db_file) as db:
-                await Cubicle.create_tables(db)
-                logger.info(f"存储样本 ...")
-                await asyncio.gather(
-                    Cubicle.insert_joint_data(
-                        db, self.file_folder, self.title, Period.convert_time(now_format)
-                    ),
-                    Cubicle.insert_gfx_data(
-                        db, self.file_folder, self.align.label, Period.convert_time(now_format), gfx_fmt_data
-                    ),
-                    Cubicle.insert_ion_data(
-                        db, self.file_folder, self.align.label, Period.convert_time(now_format), ion_fmt_data
-                    )
-                )
-                self.file_insert += (len(gfx_fmt_data) + len(ion_fmt_data))
-                logger.info(f"Article {self.file_insert} data insert success")
 
         await asyncio.gather(watcher, self.sample_stop(reporter))
 
@@ -507,12 +452,18 @@ class Memrix(object):
         if not (target_dir := Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR / self.focus).exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
+        reporter = Reporter(self.src_total_place, self.focus, self.align)
+
+        for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
+            if not Path(file).is_file():
+                raise MemrixError(f"Missing valid data file: {file}")
+
+        # todo 文件夹不分类后该怎么自适应报告
         segment_router = {
             "Track": "track_rendition",
             "Lapse": "lapse_rendition",
             "Sleek": "sleek_rendition"
         }
-
 
         if len(parts := target_dir.name.split("_")) != 2:
             raise MemrixError(f"Unexpected directory name format: {target_dir.name}")
@@ -522,12 +473,6 @@ class Memrix(object):
             render = segment_router[dst]
         except KeyError:
             raise MemrixError(f"Unsupported directory type: {src} ...")
-
-        reporter = Reporter(self.src_total_place, src, dst, self.align)
-
-        for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
-            if not Path(file).is_file():
-                raise MemrixError(f"Missing valid data file: {file}")
 
         async with aiosqlite.connect(reporter.db_file) as db:
             templater = Templater(
@@ -551,42 +496,52 @@ class Perfetto(object):
 
     def __init__(
             self,
-            config: str,
+            enable_perfetto: bool,
             device: "Device",
-            device_folder: str,
-            target_folder: str,
-            trace_loc: str
-    ):
+            ft_file: typing.Union["Path", str],
+            trace_loc: typing.Union["Path", str]
+    ) -> None:
 
-        self.config = config
-        self.device = device
-        self.device_folder = device_folder
-        self.target_folder = target_folder
-        self.trace_loc = trace_loc
+        self.__enable_perfetto = enable_perfetto
+        self.__device = device
+        self.__ft_file = str(ft_file)
+        self.__trace_loc = str(trace_loc)
+
+        self.__device_folder: typing.Optional[str] = None
+        self.__target_folder: typing.Optional[str] = None
+
+    async def __input_stream(self) -> None:
+        async for line in self.__transports.stdout:
+            logger.info(line.decode(const.CHARSET).strip())
+
+    async def __error_stream(self) -> None:
+        async for line in self.__transports.stderr:
+            logger.info(line.decode(const.CHARSET).strip())
 
     async def start(self) -> None:
+        if not self.__enable_perfetto:
+            return None
 
-        async def input_stream() -> None:
-            async for line in self.__transports.stdout:
-                logger.info(line.decode(const.CHARSET).strip())
+        unique_id = uuid.uuid4().hex[:8]
+        self.__device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
+        self.__target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
-        async def error_stream() -> None:
-            async for line in self.__transports.stderr:
-                logger.info(line.decode(const.CHARSET).strip())
+        await self.__device.push(self.__ft_file, self.__device_folder)
+        await self.__device.change_mode(777, self.__device_folder)
 
-        await self.device.push(self.config, self.device_folder)
-        await self.device.change_mode(777, self.device_folder)
-
-        self.__transports = await self.device.perfetto_start(
-            self.device_folder, self.target_folder
+        self.__transports = await self.__device.perfetto_start(
+            self.__device_folder, self.__target_folder
         )
-        _ = asyncio.create_task(input_stream())
-        _ = asyncio.create_task(error_stream())
+        _ = asyncio.create_task(self.__input_stream())
+        _ = asyncio.create_task(self.__error_stream())
 
     async def close(self) -> None:
-        await self.device.perfetto_close()
-        await self.device.pull(self.target_folder, self.trace_loc)
-        await self.device.remove(self.target_folder)
+        if not self.__enable_perfetto or not self.__transports:
+            return None
+
+        await self.__device.perfetto_close()
+        await self.__device.pull(self.__target_folder, self.__trace_loc)
+        await self.__device.remove(self.__target_folder)
         self.__transports = None
 
 
@@ -633,7 +588,7 @@ async def main() -> typing.Any:
         ):
             logger.debug(f"Authorize: {resp}")
 
-    async def arithmetic(function: "typing.Callable") -> None:
+    async def arithmetic(function: typing.Callable, *args, **kwargs) -> None:
         """
         执行通用异步任务函数。
         """
@@ -646,7 +601,7 @@ async def main() -> typing.Any:
 
         signal.signal(signal.SIGINT, memrix.task_clean_up)
 
-        return await function(device)
+        return await function(device, *args, **kwargs)
 
     # Notes: ========== Start from here ==========
     Design.startup_logo()
@@ -793,7 +748,7 @@ async def main() -> typing.Any:
     await align.load_align()
 
     positions = (
-        cmd_lines.track, cmd_lines.lapse, cmd_lines.sleek, cmd_lines.surge, cmd_lines.forge,
+        cmd_lines.track, cmd_lines.forge,
         cmd_lines.focus, cmd_lines.vault, cmd_lines.title, cmd_lines.hprof,
     )
     keywords = {
@@ -810,11 +765,23 @@ async def main() -> typing.Any:
 
     memrix = Memrix(wires, level, power, remote, *positions, **keywords)
 
-    if cmd_lines.track or cmd_lines.lapse:
-        return await arithmetic(memrix.mem_dump_task)
+    if cmd_lines.track:
+        track_mem, track_gfx, track_io = False, False, False
 
-    elif cmd_lines.sleek:
-        return await arithmetic(memrix.gfx_dump_task)
+        for typer in cmd_lines.track:
+            match typer:
+                case "mem":
+                    track_mem = True
+                case "gfx":
+                    track_gfx = True
+                case "io":
+                    track_io = True
+                case _:
+                    raise MemrixError(f"Type: {typer} -> not allowed in {const.ALLOWED_TYPES}")
+
+        return await arithmetic(
+            memrix.track_core_task, track_mem, track_gfx, track_io
+        )
 
     elif cmd_lines.forge:
         return await memrix.observation()

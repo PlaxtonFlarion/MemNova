@@ -311,7 +311,7 @@ class GfxAnalyzer(_Tracer):
         }
 
 
-class IonAnalyzer(_Tracer):
+class IoAnalyzer(_Tracer):
     """I/O"""
 
     async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:

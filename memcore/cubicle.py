@@ -20,16 +20,24 @@ class Cubicle(object):
     __joint_table = "joint_table"
     __mem_data_table = "mem_data"
     __gfx_data_table = "gfx_data"
-    __ion_data_table = "ion_data"
+    __io_data_table = "ion_data"
 
     @staticmethod
-    async def create_tables(db: "aiosqlite.Connection") -> None:
+    async def initialize_tables(
+            db: "aiosqlite.Connection",
+            data_dir: str,
+            title: str,
+            timestamp: str,
+    ) -> typing.Any:
+
         await asyncio.gather(
             Cubicle.__create_joint_table(db),
             Cubicle.__create_mem_table(db),
             Cubicle.__create_gfx_table(db),
-            Cubicle.__create_ion_table(db)
+            Cubicle.__create_io_table(db)
         )
+
+        return await Cubicle.insert_joint_data(db, data_dir, title, timestamp)
 
     @staticmethod
     async def __create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
@@ -280,8 +288,8 @@ class Cubicle(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def __create_ion_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__ion_data_table} (
+    async def __create_io_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__io_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -292,7 +300,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def insert_ion_data(
+    async def insert_io_data(
             db: "aiosqlite.Connection",
             data_dir: str,
             label: str,
@@ -300,7 +308,7 @@ class Cubicle(object):
             payload: dict
     ) -> None:
 
-        await db.execute(f'''INSERT INTO {Cubicle.__ion_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.__io_data_table} (
             data_dir,
             label,
             timestamp,
@@ -318,13 +326,13 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_ion_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+    async def query_io_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
                 io,
                 rss,
                 block
-            FROM {Cubicle.__ion_data_table}
+            FROM {Cubicle.__io_data_table}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:

@@ -8,6 +8,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import re
 import typing
 import argparse
 import textwrap
@@ -24,9 +25,7 @@ class Parser(object):
     def __init__(self):
         custom_made_usage = f"""\
         --------------------------------------------
-        \033[1;35m{const.APP_NAME}\033[0m --track --focus <com.example.app> --imply <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --lapse --focus <com.example.app> --imply <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --sleek --focus <com.example.app> --imply <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --track mem,gfx,io --focus <com.example.app> --imply <device.serial>
         \033[1;35m{const.APP_NAME}\033[0m --forge --focus <file.name>
         \033[1;35m{const.APP_NAME}\033[0m --align
         """
@@ -50,38 +49,13 @@ class Parser(object):
         major_group = mutually_exclusive.add_mutually_exclusive_group()
 
         major_group.add_argument(
-            "--track", action="store_true",
+            "--track",
+            nargs="?",
+            type=lambda x: [i for i in re.split(r'[,\s;]+', x) if i],
             help=textwrap.dedent(f'''\
                 \033[1;34m^*星痕律动*^\033[0m
                 -------------------------
-                - 内存基线
-
-            ''')
-        )
-        major_group.add_argument(
-            "--lapse", action="store_true",
-            help=textwrap.dedent(f'''\
-                \033[1;34m^*星落浮影*^\033[0m
-                -------------------------
-                - 内存泄露
-
-            ''')
-        )
-        major_group.add_argument(
-            "--sleek", action="store_true",
-            help=textwrap.dedent(f'''\
-                \033[1;34m^*帧影流光*^\033[0m
-                -------------------------
-                - 流畅度
-
-            ''')
-        )
-        major_group.add_argument(
-            "--surge", action="store_true",
-            help=textwrap.dedent(f'''\
-                \033[1;34m^*引力回廊*^\033[0m
-                -------------------------
-                - I/O
+                - 内存基线，内存泄露，流畅度，I/O
 
             ''')
         )
