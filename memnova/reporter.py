@@ -178,8 +178,6 @@ class Reporter(object):
             ]
 
         else:
-            leak_data = {}
-
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -194,7 +192,7 @@ class Reporter(object):
                 all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
 
             seal = [
-                "text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
+                {"text": "Pass", "class": "expiry-pass" if all_ok else "expiry-fail"}
             ]
 
             tag_lines = [
