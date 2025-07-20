@@ -73,7 +73,7 @@ class Memrix(object):
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.vault, self.title, self.hprof, *_ = args
+        _, _, _, self.focus, self.nodes, self.title, self.front, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -197,7 +197,7 @@ class Memrix(object):
             )
 
         logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
+            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^\n"
         )
 
         Design.console.print()
@@ -407,7 +407,7 @@ class Memrix(object):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
         reporter = Reporter(
-            self.src_total_place, self.vault, prefix := "Storm" if self.storm else "Sleek", self.align
+            self.src_total_place, self.nodes, prefix := "Storm" if self.storm else "Sleek", self.align
         )
 
         logger.info(
@@ -417,7 +417,12 @@ class Memrix(object):
         team_name = f"{prefix}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await self.refresh(device, reporter, self.focus, team_name)
 
-        head = f"{self.title}_{now_time}" if self.title else self.file_folder
+        if self.title:
+            safe = re.sub(r'[\\/:"*?<>|]+', '', self.title)
+            head = f"{safe[:11]}_{now_time}"
+        else:
+            head = self.file_folder
+
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
         perfetto = Perfetto(device, self.ft_file, trace_loc)
@@ -483,7 +488,7 @@ class Memrix(object):
 
         async with aiosqlite.connect(reporter.db_file) as db:
             rendition = await getattr(reporter, render)(
-                db, templater, data_list, team_data, self.hprof
+                db, templater, team_data, self.front
             )
             await reporter.make_report(
                 self.unity_template, templater.download, **rendition
@@ -744,7 +749,7 @@ async def main() -> typing.Any:
 
     positions = (
         cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.vault, cmd_lines.title, cmd_lines.hprof,
+        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.front,
     )
     keywords = {
         "src_opera_place": src_opera_place,

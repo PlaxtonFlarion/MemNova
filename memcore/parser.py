@@ -49,6 +49,8 @@ class Parser(object):
         )
         major_group = mutually_exclusive.add_mutually_exclusive_group()
 
+        # Workflow: ======================== 参数互斥 ========================
+
         major_group.add_argument(
             "--storm", action="store_true",
             help=textwrap.dedent(f'''\
@@ -69,7 +71,7 @@ class Parser(object):
         )
         major_group.add_argument(
             "--forge",
-            type=lambda x: re.sub(r"[^a-zA-Z0-9_]", "", x),
+            type=lambda x: re.sub(r"[^a-zA-Z0-9\u4e00-\u9fa5]", "", x),
             help=textwrap.dedent(f'''\
                 \033[1;34m^*真相快照*^\033[0m
                 -------------------------
@@ -96,6 +98,8 @@ class Parser(object):
             ''')
         )
 
+        # Workflow: ======================== 参数兼容 ========================
+
         minor_group = self.__parse_engine.add_argument_group(
             title="\033[1m^* 环境桥接 *^\033[0m",
             description=textwrap.dedent(f'''\
@@ -103,11 +107,11 @@ class Parser(object):
             '''),
         )
         minor_group.add_argument(
-            "--hprof", type=str, default=None,
+            "--split", type=str, default=None,
             help=textwrap.dedent(f'''\
-                \033[1;36m^*核心碎片*^\033[0m
+                \033[1;36m^*极昼极夜*^\033[0m
                 -------------------------
-                - 核心碎片
+                - 极昼极夜
 
             ''')
         )
@@ -130,7 +134,7 @@ class Parser(object):
             ''')
         )
         minor_group.add_argument(
-            "--vault", type=str, default=None,
+            "--nodes", type=str, default=None,
             help=textwrap.dedent(f'''\
                 \033[1;36m^*中枢节点*^\033[0m
                 -------------------------
@@ -147,6 +151,8 @@ class Parser(object):
 
             ''')
         )
+
+        # Workflow: ======================== 参数兼容 ========================
 
         extra_group = self.__parse_engine.add_argument_group(
             title="\033[1m^* 观象引擎 *^\033[0m",

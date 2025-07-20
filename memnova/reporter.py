@@ -40,21 +40,21 @@ from memnova import const
 
 class Reporter(object):
 
-    def __init__(self, src_total_place: str, vault: str, classify_type: str, align: "Align"):
+    def __init__(self, src_total_place: str, nodes: str, classify_type: str, align: "Align"):
         self.total_dir = os.path.join(src_total_place, const.TOTAL_DIR)
         self.before_time = time.time()
 
         self.align = align
 
-        vault = vault or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
+        nodes = nodes or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
 
-        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{vault}_{classify_type}")
+        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{nodes}_{classify_type}")
         if not (group_dir := Path(self.group_dir)).exists():
             group_dir.mkdir(parents=True, exist_ok=True)
 
         self.db_file = os.path.join(self.total_dir, const.DB_FILE)
-        self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{vault}.log")
-        self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{vault}.yaml")
+        self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{nodes}.log")
+        self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{nodes}.yaml")
 
         logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
@@ -79,6 +79,8 @@ class Reporter(object):
 
         Design.build_file_tree(html_file)
 
+    # Workflow: ======================== MEM & I/O ========================
+
     @staticmethod
     def __mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
         for key in keys:
@@ -92,41 +94,6 @@ class Reporter(object):
             if vals:
                 return round(float(np.mean(vals)), 2)
         return None
-
-    @staticmethod
-    def __split_frames_with_ranges(
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            segment_ms: int = 60000
-    ) -> list[tuple]:
-
-        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
-        start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
-
-        segment_list = []
-
-        cur_start = start_ts
-        while cur_start < close_ts:
-            cur_end = cur_start + segment_ms
-            segment_frames = [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]
-            if segment_frames:
-                roll_in = [
-                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
-                    for r in roll_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
-                ]
-                drag_in = [
-                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
-                    for r in drag_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
-                ]
-                jank_in = [
-                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
-                    for r in jank_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
-                ]
-                segment_list.append((segment_frames, roll_in, drag_in, jank_in, cur_start, cur_end))
-            cur_start = cur_end
-        return segment_list
 
     async def __classify_rendering(
             self,
@@ -179,9 +146,7 @@ class Reporter(object):
             evaluate = [
                 {
                     "fields": [
-                        {
-                            "text": "Pass", "class": "expiry-pass"
-                        } if all_ok else {"text": "Fail", "class": "expiry-fail"}
+                        {"text": "Pass" if all_ok else "Fail", "class": "expiry-pass" if all_ok else "expiry-fail"}
                     ]
                 }
             ]
@@ -242,8 +207,6 @@ class Reporter(object):
             "tags": tag_lines
         }
 
-    # Workflow: ======================== Track ========================
-
     async def mem_rendition(
             self,
             db: "aiosqlite.Connection",
@@ -253,123 +216,97 @@ class Reporter(object):
             *_
     ) -> dict:
 
-        cur_time, cur_data = team_data.get("time"), team_data["file"]
+        cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(db, templater, d, baseline) for d in cur_data)
         )
 
-        fg_final = {
-            "前台峰值": (avg_fg_max := self.__mean_of_field(compilation, ["FG-MAX"])),
-            "前台均值": (avg_fg_avg := self.__mean_of_field(compilation, ["FG-AVG"])),
-        }
-        bg_final = {
-            "后台峰值": (avg_bg_max := self.__mean_of_field(compilation, ["BG-MAX"])),
-            "后台均值": (avg_bg_avg := self.__mean_of_field(compilation, ["BG-AVG"])),
-        }
+        major_summary = [
+            {"label": "测试时间", "value": [{"text": cur_time, "class": "time"}]}
+        ]
+        minor_summary = []
 
-        conclusion = []
-        if avg_fg_max and avg_fg_max > self.align.fg_max:
-            conclusion.append("前台峰值超标")
-        if avg_fg_avg and avg_fg_avg > self.align.fg_avg:
-            conclusion.append("前台均值超标")
-        if avg_bg_max and avg_bg_max > self.align.bg_max:
-            conclusion.append("后台峰值超标")
-        if avg_bg_avg and avg_bg_avg > self.align.bg_avg:
-            conclusion.append("后台均值超标")
-        expiry = {"text": "Fail", "class": "expiry-fail"} if conclusion else {"text": "Pass", "class": "expiry-pass"}
+        if baseline:
+            fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
+            bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
+            conclusion = [
+                ("FG-MAX HIGH", fg["FG-MAX"], self.align.fg_max),
+                ("FG-AVG HIGH", fg["FG-AVG"], self.align.fg_avg),
+                ("BG-MAX HIGH", bg["BG-MAX"], self.align.bg_max),
+                ("BG-AVG HIGH", bg["BG-AVG"], self.align.bg_avg),
+            ]
+            high = [desc for desc, val, limit in conclusion if val and val > limit]
+            expiry = {
+                "text": "Fail" if high else "Pass", "class": "expiry-fail" if high else "expiry-pass"
+            }
 
-        return {
-            "title": f"{const.APP_DESC} Information",
-            "headline": self.align.headline,
-            "major_summary_items": [
-                {
-                    "label": "测试时间",
-                    "value": [
-                        {"text": cur_time or "Unknown", "class": "time"}
-                    ]
-                },
-                {
-                    "label": "测试结论",
-                    "value": [expiry] + [{"text": c, "class": "highlight"} for c in conclusion]
-                },
-                {
-                    "label": "参考标准",
-                    "value": [
-                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
-                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
-                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
-                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
-                    ]
-                },
-                {
-                    "label": "准出标准",
-                    "value": [
-                        {"text": self.align.criteria, "class": "criteria"}
-                    ]
-                }
-            ],
-            "minor_summary_items": [
-                {
-                    "value": [f"{k}: {v:.2f} MB" for k, v in fg_final.items() if v],
-                    "class": "fg-copy"
-                },
-                {
-                    "value": [f"{k}: {v:.2f} MB" for k, v in bg_final.items() if v],
-                    "class": "bg-copy"
-                }
-            ],
-            "report_list": compilation
-        }
+            major_summary += [
+                {"label": "测试结论", "value": [expiry] + [{"text": c, "class": "highlight"} for c in high]},
+                {"label": "参考标准", "value": [
+                    {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
+                    {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
+                    {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
+                    {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
+                ]},
+                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
+            ]
+            minor_summary += [
+                {"value": [f"{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
+                {"value": [f"{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
+            ]
 
-    # Workflow: ======================== Lapse ========================
-
-    async def lapse_rendition(
-            self,
-            db: "aiosqlite.Connection",
-            templater: "Templater",
-            team_data: dict,
-            baseline: bool,
-            *_
-    ) -> dict:
-
-        cur_time, cur_data = team_data.get("time"), team_data["file"]
-
-        compilation = await asyncio.gather(
-            *(self.__classify_rendering(db, templater, d, baseline) for d in cur_data)
-        )
-
-        union_final = {
-            "内存峰值": self.__mean_of_field(compilation, ["MEM-MAX"]),
-            "内存均值": self.__mean_of_field(compilation, ["MEM-AVG"]),
-        }
+        else:
+            union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
+            major_summary += [
+                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
+            ]
+            minor_summary += [{"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}]
 
         return {
             "title": f"{const.APP_DESC} Information",
             "headline": self.align.headline,
-            "major_summary_items": [
-                {
-                    "label": "测试时间",
-                    "value": [
-                        {"text": cur_time or "Unknown", "class": "time"}
-                    ]
-                },
-                {
-                    "label": "准出标准",
-                    "value": [
-                        {"text": self.align.criteria, "class": "criteria"}
-                    ]
-                }
-            ],
-            "minor_summary_items": [
-                {
-                    "value": [f"{k}: {v:.2f} MB" for k, v in union_final.items() if v]
-                }
-            ],
+            "major_summary_items": major_summary,
+            "minor_summary_items": minor_summary,
             "report_list": compilation
         }
 
-    # Workflow: ======================== Sleek ========================
+    # Workflow: ======================== GFX & I/O ========================
+
+    @staticmethod
+    def __split_frames_with_ranges(
+            frames: list[dict],
+            roll_ranges: list[dict],
+            drag_ranges: list[dict],
+            jank_ranges: list[dict],
+            segment_ms: int = 60000
+    ) -> list[tuple]:
+
+        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
+        start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
+
+        segment_list = []
+
+        cur_start = start_ts
+        while cur_start < close_ts:
+            cur_end = cur_start + segment_ms
+            segment_frames = [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]
+            if segment_frames:
+                roll_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in roll_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                drag_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in drag_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                jank_in = [
+                    {**r, "start_ts": max(r["start_ts"], cur_start), "end_ts": min(r["end_ts"], cur_end)}
+                    for r in jank_ranges if r["end_ts"] > cur_start and r["start_ts"] < cur_end
+                ]
+                segment_list.append((segment_frames, roll_in, drag_in, jank_in, cur_start, cur_end))
+            cur_start = cur_end
+        return segment_list
 
     async def __gfx_rendering(
             self,
@@ -505,18 +442,8 @@ class Reporter(object):
             "title": f"{const.APP_DESC} Information",
             "headline": self.align.headline,
             "major_summary_items": [
-                {
-                    "label": "测试时间",
-                    "value": [
-                        {"text": cur_time or "Unknown", "class": "time"}
-                    ]
-                },
-                {
-                    "label": "准出标准",
-                    "value": [
-                        {"text": self.align.criteria, "class": "criteria"}
-                    ]
-                }
+                {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},
+                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
             ],
             "report_list": compilation
         }

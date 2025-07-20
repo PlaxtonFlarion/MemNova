@@ -10,9 +10,6 @@
 
 import os
 import asyncio
-from pathlib import Path
-from memcore.api import Api
-from memnova import const
 
 try:
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
@@ -26,11 +23,8 @@ class Player(object):
     音频播放工具类，用于异步播放本地音频文件。
     """
 
-    def __init__(self, opera_place: str, allowed_extra: list):
-        self.opera_place = opera_place
-        self.allowed_extra = allowed_extra
-
-    async def audio_player(self, audio_file: str, *_, **__) -> None:
+    @staticmethod
+    async def audio_player(audio_file: str, *_, **__) -> None:
         """
         异步播放指定的音频文件（支持常见音频格式）。
 
@@ -42,15 +36,8 @@ class Player(object):
         audio_file : str
             音频文件的路径，支持 `.mp3`, `.wav`, `.ogg` 等格式。
         """
-        if (speech := Path(audio_file)).is_file():
-            speech_file = audio_file
-        else:
-            speech_file = await Api.synthesize(
-                speech.stem, speech.suffix or const.WAVERS, self.opera_place, self.allowed_extra
-            )
-
         pygame.mixer.init()
-        pygame.mixer.music.load(speech_file)
+        pygame.mixer.music.load(audio_file)
         pygame.mixer.music.set_volume(1.0)
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy():
