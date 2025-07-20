@@ -95,7 +95,6 @@ class Cubicle(object):
             pss REAL,
             uss REAL,
             swap REAL,
-            opss REAL,
             native_heap REAL,
             dalvik_heap REAL,
             dalvik_other REAL,
@@ -142,7 +141,6 @@ class Cubicle(object):
             pss,
             uss,
             swap,
-            opss,
             native_heap,
             dalvik_heap,
             dalvik_other,
@@ -159,7 +157,7 @@ class Cubicle(object):
             other_mmap,
             gl_mtrack,
             unknown,
-            vmrss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            vmrss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
                 remark_map["tms"],
@@ -174,7 +172,6 @@ class Cubicle(object):
                 resume_map["TOTAL PSS"],
                 resume_map["TOTAL USS"],
                 resume_map["TOTAL SWAP"],
-                resume_map["OPSS"],
 
                 memory_map["Native Heap"],
                 memory_map["Dalvik Heap"],
@@ -201,7 +198,17 @@ class Cubicle(object):
     @staticmethod
     async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
         sql = f"""
-            SELECT timestamp, rss, pss, uss, opss, activity, adj, mode
+            SELECT
+                timestamp,
+                rss,
+                pss,
+                uss,
+                activity,
+                adj,
+                mode,
+                native_heap,
+                dalvik_heap,
+                graphics
             FROM {Cubicle.__mem_data_table}
             WHERE data_dir = ? AND pss != ''
             ORDER BY timestamp ASC

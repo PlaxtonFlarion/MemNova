@@ -268,8 +268,6 @@ class Memrix(object):
                 resume_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
                 resume_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
 
-                resume_map["OPSS"] = toolkit.subtract(resume_map["TOTAL PSS"], resume_map["Graphics"])
-
             memory_vms["vms"] = toolkit.transform(await device.pkg_value(pid))
 
             return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}

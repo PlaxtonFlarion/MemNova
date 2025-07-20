@@ -11,6 +11,7 @@
 
 import numpy
 import typing
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from bokeh.io import curdoc
@@ -93,6 +94,187 @@ class Templater(object):
 
     @staticmethod
     async def plot_mem_analysis(df: "pd.DataFrame") -> "figure":
+        # === 数据处理 ===
+        df = df.copy()
+        df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df = df.dropna(subset=["x"])
+        for col in ["pss", "rss", "uss", "native heap", "dalvik heap", "graphics"]:
+            df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
+        df["activity"] = df["activity"].fillna("")
+
+        # 滑动窗口均值
+        window_size = max(3, len(df) // 20)
+        df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
+
+        # 区块分组
+        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
+
+        # 主统计
+        max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
+        value_span = max_value - min_value
+        if value_span < 1e-6:
+            pad = max(20, 0.05 * max_value)
+            y_start = max(0, min_value - pad)
+            y_end = max_value + pad
+        else:
+            pad = max(10, 0.12 * value_span)
+            y_start = max(0, min_value - pad)
+            y_end = max_value + pad
+
+        # 区块统计
+        block_stats = df.groupby(["block_id", "mode"]).agg(
+            start_time=("x", "first"),
+            end_time=("x", "last"),
+        ).reset_index()
+
+        # 主线折线 &极值
+        pss_color = "#3564B0"  # 主线深蓝
+        rss_color = "#FEB96B"  # RSS淡橙
+        uss_color = "#90B2C8"  # USS淡蓝灰
+        avg_color = "#BDB5D5"  # 均值灰紫
+        max_color = "#FF5872"  # 峰值桃红
+        min_color = "#54E3AF"  # 谷值薄荷绿
+
+        # 区块色
+        fg_color = "#8FE9FC"  # 前台湖蓝
+        bg_color = "#F1F1F1"  # 后台淡灰
+        fg_alpha = 0.13
+        bg_alpha = 0.09
+
+        # 堆叠配色（马卡龙/莫兰迪风）
+        stack_fields = ["native heap", "dalvik heap", "graphics"]
+        stack_colors = [
+            "#FFD6E0",  # Native Heap：淡粉
+            "#D4E7FF",  # Dalvik Heap：淡蓝
+            "#CAE7E1",  # Graphics：淡青
+        ]
+        stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
+
+        # Source
+        stack_source = ColumnDataSource(df)
+
+        # === 绘图主对象 ===
+        p = figure(
+            sizing_mode="stretch_both",
+            x_axis_type="datetime",
+            tools="pan,wheel_zoom,box_zoom,reset,save",
+            title="Memory Usage & Heap Area Over Time",
+            y_range=Range1d(y_start, y_end),
+            height=400,
+            width=900
+        )
+
+        # 分区底色
+        for _, row in block_stats.iterrows():
+            color = fg_color if row["mode"] == "FG" else bg_color
+            alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
+            p.quad(
+                left=row["start_time"], right=row["end_time"],
+                bottom=y_start, top=y_end,
+                fill_color=color, fill_alpha=alpha, line_alpha=0
+            )
+
+        # ==== 面积堆叠 ====
+        p.varea_stack(
+            stackers=stack_fields,
+            x="x",
+            color=stack_colors,
+            legend_label=stack_labels,
+            source=stack_source,
+            alpha=0.4
+        )
+
+        # === 折线&极值点 ===
+        df["colors"] = df["pss"].apply(
+            lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
+        )
+        df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
+        source = ColumnDataSource(df)
+
+        # 主线
+        p.line(
+            "x", "pss",
+            source=source, line_width=2.5, color=pss_color, legend_label="PSS"
+        )
+        # 辅助线
+        p.line(
+            "x", "rss",
+            source=source, line_width=1.2, color=rss_color, alpha=0.7, legend_label="RSS", line_dash="dashed"
+        )
+        p.line(
+            "x", "uss",
+            source=source, line_width=1.2, color=uss_color, alpha=0.7, legend_label="USS", line_dash="dotted"
+        )
+        # 滑窗均值
+        p.line(
+            "x", "pss_sliding_avg",
+            source=source, line_width=1.5, color=avg_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
+        )
+        # 极值点
+        pss_spot = p.scatter(
+            "x", "pss",
+            source=source, size="sizes", color="colors", alpha=0.98
+        )
+
+        # 均值/极值线
+        p.add_layout(
+            Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
+        )
+        p.add_layout(
+            Span(location=max_value, dimension="width", line_color=max_color, line_dash="dotted", line_width=2)
+        )
+        p.add_layout(
+            Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
+        )
+
+        # === 悬浮提示 ===
+        tooltips = [
+            ("时间", "@timestamp{%H:%M:%S}"),
+            ("滑窗均值", "@pss_sliding_avg{0.00} MB"),
+            ("PSS", "@pss{0.00} MB"),
+            ("RSS", "@rss{0.00} MB"),
+            ("USS", "@uss{0.00} MB"),
+            ("Native Heap", "@native heap{0.00} MB"),
+            ("Dalvik Heap", "@dalvik heap{0.00} MB"),
+            ("Graphics", "@graphics{0.00} MB"),
+            ("当前页", "@activity"),
+            ("优先级", "@mode"),
+        ]
+        hover = HoverTool(
+            tooltips=tooltips, formatters={"@timestamp": "datetime"}, mode="mouse", renderers=[pss_spot]
+        )
+        p.add_tools(hover)
+
+        # === 主题 & 坐标轴 ===
+        p.xgrid.grid_line_color = "#E3E3E3"
+        p.ygrid.grid_line_color = "#E3E3E3"
+        p.xgrid.grid_line_alpha = 0.25
+        p.ygrid.grid_line_alpha = 0.25
+        p.xaxis.axis_label = "时间轴"
+        p.yaxis.axis_label = "内存用量 (MB)"
+        p.xaxis.major_label_orientation = np.pi / 6
+        p.xaxis.formatter = DatetimeTickFormatter(
+            seconds="%H:%M:%S",
+            minsec="%H:%M:%S",
+            minutes="%H:%M",
+            hourmin="%H:%M",
+            hours="%H:%M",
+            days="%m-%d",
+            months="%m-%d",
+            years="%Y-%m"
+        )
+        p.legend.location = "top_left"
+        p.legend.click_policy = "hide"
+        p.legend.border_line_alpha = 0.1
+        p.legend.background_fill_alpha = 0.07
+        p.background_fill_color = "#FBFCFD"
+        p.background_fill_alpha = 0.24
+        curdoc().theme = "caliber"
+
+        return p
+
+    @staticmethod
+    async def plot_mem_analysis_2(df: "pd.DataFrame") -> "figure":
         # 数据处理
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
