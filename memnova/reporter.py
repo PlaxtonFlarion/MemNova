@@ -120,7 +120,7 @@ class Reporter(object):
 
         df = pd.DataFrame(
             union_data_list,
-            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
+            columns=["timestamp", "rss", "pss", "uss", "activity", "adj", "mode", "native heap", "dalvik heap", "graphics"]
         )
 
         ionic_task = asyncio.create_task(
