@@ -9,7 +9,6 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import numpy
 import typing
 import numpy as np
 import pandas as pd
@@ -150,7 +149,7 @@ class Templater(object):
         ]
         stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
 
-        # Source
+        # 堆叠数据
         stack_source = ColumnDataSource(df)
 
         # === 绘图主对象 ===
@@ -158,10 +157,9 @@ class Templater(object):
             sizing_mode="stretch_both",
             x_axis_type="datetime",
             tools="pan,wheel_zoom,box_zoom,reset,save",
-            title="Memory Usage & Heap Area Over Time",
+            title="Memory Usage over Time",
             y_range=Range1d(y_start, y_end),
-            height=400,
-            width=900
+            height=700
         )
 
         # 分区底色
@@ -410,7 +408,7 @@ class Templater(object):
         p.ygrid.grid_line_alpha = 0.25
         p.xaxis.axis_label = "时间轴"
         p.yaxis.axis_label = "内存用量 (MB)"
-        p.xaxis.major_label_orientation = 30 * numpy.pi / 180
+        p.xaxis.major_label_orientation = 30 * np.pi / 180
         p.xaxis.formatter = DatetimeTickFormatter(
             seconds="%H:%M:%S",
             minsec="%H:%M:%S",
