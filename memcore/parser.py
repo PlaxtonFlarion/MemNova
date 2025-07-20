@@ -25,8 +25,9 @@ class Parser(object):
     def __init__(self):
         custom_made_usage = f"""\
         --------------------------------------------
-        \033[1;35m{const.APP_NAME}\033[0m --track mem,gfx,io --focus <com.example.app> --imply <device.serial>
-        \033[1;35m{const.APP_NAME}\033[0m --forge --focus <file.name>
+        \033[1;35m{const.APP_NAME}\033[0m --storm --focus <com.example.app> --imply <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --sleek --focus <com.example.app> --imply <device.serial>
+        \033[1;35m{const.APP_NAME}\033[0m --forge <file.name>
         \033[1;35m{const.APP_NAME}\033[0m --align
         """
         self.__parse_engine = argparse.ArgumentParser(
@@ -49,22 +50,30 @@ class Parser(object):
         major_group = mutually_exclusive.add_mutually_exclusive_group()
 
         major_group.add_argument(
-            "--track",
-            nargs="?",
-            type=lambda x: [i for i in re.split(r'[,\s;]+', x) if i],
+            "--storm", action="store_true",
             help=textwrap.dedent(f'''\
                 \033[1;34m^*星痕律动*^\033[0m
                 -------------------------
-                - 内存基线，内存泄露，流畅度，I/O
+                - 内存基线，内存泄露，I/O
 
             ''')
         )
         major_group.add_argument(
-            "--forge", action="store_true",
+            "--sleek", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;34m^*帧影流光*^\033[0m
+                -------------------------
+                - 流畅度，I/O
+
+            ''')
+        )
+        major_group.add_argument(
+            "--forge",
+            type=lambda x: re.sub(r"[^a-zA-Z0-9_]", "", x),
             help=textwrap.dedent(f'''\
                 \033[1;34m^*真相快照*^\033[0m
                 -------------------------
-                - 生成报告
+                - 真相快照
 
             ''')
         )

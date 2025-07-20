@@ -13,15 +13,10 @@ import numpy
 import typing
 import pandas as pd
 from pathlib import Path
-from bokeh.layouts import column
-from bokeh.io import (
-    curdoc, output_file
-)
-from bokeh.plotting import (
-    save, figure
-)
+from bokeh.io import curdoc
+from bokeh.plotting import figure
 from bokeh.models import (
-    ColumnDataSource, Spacer, Span, Div,
+    ColumnDataSource, Span, Div,
     DatetimeTickFormatter, Range1d, HoverTool
 )
 from memnova import const
@@ -32,36 +27,32 @@ class Templater(object):
     def __init__(self, download: str):
         self.download = download
 
-    def generate_viewers(self) -> "Div":
+    def generate_viewers(self, image_path: "Path", ionic_path: "Path") -> "Div":
+
         parent = Path(self.download).parent.resolve()
-
-        traces_path = parent / const.TRACES_DIR
-        images_path = parent / const.IMAGES_DIR
-        ionics_path = parent / const.IONICS_DIR
-
-        logs = [f for f in parent.glob("*.log") if f.is_file()]
+        log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
 
         viewers = [
-            {
-                "label": "➤ Traces 查看",
-                "url": f"file:///{traces_path.as_posix()}",
-                "color": "#4CAF50"
-            },
-            {
-                "label": "➤ Images 查看",
-                "url": f"file:///{images_path.as_posix()}",
-                "color": "#4CAF50"
-            },
-            {
-                "label": "➤ Ionics 查看",
-                "url": f"file:///{ionics_path.as_posix()}",
-                "color": "#4CAF50"
-            },
+            {**({
+                    "label": "➤ Traces 查看",
+                    "url": f"file:///{traces_path.as_posix()}",
+                    "color": "#4CAF50"
+                } if (traces_path := parent / const.TRACES_DIR).exists() else {})},
+            {**({
+                    "label": "➤ Images 查看",
+                    "url": f"file:///{image_path.as_posix()}",
+                    "color": "#4CAF50"
+                } if image_path and image_path.exists() else {})},
+            {**({
+                    "label": "➤ Ionics 查看",
+                    "url": f"file:///{ionic_path.as_posix()}",
+                    "color": "#4CAF50"
+                } if ionic_path and ionic_path.exists() else {})},
             {**({
                      "label": "➤ 日志 查看",
-                     "url": f"file:///{logs[0].as_posix()}",
+                     "url": f"file:///{log_list[0].as_posix()}",
                      "color": "#4CAF50"
-                 } if logs else {})},
+                 } if log_list else {})},
             {
                 "label": "➤ UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
@@ -96,12 +87,8 @@ class Templater(object):
 
     # Workflow: ======================== MEM ========================
 
-    async def plot_mem_analysis(
-            self,
-            df: "pd.DataFrame",
-            output_path: str
-    ) -> str:
-
+    @staticmethod
+    async def plot_mem_analysis(df: "pd.DataFrame") -> "figure":
         # 数据处理
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -256,13 +243,7 @@ class Templater(object):
         p.background_fill_alpha = 0.2
         curdoc().theme = "caliber"
 
-        # 文件导出与布局
-        output_file(output_path)
-
-        viewer_div = self.generate_viewers()
-        save(column(viewer_div, Spacer(height=10), p, sizing_mode="stretch_both"))
-
-        return output_path
+        return p
 
     # Workflow: ======================== GFX ========================
 
@@ -274,7 +255,7 @@ class Templater(object):
             roll_ranges: typing.Optional[list[dict]],
             drag_ranges: typing.Optional[list[dict]],
             jank_ranges: list[dict]
-    ):
+    ) -> "figure":
 
         # 🟢 颜色预处理
         for frame in frames:

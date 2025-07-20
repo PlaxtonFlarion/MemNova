@@ -87,17 +87,17 @@ class Painter(object):
 
         # 主线
         ax.plot(
-            df["num_x"], df["pss"], 
+            df["num_x"], df["pss"],
             color=pss_color, linewidth=1.2, label="PSS"
         )
         # 滑动平均
         ax.plot(
-            df["num_x"], df["pss_sliding_avg"], 
+            df["num_x"], df["pss_sliding_avg"],
             color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
         )
         # 均值带
         ax.axhspan(
-            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, 
+            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range,
             color="#D0D0FF", alpha=0.25, label="Average Range"
         )
         # 均值/极值线
@@ -107,11 +107,11 @@ class Painter(object):
 
         # 极值点
         ax.scatter(
-            df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"], 
+            df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"],
             s=60, color="#FF1D58", zorder=3, label="Max"
         )
         ax.scatter(
-            df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"], 
+            df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"],
             s=60, color="#009FFD", zorder=3, label="Min"
         )
 
@@ -123,17 +123,44 @@ class Painter(object):
         ax.grid(True, linestyle="--", alpha=0.4)
         plt.xticks(rotation=30)
 
-        # 构造伪图例项（作为文字说明）
+        # 构造伪图例项
         legend_items = [
-            Line2D([0], [0], color="none", label=f"Trend: {trend}"),
-            Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
-            Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
-            Line2D([0], [0], color="none", label=f"Slope: {slope:.4f}"),
-            Line2D([0], [0], color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"),
-            Line2D([0], [0], color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"),
-            Line2D([0], [0], color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"),
-            Line2D([0], [0], color="#A8BFFF", linestyle="--", label=f"Sliding Avg"),
-            Line2D([0], [0], color=pss_color, label="PSS Line")
+            Line2D(
+                [0], [0],
+                color="none", label=f"Trend: {trend}"
+            ),
+            Line2D(
+                [0], [0],
+                color="none", label=f"Score: {trend_score:.2f}"
+            ),
+            Line2D(
+                [0], [0],
+                color="none", label=f"Jitter: {jitter:.4f}"
+            ),
+            Line2D(
+                [0], [0],
+                color="none", label=f"Slope: {slope:.4f}"
+            ),
+            Line2D(
+                [0], [0],
+                color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"
+            ),
+            Line2D(
+                [0], [0],
+                color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"
+            ),
+            Line2D(
+                [0], [0],
+                color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"
+            ),
+            Line2D(
+                [0], [0],
+                color="#A8BFFF", linestyle="--", label=f"Sliding Avg"
+            ),
+            Line2D(
+                [0], [0],
+                color=pss_color, label="PSS Line"
+            )
         ]
 
         # 展示图例
@@ -185,12 +212,13 @@ class Painter(object):
 
         draw_background(roll_ranges, "#A2C8E6", 0.12)   # 滑动区
         draw_background(drag_ranges, "#FFD39B", 0.16)   # 拖拽区
-        draw_background(jank_ranges, "#F24C4C", 0.32)   # 掉帧区，最突出
+        draw_background(jank_ranges, "#F24C4C", 0.32)   # 掉帧区
 
         # === 帧耗时主线 ===
         line_color = "#585858"
         ax1.plot(
-            timestamps, durations, label="Frame Duration", color=line_color, linewidth=1.8
+            timestamps, durations,
+            label="Frame Duration", color=line_color, linewidth=1.8
         )
 
         # === 多帧率基准线（不进图例，右侧标注） ===
@@ -238,8 +266,14 @@ class Painter(object):
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
             Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
             Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
-            plt.Line2D([0], [0], color=line_color, lw=2, label="Frame Duration"),
-            plt.Line2D([0], [0], color="#D62728", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"),
+            plt.Line2D(
+                [0], [0],
+                color=line_color, lw=2, label="Frame Duration"
+            ),
+            plt.Line2D(
+                [0], [0],
+                color="#D62728", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"
+            )
         ]
 
         ax1.legend(
@@ -272,7 +306,7 @@ class Painter(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def draw_ion_metrics(
+    async def draw_io_metrics(
             metadata: dict,
             io: dict,
             rss: list,
@@ -280,24 +314,22 @@ class Painter(object):
             output_path: str
     ) -> str:
 
-        _ = metadata
-
-        evaluate = Scores.assess_io_score(io, block)
+        _, evaluate = metadata, Scores.assess_io_score(io, block)
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # === 左轴：RSS ===
-        rss_times = [d["time_sec"] / 1000 for d in rss]
-        rss_vals = [d["rss_mb"] for d in rss]
+        rss_times, rss_vals = [d["time_sec"] / 1000 for d in rss], [d["rss_mb"] for d in rss]
+
         ax1.plot(
-            rss_times, rss_vals, color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
+            rss_times, rss_vals,
+            color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
         )
         ax1.set_ylabel("RSS (MB)", fontsize=12, color="#1F77B4")
         ax1.tick_params(axis="y", labelcolor="#1F77B4")
 
         # === 右轴：IO ===
-        ax2 = ax1.twinx()
-        io_lines = []
+        io_lines, ax2 = [], ax1.twinx()
 
         def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]:
             if not (data := io.get(series_name, [])):
@@ -305,16 +337,25 @@ class Painter(object):
             times = [d["time_sec"] / 1000 for d in data]
             values = [d["delta"] for d in data]
             io_line = ax2.plot(
-                times, values, linestyle="--", linewidth=1.2, marker=marker, markersize=2, color=color, label=label
+                times, values,
+                linestyle="--", linewidth=1.2, marker=marker, markersize=2, color=color, label=label
             )
             io_lines.append(io_line)
             return values
 
         all_io_vals = []
-        all_io_vals += plot_io_line("pgpgin", "#FF7F0E", "s", "Page In (KB)") or []
-        all_io_vals += plot_io_line("pgpgout", "#2CA02C", "^", "Page Out (KB)") or []
-        all_io_vals += plot_io_line("pswpin", "#D62728", "v", "Swap In (KB)") or []
-        all_io_vals += plot_io_line("pswpout", "#9467BD", "x", "Swap Out (KB)") or []
+        all_io_vals += plot_io_line(
+            "pgpgin", "#FF7F0E", "s", "Page In (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pgpgout", "#2CA02C", "^", "Page Out (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pswpin", "#D62728", "v", "Swap In (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pswpout", "#9467BD", "x", "Swap Out (KB)"
+        ) or []
 
         ax2.set_ylabel("Page / Swap Delta (KB)", fontsize=12)
         ax2.tick_params(axis="y")
@@ -329,13 +370,34 @@ class Painter(object):
 
         # === 主图例项 ===
         legend_lines = [
-            Line2D([0], [0], color="#1F77B4", linewidth=2, marker="o", label="RSS (MB)"),
-            Line2D([0], [0], color="#FF7F0E", linestyle="--", marker="s", label="Page In"),
-            Line2D([0], [0], color="#2CA02C", linestyle="--", marker="^", label="Page Out"),
-            Line2D([0], [0], color="#D62728", linestyle="--", marker="v", label="Swap In"),
-            Line2D([0], [0], color="#9467BD", linestyle="--", marker="x", label="Swap Out"),
-            Line2D([0], [0], color="#E377C2", linewidth=2, linestyle="--", marker="|", label="Block Issue"),
-            Line2D([0], [0], color="#7F7F7F", linewidth=2, linestyle="--", marker="|", label="Block Complete"),
+            Line2D(
+                [0], [0],
+                color="#1F77B4", linewidth=2, marker="o", label="RSS (MB)"
+            ),
+            Line2D(
+                [0], [0],
+                color="#FF7F0E", linestyle="--", marker="s", label="Page In"
+            ),
+            Line2D(
+                [0], [0],
+                color="#2CA02C", linestyle="--", marker="^", label="Page Out"
+            ),
+            Line2D(
+                [0], [0],
+                color="#D62728", linestyle="--", marker="v", label="Swap In"
+            ),
+            Line2D(
+                [0], [0],
+                color="#9467BD", linestyle="--", marker="x", label="Swap Out"
+            ),
+            Line2D(
+                [0], [0],
+                color="#E377C2", linewidth=2, linestyle="--", marker="|", label="Block Issue"
+            ),
+            Line2D(
+                [0], [0],
+                color="#7F7F7F", linewidth=2, linestyle="--", marker="|", label="Block Complete"
+            )
         ]
 
         # === 评估信息（伪图例项） ===

@@ -414,13 +414,13 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"{Storm}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        team_name = f"{prefix}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await self.refresh(device, reporter, self.focus, team_name)
 
         head = f"{self.title}_{now_time}" if self.title else self.file_folder
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
-        perfetto = Perfetto(self.sleek, device, self.ft_file, str(trace_loc))
+        perfetto = Perfetto(device, self.ft_file, trace_loc)
 
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
@@ -438,7 +438,7 @@ class Memrix(object):
             await self.task_close_event.wait()
 
             await perfetto.close()
-            await self.sample_analyze(db, trace_loc, now_time)
+            await self.sample_analyze(self.sleek, db, trace_loc, now_time)
 
             animation_event.set()
 
@@ -447,46 +447,49 @@ class Memrix(object):
     # """真相快照"""
     async def observation(self) -> None:
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
-        if not (target_dir := original / self.focus).exists():
+        if not (target_dir := original / self.forge).exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
-        reporter = Reporter(self.src_total_place, self.focus, self.align)
+        segment_router = {
+            "Storm": "mem_rendition", "Sleek": "gfx_rendition"
+        }
+
+        if len(parts := target_dir.name.split("_")) != 2:
+            raise MemrixError(f"Unexpected directory name format: {target_dir.name}")
+        src, dst = parts
+
+        try:
+            render = segment_router[dst]
+        except KeyError:
+            raise MemrixError(f"Unsupported directory type: {src} ...")
+
+        reporter = Reporter(self.src_total_place, src, dst, self.align)
+
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"Missing valid data file: {file}")
 
-        team_data = await FileAssist.read_yaml(reporter.team_file)
+        try:
+            team_data = await FileAssist.read_yaml(reporter.team_file)
+        except Exception as e:
+            raise MemrixError(e)
 
-        segment_router = {
-            "mem": "lapse_rendition" if self.hprof else "mem_rendition",
-            "gfx": "gfx_rendition",
-        }
+        if not (data_list := team_data.get("file")):
+            raise MemrixError(f"No data scenario: {data_list} ...")
 
-        if not (classify_type := team_data.get("type")):
-            raise MemrixError(f"No data classify type: {classify_type} ...")
-
-        renderers = []
-        for i in classify_type.strip().split(","):
-            try:
-                renderers.append(segment_router[i])
-            except KeyError:
-                raise MemrixError(f"Unexpected name format: {i} ...")
+        templater = Templater(
+            os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
+        )
 
         async with aiosqlite.connect(reporter.db_file) as db:
-            templater = Templater(
-                os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
+            rendition = await getattr(reporter, render)(
+                db, templater, data_list, team_data, self.hprof
+            )
+            await reporter.make_report(
+                self.unity_template, templater.download, **rendition
             )
 
-            if not (data_list := team_data.get("file")):
-                raise MemrixError(f"No data scenario: {data_list} ...")
-
-            for rendition in await asyncio.gather(
-                *(getattr(reporter, render)(db, templater, data_list, team_data) for render in renderers)
-            ):
-                await reporter.make_report(
-                    self.unity_template, templater.download, **rendition
-                )
-            await asyncio.gather(*reporter.background_tasks)
+        await asyncio.gather(*reporter.background_tasks)
 
 
 class Perfetto(object):

@@ -80,7 +80,7 @@ class Reporter(object):
         Design.build_file_tree(html_file)
 
     @staticmethod
-    def mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
+    def __mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
         for key in keys:
             # 提取所有 compilation 里的 fields 并找 label 以 key 结尾的值
             vals = [
@@ -94,19 +94,19 @@ class Reporter(object):
         return None
 
     @staticmethod
-    def split_frames_with_ranges(
+    def __split_frames_with_ranges(
             frames: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
             jank_ranges: list[dict],
             segment_ms: int = 60000
     ) -> list[tuple]:
-        
+
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
         start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
-        
+
         segment_list = []
-        
+
         cur_start = start_ts
         while cur_start < close_ts:
             cur_end = cur_start + segment_ms
@@ -128,55 +128,29 @@ class Reporter(object):
             cur_start = cur_end
         return segment_list
 
-    @staticmethod
-    def split_frames_by_time(frames: list[dict], segment_ms: int = 60000) -> list[list[dict]]:
-        frames = sorted(frames, key=lambda f: f["timestamp_ms"])
-        segment_list = []
-
-        start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
-        cur_start = start_ts
-        while cur_start < close_ts:
-            cur_end = cur_start + segment_ms
-            if seg := [f for f in frames if cur_start <= f["timestamp_ms"] < cur_end]:
-                segment_list.append(seg)
-            cur_start = cur_end
-
-        return segment_list
-
-    # Workflow: ======================== Union ========================
-
-    def __share_folder(self) -> tuple["Path", "Path"]:
-        if not (images := Path(self.group_dir) / const.IMAGES_DIR).exists():
-            images.mkdir(parents=True, exist_ok=True)
-        if not (ionics := Path(self.group_dir) / const.IONICS_DIR).exists():
-            ionics.mkdir(parents=True, exist_ok=True)
-
-        return images, ionics
-
     async def __classify_rendering(
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str,
-            images: "Path",
-            ionics: "Path",
-            leak_mode: bool,
+            baseline: bool,
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        union_data_list, (io_data, *_), (joint, *_) = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir),
-            Cubicle.query_io_data(db, data_dir),
-            Cubicle.query_joint_data(db, data_dir)
+        union_data_list, (joint, *_) = await asyncio.gather(
+            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-        metadata, (io, rss, block), (title, timestamp) = {}, io_data.values(), joint
+        metadata, (title, timestamp) = {}, joint
+
+        io_data, *_ = await Cubicle.query_io_data(db, data_dir)
+        io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        image_loc = images / f"{head}_image.png"
-        ionic_loc = ionics / f"{head}_ionic.png"
+        image_loc = Path(group) / f"{head}_image.png"
+        ionic_loc = Path(group) / f"{head}_ionic.png"
 
         df = pd.DataFrame(
             union_data_list,
@@ -184,44 +158,11 @@ class Reporter(object):
         )
 
         ionic_task = asyncio.create_task(
-            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
+            Painter.draw_io_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw io metrics"
         )
         self.background_tasks.append(ionic_task)
 
-        if leak_mode:
-            leak = Scores.analyze_mem_trend(df["pss"])
-            evaluate = [
-                {
-                    "fields": [
-                        {"text": f"Trend: {leak['trend']}", "class": "refer"},
-                        {"text": f"Score: {leak['trend_score']}", "class": "refer"}
-                    ]
-                },
-                {
-                    "fields": [
-                        {"text": f"Shake: {leak['jitter_index']}", "class": "refer"},
-                        {"text": f"Slope: {leak['slope']}", "class": "refer"}
-                    ]
-                }
-            ]
-
-            image_task = asyncio.create_task(
-                Painter.draw_mem_metrics(df, str(image_loc), **leak), name="draw mem metrics"
-            )
-            self.background_tasks.append(image_task)
-
-            mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
-
-            tag_lines = [
-                {
-                    "fields": [
-                        {"label": f"MEM-MAX: ", "value": f"{mem_max_pss:.2f}", "unit": "MB"},
-                        {"label": f"MEM-AVG: ", "value": f"{mem_avg_pss:.2f}", "unit": "MB"}
-                    ]
-                }
-            ]
-
-        else:
+        if baseline:
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -254,12 +195,49 @@ class Reporter(object):
                 } for _, row in group_stats.iterrows()
             ]
 
-        bokeh_link = await templater.plot_mem_analysis(df, str(Path(group) / f"{data_dir}.html"))
+        else:
+            leak = Scores.analyze_mem_trend(df["pss"])
+            evaluate = [
+                {
+                    "fields": [
+                        {"text": f"Trend: {leak['trend']}", "class": "refer"},
+                        {"text": f"Score: {leak['trend_score']}", "class": "refer"}
+                    ]
+                },
+                {
+                    "fields": [
+                        {"text": f"Shake: {leak['jitter_index']}", "class": "refer"},
+                        {"text": f"Slope: {leak['slope']}", "class": "refer"}
+                    ]
+                }
+            ]
+
+            image_task = asyncio.create_task(
+                Painter.draw_mem_metrics(df, str(image_loc), **leak), name="draw mem metrics"
+            )
+            self.background_tasks.append(image_task)
+
+            mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
+
+            tag_lines = [
+                {
+                    "fields": [
+                        {"label": f"MEM-MAX: ", "value": f"{mem_max_pss:.2f}", "unit": "MB"},
+                        {"label": f"MEM-AVG: ", "value": f"{mem_avg_pss:.2f}", "unit": "MB"}
+                    ]
+                }
+            ]
+
+        plot = await templater.plot_mem_analysis(df)
+        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
+
+        viewer_div = templater.generate_viewers(image_loc, ionic_loc)
+        save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
         logger.info(f"{data_dir} Handler Done ...")
 
         return {
             "subtitle": title or data_dir,
-            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(bokeh_link).name),
+            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
             "evaluate": evaluate,
             "tags": tag_lines
         }
@@ -270,26 +248,24 @@ class Reporter(object):
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
-            data_list: str,
             team_data: dict,
-            leak_mode: bool
+            baseline: bool,
+            *_
     ) -> dict:
 
-        images, ionics = self.__share_folder()
+        cur_time, cur_data = team_data.get("time"), team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__classify_rendering(
-                db, templater, data_dir, images, ionics, leak_mode
-            ) for data_dir in data_list)
+            *(self.__classify_rendering(db, templater, d, baseline) for d in cur_data)
         )
 
         fg_final = {
-            "前台峰值": (avg_fg_max := self.mean_of_field(compilation, ["FG-MAX"])),
-            "前台均值": (avg_fg_avg := self.mean_of_field(compilation, ["FG-AVG"])),
+            "前台峰值": (avg_fg_max := self.__mean_of_field(compilation, ["FG-MAX"])),
+            "前台均值": (avg_fg_avg := self.__mean_of_field(compilation, ["FG-AVG"])),
         }
         bg_final = {
-            "后台峰值": (avg_bg_max := self.mean_of_field(compilation, ["BG-MAX"])),
-            "后台均值": (avg_bg_avg := self.mean_of_field(compilation, ["BG-AVG"])),
+            "后台峰值": (avg_bg_max := self.__mean_of_field(compilation, ["BG-MAX"])),
+            "后台均值": (avg_bg_avg := self.__mean_of_field(compilation, ["BG-AVG"])),
         }
 
         conclusion = []
@@ -310,7 +286,7 @@ class Reporter(object):
                 {
                     "label": "测试时间",
                     "value": [
-                        {"text": team_data.get("time", "Unknown"), "class": "time"}
+                        {"text": cur_time or "Unknown", "class": "time"}
                     ]
                 },
                 {
@@ -352,22 +328,20 @@ class Reporter(object):
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
-            data_list: str,
             team_data: dict,
-            leak_mode: bool
+            baseline: bool,
+            *_
     ) -> dict:
 
-        images, ionics = self.__share_folder()
+        cur_time, cur_data = team_data.get("time"), team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__classify_rendering(
-                db, templater, data_dir, images, ionics, leak_mode
-            ) for data_dir in data_list)
+            *(self.__classify_rendering(db, templater, d, baseline) for d in cur_data)
         )
 
         union_final = {
-            "内存峰值": self.mean_of_field(compilation, ["MEM-MAX"]),
-            "内存均值": self.mean_of_field(compilation, ["MEM-AVG"]),
+            "内存峰值": self.__mean_of_field(compilation, ["MEM-MAX"]),
+            "内存均值": self.__mean_of_field(compilation, ["MEM-AVG"]),
         }
 
         return {
@@ -377,7 +351,7 @@ class Reporter(object):
                 {
                     "label": "测试时间",
                     "value": [
-                        {"text": team_data.get("time", "Unknown"), "class": "time"}
+                        {"text": cur_time or "Unknown", "class": "time"}
                     ]
                 },
                 {
@@ -402,39 +376,36 @@ class Reporter(object):
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str,
-            images: "Path",
-            ionics: "Path",
             *_,
-            **__
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (gfx_data, *_), (io_data, *_), (joint, *_) = await asyncio.gather(
-            Cubicle.query_gfx_data(db, data_dir),
-            Cubicle.query_io_data(db, data_dir),
-            Cubicle.query_joint_data(db, data_dir)
+        (gfx_data, *_), (joint, *_) = await asyncio.gather(
+            Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-        metadata = {}
         raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = gfx_data.values()
+        metadata, (title, timestamp) = {}, joint
+
+        io_data, *_ = await Cubicle.query_io_data(db, data_dir)
         io, rss, block = io_data.values()
-        title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        image_loc = images / f"{head}_image.png"
-        ionic_loc = ionics / f"{head}_ionic.png"
+        image_loc = Path(group) / f"{head}_image.png"
+        ionic_loc = Path(group) / f"{head}_ionic.png"
 
         image_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
                 metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(image_loc),
             ), name="draw gfx metrics"
         )
-        ionic_task = asyncio.create_task(
-            Painter.draw_ion_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw ion metrics"
-        )
         self.background_tasks.append(image_task)
+
+        ionic_task = asyncio.create_task(
+            Painter.draw_io_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw io metrics"
+        )
         self.background_tasks.append(ionic_task)
 
         # 平均帧
@@ -454,7 +425,7 @@ class Reporter(object):
             float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2
         )
 
-        conspiracy, segments = [], self.split_frames_with_ranges(
+        conspiracy, segments = [], self.__split_frames_with_ranges(
             raw_frames, roll_ranges, drag_ranges, jank_ranges
         )
 
@@ -485,7 +456,7 @@ class Reporter(object):
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers()
+        viewer_div = templater.generate_viewers(image_loc, ionic_loc)
         save(column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width"))
         logger.info(f"{data_dir} Handler Done ...")
 
@@ -495,7 +466,7 @@ class Reporter(object):
             "evaluate": [
                 {
                     "fields": [
-                        {"text": f"Score: {mkt['score']}", "class": "refer"},
+                        {"text": f"Score: {mkt['score'] * 100:.2f}", "class": "refer"},
                         {"text": f"Level: {mkt['level']}", "class": "refer"}
                     ]
                 }
@@ -520,16 +491,14 @@ class Reporter(object):
             self,
             db: "aiosqlite.Connection",
             templater: "Templater",
-            data_list: str,
             team_data: dict,
-            *_,
-            **__
+            *_
     ) -> typing.Optional[dict]:
 
-        images, ionics = self.__share_folder()
+        cur_time, cur_data = team_data.get("time"), team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__gfx_rendering(db, templater, data_dir, images, ionics) for data_dir in data_list)
+            *(self.__gfx_rendering(db, templater, d) for d in cur_data)
         )
 
         return {
@@ -539,7 +508,7 @@ class Reporter(object):
                 {
                     "label": "测试时间",
                     "value": [
-                        {"text": team_data.get("time", "Unknown"), "class": "time"}
+                        {"text": cur_time or "Unknown", "class": "time"}
                     ]
                 },
                 {
