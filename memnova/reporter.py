@@ -116,12 +116,11 @@ class Reporter(object):
         io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        image_loc = Path(group) / f"{head}_image.png"
         ionic_loc = Path(group) / f"{head}_ionic.png"
 
         df = pd.DataFrame(
             union_data_list,
-            columns=["timestamp", "rss", "pss", "uss", "opss", "activity", "adj", "mode"]
+            columns=["timestamp", "rss", "pss", "uss", "activity", "adj", "mode", "native heap", "dalvik heap", "graphics"]
         )
 
         ionic_task = asyncio.create_task(
@@ -130,6 +129,7 @@ class Reporter(object):
         self.background_tasks.append(ionic_task)
 
         if baseline:
+            image_loc = None
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -161,6 +161,7 @@ class Reporter(object):
             ]
 
         else:
+            image_loc = Path(group) / f"{head}_image.png"
             leak = Scores.analyze_mem_trend(df["pss"])
             evaluate = [
                 {
