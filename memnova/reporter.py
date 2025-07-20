@@ -228,6 +228,7 @@ class Reporter(object):
         minor_summary = []
 
         if baseline:
+            headline = self.align.base_headline
             fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
             bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
             conclusion = [
@@ -249,7 +250,7 @@ class Reporter(object):
                     {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
                     {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
                 ]},
-                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
+                {"label": "准出标准", "value": [{"text": self.align.base_criteria, "class": "criteria"}]}
             ]
             minor_summary += [
                 {"value": [f"{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
@@ -257,15 +258,16 @@ class Reporter(object):
             ]
 
         else:
+            headline = self.align.leak_headline
             union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
             major_summary += [
-                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
+                {"label": "准出标准", "value": [{"text": self.align.leak_criteria, "class": "criteria"}]}
             ]
             minor_summary += [{"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}]
 
         return {
             "title": f"{const.APP_DESC} Information",
-            "headline": self.align.headline,
+            "headline": headline,
             "major_summary_items": major_summary,
             "minor_summary_items": minor_summary,
             "report_list": compilation
@@ -440,10 +442,10 @@ class Reporter(object):
 
         return {
             "title": f"{const.APP_DESC} Information",
-            "headline": self.align.headline,
+            "headline": self.align.gfx_headline,
             "major_summary_items": [
                 {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},
-                {"label": "准出标准", "value": [{"text": self.align.criteria, "class": "criteria"}]}
+                {"label": "准出标准", "value": [{"text": self.align.gfx_criteria, "class": "criteria"}]}
             ],
             "report_list": compilation
         }

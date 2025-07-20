@@ -24,17 +24,23 @@ class Align(object):
     """
 
     aligns = {
-        "Memory": {
-            "speed": 1.0,
+        "common": {
+            "speed": 0.5,
             "label": "应用名称"
         },
-        "Report": {
+        "mem": {
             "fg_max": 0.0,
             "fg_avg": 0.0,
             "bg_max": 0.0,
             "bg_avg": 0.0,
+            "base_headline": "标题",
+            "base_criteria": "准出标准",
+            "leak_headline": "标题",
+            "leak_criteria": "准出标准"
+        },
+        "gfx": {
             "headline": "标题",
-            "criteria": "标准"
+            "criteria": "准出标准"
         }
     }
 
@@ -52,88 +58,138 @@ class Align(object):
         """
         采样间隔时间（秒）。
         """
-        return self.aligns["Memory"]["speed"]
+        return self.aligns["common"]["speed"]
 
     @property
     def label(self):
         """
         当前测试任务的标签或名称，用于日志与报告标注。
         """
-        return self.aligns["Memory"]["label"]
+        return self.aligns["common"]["label"]
 
     @property
     def fg_max(self):
         """
         报告中前台 PSS 峰值容忍阈。
         """
-        return self.aligns["Report"]["fg_max"]
+        return self.aligns["mem"]["fg_max"]
 
     @property
     def fg_avg(self):
         """
         报告中前台 PSS 平均值容忍阈。
         """
-        return self.aligns["Report"]["fg_avg"]
+        return self.aligns["mem"]["fg_avg"]
 
     @property
     def bg_max(self):
         """
         报告中后台 PSS 峰值容忍阈。
         """
-        return self.aligns["Report"]["bg_max"]
+        return self.aligns["mem"]["bg_max"]
 
     @property
     def bg_avg(self):
         """
         报告中后台 PSS 平均值容忍阈。
         """
-        return self.aligns["Report"]["bg_avg"]
+        return self.aligns["mem"]["bg_avg"]
 
     @property
-    def headline(self):
+    def base_headline(self):
         """
         报告页标题。
         """
-        return self.aligns["Report"]["headline"]
+        return self.aligns["mem"]["base_headline"]
 
     @property
-    def criteria(self):
+    def base_criteria(self):
         """
         报告中的性能评估标准描述。
         """
-        return self.aligns["Report"]["criteria"]
+        return self.aligns["mem"]["base_criteria"]
+
+    @property
+    def leak_headline(self):
+        """
+        报告页标题。
+        """
+        return self.aligns["mem"]["leak_headline"]
+
+    @property
+    def leak_criteria(self):
+        """
+        报告中的性能评估标准描述。
+        """
+        return self.aligns["mem"]["leak_criteria"]
+
+    @property
+    def gfx_headline(self):
+        """
+        报告页标题。
+        """
+        return self.aligns["gfx"]["headline"]
+
+    @property
+    def gfx_criteria(self):
+        """
+        报告中的性能评估标准描述。
+        """
+        return self.aligns["gfx"]["criteria"]
 
     @speed.setter
     def speed(self, value: typing.Any):
-        self.aligns["Memory"]["speed"] = Parser.parse_decimal(value)
+        self.aligns["common"]["speed"] = Parser.parse_decimal(value)
 
     @label.setter
     def label(self, value: typing.Any):
-        self.aligns["Memory"]["label"] = value
+        self.aligns["common"]["label"] = value
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
-        self.aligns["Report"]["fg_max"] = Parser.parse_decimal(value)
+        self.aligns["mem"]["fg_max"] = Parser.parse_decimal(value)
 
     @fg_avg.setter
     def fg_avg(self, value: typing.Any):
-        self.aligns["Report"]["fg_avg"] = Parser.parse_decimal(value)
+        self.aligns["mem"]["fg_avg"] = Parser.parse_decimal(value)
 
     @bg_max.setter
     def bg_max(self, value: typing.Any):
-        self.aligns["Report"]["bg_max"] = Parser.parse_decimal(value)
+        self.aligns["mem"]["bg_max"] = Parser.parse_decimal(value)
 
     @bg_avg.setter
     def bg_avg(self, value: typing.Any):
-        self.aligns["Report"]["bg_avg"] = Parser.parse_decimal(value)
+        self.aligns["mem"]["bg_avg"] = Parser.parse_decimal(value)
 
-    @headline.setter
-    def headline(self, value: typing.Any):
-        self.aligns["Report"]["headline"] = value
+    @base_headline.setter
+    def base_headline(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["mem"]["base_headline"] = value
 
-    @criteria.setter
-    def criteria(self, value: typing.Any):
-        self.aligns["Report"]["criteria"] = value
+    @base_criteria.setter
+    def base_criteria(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["mem"]["base_criteria"] = value
+
+    @leak_headline.setter
+    def leak_headline(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["mem"]["leak_headline"] = value
+
+    @leak_criteria.setter
+    def leak_criteria(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["mem"]["leak_criteria"] = value
+
+    @gfx_headline.setter
+    def gfx_headline(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["gfx"]["headline"] = value
+
+    @gfx_criteria.setter
+    def gfx_criteria(self, value: typing.Any):
+        if Parser.is_valid(value):
+            self.aligns["gfx"]["criteria"] = value
 
     async def load_align(self) -> None:
         """

@@ -28,35 +28,34 @@ class Templater(object):
         self.download = download
 
     def generate_viewers(self, image_path: "Path", ionic_path: "Path") -> "Div":
-
         parent = Path(self.download).parent.resolve()
         log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
 
         viewers = [
             {**({
-                    "label": "➤ Traces 查看",
+                    "label": "➤ 🛰️Traces 查看",
                     "url": f"file:///{traces_path.as_posix()}",
-                    "color": "#4CAF50"
+                    "color": "#38BDF8"
                 } if (traces_path := parent / const.TRACES_DIR).exists() else {})},
             {**({
-                    "label": "➤ Images 查看",
+                    "label": "➤ 🧬Leak 查看",
                     "url": f"file:///{image_path.as_posix()}",
-                    "color": "#4CAF50"
+                    "color": "#F43F5E"
                 } if image_path and image_path.exists() else {})},
             {**({
-                    "label": "➤ Ionics 查看",
+                    "label": "➤ 📈I/O 查看",
                     "url": f"file:///{ionic_path.as_posix()}",
-                    "color": "#4CAF50"
+                    "color": "#10B981"
                 } if ionic_path and ionic_path.exists() else {})},
             {**({
-                     "label": "➤ 日志 查看",
+                     "label": "➤ 📄日志 查看",
                      "url": f"file:///{log_list[0].as_posix()}",
-                     "color": "#4CAF50"
+                     "color": "#6366F1"
                  } if log_list else {})},
             {
-                "label": "➤ UI.Perfetto.dev 查看",
+                "label": "➤ 🌐UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
-                "color": "#1E90FF"
+                "color": "#F59E42"
             }
         ]
 
@@ -64,23 +63,28 @@ class Templater(object):
             f"""
             <a href="{v['url']}" target="_blank" style="
                 display: inline-block;
-                padding: 10px 20px;
-                margin: 10px;
-                background-color: {v['color']};
-                color: white;
+                padding: 14px 28px;
+                margin: 12px 8px 24px 8px;
+                background: linear-gradient(120deg, {v['color']} 60%, #1E293B 100%);
+                color: #fff;
                 text-decoration: none;
-                font-weight: bold;
-                border-radius: 6px;
-                font-size: 15px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            ">
+                font-weight: 600;
+                border-radius: 14px;
+                font-size: 17px;
+                box-shadow: 0 4px 14px 0 rgba(30,41,59,0.12);
+                letter-spacing: 0.04em;
+                transition: all 0.22s cubic-bezier(.34,1.56,.64,1);
+                will-change: transform;
+            " onmouseover="this.style.transform='scale(1.01)';this.style.boxShadow='0 6px 18px 0 rgba(34,139,230,0.22)';"
+              onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px 0 rgba(30,41,59,0.12)';"
+            >
                 {v['label']}
             </a>
-            """ for v in viewers
+            """ for v in viewers if v
         ])
 
         return Div(text=f"""
-        <div style="margin-top: 40px; text-align: center;">
+        <div style="margin-top: 48px; text-align: center; font-family: 'Segoe UI', 'Inter', 'Arial', sans-serif;">
             {buttons_html}
         </div>
         """)
