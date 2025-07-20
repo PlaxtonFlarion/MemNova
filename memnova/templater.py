@@ -98,7 +98,7 @@ class Templater(object):
         df = df.copy()
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
-        for col in ["pss", "rss", "uss", "native heap", "dalvik heap", "graphics"]:
+        for col in ["pss", "rss", "uss", "native_heap", "dalvik_heap", "graphics"]:
             df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
         df["activity"] = df["activity"].fillna("")
 
@@ -142,7 +142,7 @@ class Templater(object):
         bg_alpha = 0.09
 
         # 堆叠配色（马卡龙/莫兰迪风）
-        stack_fields = ["native heap", "dalvik heap", "graphics"]
+        stack_fields = ["native_heap", "dalvik_heap", "graphics"]
         stack_colors = [
             "#FFD6E0",  # Native Heap：淡粉
             "#D4E7FF",  # Dalvik Heap：淡蓝
@@ -234,8 +234,8 @@ class Templater(object):
             ("PSS", "@pss{0.00} MB"),
             ("RSS", "@rss{0.00} MB"),
             ("USS", "@uss{0.00} MB"),
-            ("Native Heap", "@native heap{0.00} MB"),
-            ("Dalvik Heap", "@dalvik heap{0.00} MB"),
+            ("Native Heap", "@native_heap{0.00} MB"),
+            ("Dalvik Heap", "@dalvik_heap{0.00} MB"),
             ("Graphics", "@graphics{0.00} MB"),
             ("当前页", "@activity"),
             ("优先级", "@mode"),
