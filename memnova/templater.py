@@ -296,12 +296,14 @@ class Templater(object):
         y_max = df["duration_ms"].max()
         y_range = y_max - y_min
         y_start = max(0, y_min - 0.05 * y_range)
-        y_end = y_max + 0.1 * y_range
+        y_close = y_max + 0.1 * y_range
+
+        x_start_s, x_close_s = x_start / 1000, x_close / 1000
 
         p = figure(
-            x_range=Range1d(x_start, x_close),
-            y_range=Range1d(y_start, y_end),
-            x_axis_label="Time (ms)",
+            x_range=Range1d(x_start_s, x_close_s),
+            y_range=Range1d(y_start, y_close),
+            x_axis_label="Time (s)",
             y_axis_label="Frame Duration (ms)",
             height=700,
             sizing_mode="stretch_width",
@@ -310,18 +312,15 @@ class Templater(object):
             output_backend="webgl"
         )
 
-        align_start = int(df["timestamp_ms"].min())
-        p.xaxis.axis_label = f"Time (ms) - Start {align_start}ms"
+        align_start = int(df["timestamp_s"].min())
+        p.xaxis.axis_label = f"Time (s) - Start {align_start}s"
         p.xaxis.major_label_orientation = 0.5
 
         # 🟢 主折线
-        p.line(
-            "timestamp_ms", "duration_ms",
-            source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line"
-        )
+        p.line("timestamp_s", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line")
 
-        # 🟢 点图（已预填色）
-        spot = p.scatter("timestamp_ms", "duration_ms", source=source, size=4, color="color", alpha=0.8)
+        # 🟢 点图
+        spot = p.scatter("timestamp_s", "duration_ms", source=source, size=4, color="color", alpha=0.8)
 
         # 🟢 Hover 信息
         p.add_tools(HoverTool(tooltips="""
@@ -352,7 +351,7 @@ class Templater(object):
             )
 
         # 🟢 用 Quad 绘制背景区间
-        quad_top, quad_bottom = y_end, y_start
+        quad_top, quad_bottom = y_close, y_start
         quad_types = [
             ("Roll Region", roll_ranges, "#ADD8E6", 0.30),
             ("Drag Region", drag_ranges, "#FFA500", 0.25),
@@ -362,8 +361,8 @@ class Templater(object):
         for label, ranges, color, alpha in quad_types:
             if ranges:
                 quad_source = ColumnDataSource({
-                    "left": [r["start_ts"] for r in ranges],
-                    "right": [r["end_ts"] for r in ranges],
+                    "left": [r["start_ts"] / 1000 for r in ranges],
+                    "right": [r["end_ts"] / 1000 for r in ranges],
                     "top": [quad_top] * len(ranges),
                     "bottom": [quad_bottom] * len(ranges),
                 })
