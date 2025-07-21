@@ -213,7 +213,7 @@ class Painter(object):
 
         _ = metadata
 
-        timestamps = [f["timestamp_ms"] for f in raw_frames]
+        timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
         durations = [f["duration_ms"] for f in raw_frames]
         fps_sys = [f["fps"] for f in vsync_sys]
         fps_app = [f["fps"] for f in vsync_app]
@@ -223,7 +223,7 @@ class Painter(object):
         # === 背景区块绘制 ===
         def draw_background(ranges: list[dict], color: str, alpha: float) -> None:
             for r in ranges:
-                ax1.axvspan(r["start_ts"], r["end_ts"], color=color, alpha=alpha)
+                ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=color, alpha=alpha)
 
         draw_background(roll_ranges, "#A2C8E6", 0.10)   # 滑动区
         draw_background(drag_ranges, "#FFD39B", 0.15)   # 拖拽区
@@ -254,16 +254,17 @@ class Painter(object):
 
         for label, ms in fps_marks.items():
             ax1.axhline(ms, linestyle="--", linewidth=1.2, color=fps_colors[label])
-            ax1.text(
-                x=0.003,
-                y=ms,
-                s=label,
-                transform=ax1.get_yaxis_transform(),
-                color=fps_colors[label],
-                fontsize=8,
-                verticalalignment="bottom",
-                horizontalalignment="left"
-            )
+        
+        ax1.text(
+            x=0.003,
+            y=fps_marks["60 FPS"],
+            s="16.67ms",
+            transform=ax1.get_yaxis_transform(),
+            color=fps_colors["60 FPS"],
+            fontsize=8,
+            verticalalignment="bottom",
+            horizontalalignment="left"
+        )
 
         # === FPS 统计信息 ===
         max_sys = max(fps_sys, default=0)
@@ -281,15 +282,16 @@ class Painter(object):
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
             Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
             Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
-            plt.Line2D([0], [0], color=line_color, lw=2, label="Frame Duration"),
-            plt.Line2D([0], [0], color="#D62728", lw=1.2, linestyle='--', label="16.67ms / 60 FPS")
+            Line2D([0], [0], color=line_color, lw=2, label="Frame Duration"),
+            Line2D([0], [0], color="#D62728", lw=1.0, linestyle='--', label="60 FPS"),
+            Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
+            Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS")
         ]
 
         ax1.legend(
             handles=legend_elements,
             loc="upper right",
             fontsize=8,
-            title=fps_summary,
             title_fontsize=9,
             frameon=True,
             facecolor="#FAFAFA",
@@ -298,7 +300,7 @@ class Painter(object):
 
         # === 图表样式 ===
         ax1.set_title("Frame Duration Over Time")
-        ax1.set_xlabel("Timestamp (ms)")
+        ax1.set_xlabel("Timestamp (s)")
         ax1.set_ylabel("Frame Duration (ms)")
         ax1.grid(True, linestyle="--", linewidth=0.3, alpha=0.6)
         ax1.spines["right"].set_visible(False)
