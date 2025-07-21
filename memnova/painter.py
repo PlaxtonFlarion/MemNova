@@ -294,9 +294,9 @@ class Painter(object):
             Line2D([0], [0], color="#FF4081", lw=1.1, linestyle="--", label=f"Max Duration: {max_dur:.1f}ms"),
             Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
             Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS"),
-            Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
-            Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
-            Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
+            Patch(facecolor="#A2C8E6", edgecolor="none", label="Scroll Region"),
+            Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Region"),
+            Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Region"),
         ]
 
         ax1.legend(
