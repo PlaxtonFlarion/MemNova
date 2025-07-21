@@ -137,8 +137,8 @@ class Templater(object):
         # 区块色
         fg_color = "#8FE9FC"  # 前台湖蓝
         bg_color = "#F1F1F1"  # 后台淡灰
-        fg_alpha = 0.13
-        bg_alpha = 0.09
+        fg_alpha = 0.15
+        bg_alpha = 0.35
 
         # 堆叠配色（马卡龙/莫兰迪风）
         stack_fields = ["native_heap", "dalvik_heap", "graphics"]
