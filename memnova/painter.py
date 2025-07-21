@@ -233,7 +233,7 @@ class Painter(object):
         line_color = "#585858"
         ax1.plot(
             timestamps, durations,
-            label="Frame Duration", color=line_color, linewidth=1.8
+            label="Frame Duration", color=line_color, linewidth=1.2
         )
 
         # === 多帧率基准线（不进图例，右侧标注） ===
@@ -282,7 +282,7 @@ class Painter(object):
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
             Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
             Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
-            Line2D([0], [0], color=line_color, lw=2, label="Frame Duration"),
+            Line2D([0], [0], color=line_color, lw=1.2, label="Frame Duration"),
             Line2D([0], [0], color="#D62728", lw=1.0, linestyle='--', label="60 FPS"),
             Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
             Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS")
