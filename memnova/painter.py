@@ -91,14 +91,16 @@ class Painter(object):
             # )
 
         # 堆叠区
+        stack_colors = ["#FFD6E0", "#D4E7FF", "#CAE7E1"]
+        stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
         ax.stackplot(
             df["num_x"],
             df["native_heap"],
             df["dalvik_heap"],
             df["graphics"],
-            colors=["#FFD6E0", "#D4E7FF", "#CAE7E1"],
+            colors=stack_colors,
             alpha=0.38,
-            labels=["Native Heap", "Dalvik Heap", "Graphics"]
+            labels=stack_labels
         )
 
         # RSS折线
