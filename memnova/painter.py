@@ -70,8 +70,8 @@ class Painter(object):
         # 区块配色
         fg_color = "#3386E6"
         bg_color = "#757575"
-        fg_alpha = 0.22
-        bg_alpha = 0.18
+        fg_alpha = 0.15
+        bg_alpha = 0.10
 
         # ---- 绘图 ----
         fig, ax = plt.subplots(figsize=(16, 6))
