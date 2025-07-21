@@ -93,9 +93,6 @@ class Painter(object):
             ax.fill_between(
                 [row["start_time"], row["end_time"]], y_min, y_max, color=color, alpha=alpha, zorder=0
             )
-            # ax.axvspan(
-            #    row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0
-            # )
 
         # 堆叠区
         stack_colors = ["#FFD6E0", "#D4E7FF", "#CAE7E1"]
@@ -116,21 +113,20 @@ class Painter(object):
         ax.plot(df["num_x"], df["uss"], color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
         # PSS主线
         ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
-        
+
         # 滑动平均
         ax.plot(
-            df["num_x"], df["pss_sliding_avg"], color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
+            df["num_x"], df["pss_sliding_avg"],
+            color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
         )
-        
+
         # 均值带
         ax.axhspan(
             avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range"
         )
-        
-        # 均值/极值线
+
+        # 均值线
         ax.axhline(y=avg_val, linestyle=":", color=avg_color, linewidth=0.8)
-        # ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
-        # ax.axhline(y=min_val, linestyle=":", color=min_color, linewidth=0.8)
 
         # 极值点
         ax.scatter(
@@ -169,16 +165,16 @@ class Painter(object):
             Line2D([0], [0], marker="o", color="#009FFD", linestyle="None", markersize=7, label="Min"),
         ]
 
-         # === 展示图例（主图例+堆叠区图例） ===
-         ax.legend(
-             handles=stack_handles + line_handles,
-             loc="upper right",
-             fontsize=9,
-             frameon=True,
-             framealpha=0.3,
-             facecolor="#F9F9F9",
-             edgecolor="#CCCCCC"
-         )
+        # === 展示图例（主图例+堆叠区图例） ===
+        ax.legend(
+            handles=stack_handles + line_handles,
+            loc="upper right",
+            fontsize=9,
+            frameon=True,
+            framealpha=0.3,
+            facecolor="#F9F9F9",
+            edgecolor="#CCCCCC"
+        )
 
         # ====== 评分信息 ======
         ax.text(
@@ -263,7 +259,7 @@ class Painter(object):
 
         for label, ms in fps_marks.items():
             ax1.axhline(ms, linestyle="--", linewidth=1.0, color=fps_colors[label])
-        
+
         ax1.text(
             x=0.003,
             y=fps_marks["60 FPS"],
@@ -340,93 +336,55 @@ class Painter(object):
     @staticmethod
     async def draw_io_metrics(
             metadata: dict,
-            io: dict,
-            rss: list,
-            block: list,
+            df: "pd.DataFrame",
             output_path: str
     ) -> str:
 
-        _, evaluate = metadata, Scores.assess_io_score(io, block)
+        _, evaluate = metadata, Scores.analyze_io_score(df)
+        io_summary = (
+            f"Grade: {evaluate['grade']}\n"
+            f"Score: {evaluate['score']}\n"
+        )
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
-        # === 左轴：RSS ===
-        rss_times, rss_vals = [d["time_sec"] / 1000 for d in rss], [d["rss_mb"] for d in rss]
+        # === 时间轴 ===
+        ts = pd.to_datetime(df["timestamp"])
+        x = (ts - ts.iloc[0]).dt.total_seconds()
 
-        ax1.plot(
-            rss_times, rss_vals,
-            color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
-        )
-        ax1.set_ylabel("RSS (MB)", fontsize=12, color="#1F77B4")
-        ax1.tick_params(axis="y", labelcolor="#1F77B4")
-
-        # === 右轴：IO ===
-        io_lines, ax2 = [], ax1.twinx()
-
-        def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]:
-            if not (data := io.get(series_name, [])):
-                return []
-            times = [d["time_sec"] / 1000 for d in data]
-            values = [d["delta"] for d in data]
-            io_line = ax2.plot(
-                times, values,
-                linestyle="--", linewidth=1.2, marker=marker, markersize=2, color=color, label=label
-            )
-            io_lines.append(io_line)
-            return values
-
-        all_io_vals = []
-        all_io_vals += plot_io_line("pgpgin", "#FF7F0E", "s", "Page In (KB)") or []
-        all_io_vals += plot_io_line("pgpgout", "#2CA02C", "^", "Page Out (KB)") or []
-        all_io_vals += plot_io_line("pswpin", "#D62728", "v", "Swap In (KB)") or []
-        all_io_vals += plot_io_line("pswpout", "#9467BD", "x", "Swap Out (KB)") or []
-
-        ax2.set_ylabel("Page / Swap Delta (KB)", fontsize=12)
-        ax2.tick_params(axis="y")
-
-        # === Block IO 垂线 ===
-        for event in block:
-            t = event["time_sec"]
-            if event["event"] == "block_rq_issue":
-                ax1.axvline(x=t, color="#E377C2", linestyle="--", alpha=0.3)
-            elif event["event"] == "block_rq_complete":
-                ax1.axvline(x=t, color="#7F7F7F", linestyle="--", alpha=0.3)
-
-        # === 主图例项 ===
-        legend_lines = [
-            Line2D([0], [0], color="#1F77B4", linewidth=2, marker="o", label="RSS (MB)"),
-            Line2D([0], [0], color="#FF7F0E", linestyle="--", marker="s", label="Page In"),
-            Line2D([0], [0], color="#2CA02C", linestyle="--", marker="^", label="Page Out"),
-            Line2D([0], [0], color="#D62728", linestyle="--", marker="v", label="Swap In"),
-            Line2D([0], [0], color="#9467BD", linestyle="--", marker="x", label="Swap Out"),
-            Line2D([0], [0], color="#E377C2", linewidth=2, linestyle="--", marker="|", label="Block Issue"),
-            Line2D([0], [0], color="#7F7F7F", linewidth=2, linestyle="--", marker="|", label="Block Complete")
+        # === 计算各项 I/O 差分速率（每秒增量） ===
+        io_fields = [
+            ("read_bytes", "#4F8CFD", "Read Bytes Δ", "o"),
+            ("write_bytes", "#6BE675", "Write Bytes Δ", "^"),
+            ("rchar", "#F09F3E", "RChar Δ", "s"),
+            ("wchar", "#F46C9D", "WChar Δ", "x"),
+            ("syscr", "#9B8FBA", "Syscr Δ", "*"),
+            ("syscw", "#A8D8EA", "Syscw Δ", "+"),
         ]
+        handles = []
+        for col, color, label, marker in io_fields:
+            vals = df[col].astype(float).diff().fillna(0)
+            ax1.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.2, markersize=2, alpha=0.92)
+            handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2))
 
-        # === 主图例项 ===
+        ax1.set_ylabel("Delta Value (s)", fontsize=12)
+        ax1.set_xlabel("Time (s)", fontsize=12)
+        ax1.set_title("I/O Timeline", fontsize=16)
+        ax1.grid(True, linestyle="--", alpha=0.4)
+
+        # === 图例 ===
         ax1.legend(
-            handles=legend_lines,
+            handles=handles,
             loc="upper right",
             fontsize=9,
-            framealpha=0.4,
-            handlelength=0,
-            handletextpad=0.4,
-            labelspacing=0.3,
-            borderpad=0.8
+            framealpha=0.5,
+            facecolor="#F8F9FB",
+            edgecolor="#CCCCCC"
         )
 
-        # === 评分信息 ===
-        summary_text = (
-            f"Score: {evaluate['score']} / 100\n"
-            f"Grade: {evaluate['grade']}\n"
-            f"Swap: {evaluate['swap_status']} ({evaluate['swap_max']} KB)\n"
-            f"Page IO: {evaluate['page_io_status']} ({evaluate['page_io_peak']} KB)\n"
-            f"Block IO: {evaluate['block_events']} events"
-        )
-        
         # === 展示评分 ===
         ax1.text(
-            0.008, 0.98, summary_text,
+            0.008, 0.98, io_summary,
             transform=ax1.transAxes,
             ha="left", va="top",
             fontsize=9,
@@ -434,105 +392,6 @@ class Painter(object):
             bbox=dict(boxstyle="round,pad=0.25", facecolor="#F8F9FB", alpha=0.48, edgecolor="none")
         )
 
-        # === 图表设置 ===
-        ax1.set_xlabel("Time (seconds)", fontsize=12)
-        plt.title("RSS + I/O Timeline", fontsize=16)
-        plt.grid(True, linestyle="--", alpha=0.4)
-        plt.tight_layout()
-        plt.savefig(output_path, dpi=300)
-        plt.close()
-
-        logger.info(f"[√] 图表已保存至: {output_path}")
-
-        return output_path
-    
-    @staticmethod
-    async def draw_io_metrics_2(
-            metadata: dict,
-            io: list,
-            rss: list,
-            block: list,
-            output_path: str
-    ) -> str:
-    
-        # 评分函数先注释掉
-        # _, evaluate = metadata, Scores.assess_io_score(io, block)
-
-        fig, ax1 = plt.subplots(figsize=(16, 6))
-
-        # === 左轴：RSS ===
-        rss_times = [d["time_sec"] / 1000 for d in rss]
-        rss_vals = [d["rss_mb"] for d in rss]
-
-        ax1.plot(
-            rss_times, rss_vals,
-            color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
-        )
-        ax1.set_ylabel("RSS (MB)", fontsize=12, color="#1F77B4")
-        ax1.tick_params(axis="y", labelcolor="#1F77B4")
-
-        # === 右轴：IO ===
-        ax2 = ax1.twinx()
-
-        # 显示（io.read_bytes/io.write_bytes），按 counter_name 分组
-        df = pd.DataFrame(io)
-        io_colors = {
-            "io.read_bytes": "#FF7F0E",
-            "io.write_bytes": "#2CA02C",
-            "io.rchar": "#8C564B",
-            "io.wchar": "#9467BD",
-        }
-        io_markers = {
-            "io.read_bytes": "s",
-            "io.write_bytes": "^",
-            "io.rchar": "d",
-            "io.wchar": "x",
-        }
-
-        for name, group in df.groupby("counter_name"):
-            times = group["time_ms"] / 1000
-            value = group["value"].diff().fillna(0)
-            ax2.plot(
-                times, value,
-                linestyle="--", linewidth=1.2, marker=io_markers.get(name, "o"),
-                markersize=2, color=io_colors.get(name, "#888888"), label=name
-            )
-
-        ax2.set_ylabel("IO Delta (Bytes)", fontsize=12)
-        ax2.tick_params(axis="y")
-
-        # === Block IO 垂线 ===
-        for event in block:
-            t = event["time_sec"]
-            if event["event"] == "block_rq_issue":
-                ax1.axvline(x=t, color="#E377C2", linestyle="--", alpha=0.3)
-            elif event["event"] == "block_rq_complete":
-                ax1.axvline(x=t, color="#7F7F7F", linestyle="--", alpha=0.3)
-
-        # === 主图例项 ===
-        legend_lines = [
-            Line2D([0], [0], color="#1F77B4", linewidth=2, marker="o", label="RSS (MB)"),
-            Line2D([0], [0], color="#FF7F0E", linestyle="--", marker="s", label="io.read_bytes"),
-            Line2D([0], [0], color="#2CA02C", linestyle="--", marker="^", label="io.write_bytes"),
-            Line2D([0], [0], color="#8C564B", linestyle="--", marker="d", label="io.rchar"),
-            Line2D([0], [0], color="#9467BD", linestyle="--", marker="x", label="io.wchar"),
-        ]
-
-        ax1.legend(
-            handles=legend_lines,
-            loc="upper left",
-            fontsize=9,
-            framealpha=0.4,
-            handlelength=1.5,
-            handletextpad=0.4,
-            labelspacing=0.3,
-            borderpad=0.8
-        )
-
-        # === 图表设置 ===
-        ax1.set_xlabel("Time (seconds)", fontsize=12)
-        plt.title("I/O + RSS Timeline", fontsize=16)
-        plt.grid(True, linestyle="--", alpha=0.4)
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
         plt.close()

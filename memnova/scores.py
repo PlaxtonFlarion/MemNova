@@ -8,9 +8,10 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import numpy
 import typing
 import statistics
+import numpy as np
+import pandas as pd
 from scipy.stats import linregress
 
 
@@ -19,7 +20,7 @@ class Scores(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    def analyze_mem_trend(values: tuple[typing.Any]) -> dict:
+    def analyze_mem_score(values: tuple[typing.Any]) -> dict:
         if len(values) < 10:
             return {
                 "trend": "Insufficient Data",
@@ -35,11 +36,11 @@ class Scores(object):
         slope_threshold = 0.01
 
         # ==== 抖动指数 ====
-        diffs = numpy.diff(values)
-        jitter_index = round(float(numpy.std(diffs)) / float(numpy.mean(values)) + 1e-6, 4)
+        diffs = np.diff(values)
+        jitter_index = round(float(np.std(diffs)) / float(np.mean(values)) + 1e-6, 4)
 
         # ==== 线性拟合 ====
-        x = numpy.arange(len(values))
+        x = np.arange(len(values))
         slope, intercept, r_val, _, _ = linregress(x, values)
         r_squared = round(r_val ** 2, 4)
         slope = round(slope, 4)
@@ -74,7 +75,7 @@ class Scores(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    def score_segment(
+    def analyze_gfx_score(
             frames: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
@@ -170,75 +171,79 @@ class Scores(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    def assess_io_score(
-            io: dict,
-            block: list,
-            swap_io_threshold: float = 10240.0,
-            page_io_peak_threshold: float = 102400.0,
-            swap_active_ratio_threshold: float = 0.2
+    def analyze_io_score(
+            df: "pd.DataFrame",
+            swap_threshold: int = 10240,
+            rw_peak_threshold: int = 102400,
+            idle_threshold=10
     ) -> dict:
 
         result = {
             "swap_status": "PASS",
             "swap_max": 0.0,
-            "swap_events": 0,
-            "swap_ratio": 0.0,
-            "page_io_status": "PASS",
-            "page_io_peak": 0.0,
-            "page_io_std": 0.0,
-            "block_events": len(block),
+            "swap_burst_ratio": 0.0,
+            "swap_burst_count": 0,
+            "rw_peak": 0.0,
+            "rw_std": 0.0,
+            "rw_burst_ratio": 0.0,
+            "rw_idle_ratio": 0.0,
+            "sys_burst": 0.0,
+            "sys_burst_events": 0,
             "tags": [],
             "risk": [],
             "score": 100,
             "grade": "S"
         }
 
-        penalties = []
-        tags = []
+        tags, penalties = [], []
 
-        # Swap IO
-        swap_vals = []
-        swap_times = set()
-        for k in ("pswpin", "pswpout"):
-            for d in io.get(k, []):
-                v = float(d.get("delta", 0))
-                t = float(d.get("time_sec", 0))
-                if v > 0:
-                    swap_vals.append(v)
-                    swap_times.add(round(t, 1))
+        # 1. Δ 速率序列
+        for col in ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]:
+            df[col] = df[col].astype(float).diff().fillna(0).clip(lower=0)
 
-        if swap_vals:
-            max_swap = max(swap_vals)
-            ratio = len(swap_times) / max(len(io.get("pgpgin", [])), 1)
-            result["swap_max"] = round(max_swap, 2)
-            result["swap_events"] = len(swap_vals)
-            result["swap_ratio"] = round(ratio, 2)
-            if max_swap > swap_io_threshold:
-                result["swap_status"] = "FAIL"
-                penalties.append(20)
-                result["risk"].append("swap_peak")
-                tags.append("high_swap")
-            if ratio > swap_active_ratio_threshold:
-                result["swap_status"] = "FAIL"
-                penalties.append(10)
-                result["risk"].append("swap_ratio")
-                tags.append("swap_active")
+        # 2. 峰值与抖动
+        rw_vals = pd.concat([df["read_bytes"], df["write_bytes"]])
+        rw_peak = rw_vals.max()
+        rw_std = rw_vals.std()
+        result["rw_peak"] = round(rw_peak, 2)
+        result["rw_std"] = round(rw_std, 2)
+        if rw_peak > rw_peak_threshold:
+            penalties.append(15)
+            tags.append("rw_peak_high")
+            result["risk"].append("RW高峰")
 
-        # Page IO
-        page_vals = []
-        for k in ("pgpgin", "pgpgout"):
-            page_vals += [float(d.get("delta", 0)) for d in io.get(k, [])]
-        if page_vals:
-            peak = max(page_vals)
-            std = numpy.std(page_vals)
-            result["page_io_peak"] = round(peak, 2)
-            result["page_io_std"] = round(std, 2)
-            if peak > page_io_peak_threshold:
-                result["page_io_status"] = "FAIL"
-                penalties.append(10)
-                result["risk"].append("page_io_peak")
-                tags.append("high_page_io")
+        # 3. 爆发段：连续n帧高于均值+std，视为“IO burst”
+        threshold = rw_vals.mean() + rw_vals.std()
+        burst_mask = (rw_vals > threshold)
+        burst_ratio = burst_mask.sum() / len(rw_vals)
+        result["rw_burst_ratio"] = round(burst_ratio, 2)
+        if burst_ratio > burst_ratio:
+            penalties.append(10)
+            tags.append("rw_burst")
+            result["risk"].append("RW爆发")
 
+        # 4. Idle段：所有列加起来几乎全为0的比例
+        idle_mask = ((df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1)) < idle_threshold)
+
+        result["rw_idle_ratio"] = round((idle_ratio := idle_mask.sum() / len(df)), 2)
+        if idle_ratio > 0.4:
+            penalties.append(10)
+            tags.append("rw_idle")
+            result["risk"].append("IO异常空闲")
+
+        # 5. 系统调用突变
+        cr_burst = (df["syscr"] > df["syscr"].mean() + 2 * df["syscr"].std()).sum()
+        cw_burst = (df["syscw"] > df["syscw"].mean() + 2 * df["syscw"].std()).sum()
+
+        result["sys_burst"] = (sys_burst_events := cr_burst + cw_burst)
+        if sys_burst_events > 3:
+            penalties.append(5)
+            tags.append("sys_burst")
+            result["risk"].append("系统调用爆发")
+
+        # 6. Swap爆发（如后续加swap字段可加）
+
+        # 7. 赋分
         score = max(100 - sum(penalties), 0)
         result["score"], result["tags"] = score, tags
 

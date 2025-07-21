@@ -50,7 +50,7 @@ from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.templater import Templater
 from memnova.reporter import Reporter
-from memnova.tracer import GfxAnalyzer, IoAnalyzer
+from memnova.tracer import GfxAnalyzer
 from memnova import const
 
 
@@ -134,7 +134,8 @@ class Memrix(object):
             device: "Device",
             reporter: "Reporter",
             package: str,
-            team_name: str
+            team_name: str,
+            prefix: str,
     ) -> "Path":
 
         self.file_insert = 0
@@ -161,6 +162,7 @@ class Memrix(object):
             scene = {
                 "time": format_before_time,
                 "mark": device.serial,
+                "type": prefix,
                 "file": [self.file_folder]
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
@@ -211,56 +213,87 @@ class Memrix(object):
             now_time: str,
     ) -> None:
 
-        gfx_fmt_data, io_fmt_data, now_time = {}, {}, Period.convert_time(now_time)
+        if not track_gfx or not Path(trace_loc).exists():
+            return None
+
+        gfx_fmt_data, now_time = {}, Period.convert_time(now_time)
 
         with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-            if track_gfx:
-                gfx_analyzer = GfxAnalyzer()
-                gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
-                gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-                await Cubicle.insert_gfx_data(
-                    db, self.file_folder, self.align.label, now_time, gfx_fmt_data
-                )
-
-            io_analyzer = IoAnalyzer()
-            io_data = await io_analyzer.extract_metrics(tp, self.focus)
-            io_fmt_data = {k: json.dumps(v) for k, v in io_data.items()}
-            await Cubicle.insert_io_data(
-                db, self.file_folder, self.align.label, now_time, io_fmt_data
+            gfx_analyzer = GfxAnalyzer()
+            gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
+            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+            await Cubicle.insert_gfx_data(
+                db, self.file_folder, self.align.label, now_time, gfx_fmt_data
             )
 
-        self.file_insert += (len(gfx_fmt_data) + len(io_fmt_data))
+        self.file_insert += len(gfx_fmt_data)
         logger.info(f"Article {self.file_insert} data insert success")
 
-    async def memory_collector(
+    async def track_collector(
             self,
-            track_mem: bool,
+            track_information: bool,
             device: "Device",
             db: "aiosqlite.Connection",
     ) -> None:
 
-        async def flash_memory(pid: str) -> typing.Optional[dict[str, dict]]:
-            if not (memory := await device.memory_info(self.focus)):
-                return None
+        def mem_analyze(mem_info: str) -> dict:
+            mem_map = {}
 
-            logger.info(f"Dump -> [{pid}] - [{self.focus}]")
-            resume_map, memory_map, memory_vms = {}, {}, {}
-
-            if match_memory := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", memory, re.S):
-                toolkit.text_content = (clean_memory := re.sub(r"\s+", " ", match_memory.group()))
-
-                for element in [
+            if match := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", mem_info, re.DOTALL):
+                toolkit.text_content = (clean_mem := re.sub(r"\s+", " ", match.group()))
+                for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    memory_map[element] = toolkit.fit(f"{element} .*?(\\d+)")
+                    mem_map[i] = toolkit.fit(f"{i} .*?(\\d+)")
+
+                if total_memory := re.search(r"TOTAL.*\d+", clean_mem, re.DOTALL):
+                    if part := total_memory.group().split():
+                        mem_map["TOTAL USS"] = toolkit.transform(part[2])
+
+            if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", mem_info, re.DOTALL):
+                toolkit.text_content = re.sub(r"\s+", " ", match_resume.group())
+
+                mem_map["Graphics"] = toolkit.fit("Graphics: .*?(\\d+)")
+                mem_map["TOTAL RSS"] = toolkit.fit("TOTAL RSS: .*?(\\d+)")
+                mem_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
+                mem_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
+
+            return mem_map
+
+        def io_analyze(io_info: str) -> dict:
+            toolkit.text_content = io_info
+            io_map = {}
+
+            if re.search(r"rchar.*?Realtime", io_info, re.DOTALL):
+                for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
+                    io_map[i] = toolkit.fit(f"{i}: .*?(\\d+)")
+
+            return io_map
+
+        async def analyze(pid: str) -> typing.Optional[dict[str, dict]]:
+            if not (union_info := await device.union_dump(pid, self.focus)):
+                return None
+
+            logger.info(f"Dump -> [{pid}] - [{self.focus}]")
+            resume_map, memory_map, io_map = {}, {}, {}
+
+            if match_memory := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", union_info, re.S):
+                toolkit.text_content = (clean_memory := re.sub(r"\s+", " ", match_memory.group()))
+
+                for i in [
+                    "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
+                    ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
+                    "Other mmap", "GL mtrack", "Unknown"
+                ]:
+                    memory_map[i] = toolkit.fit(f"{i} .*?(\\d+)")
 
                 if total_memory := re.search(r"TOTAL.*\d+", clean_memory, re.S):
                     if part := total_memory.group().split():
                         resume_map["TOTAL USS"] = toolkit.transform(part[2])
 
-            if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", memory, re.S):
+            if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", union_info, re.S):
                 toolkit.text_content = re.sub(r"\s+", " ", match_resume.group())
 
                 resume_map["Graphics"] = toolkit.fit("Graphics: .*?(\\d+)")
@@ -268,11 +301,16 @@ class Memrix(object):
                 resume_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
                 resume_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
 
-            memory_vms["vms"] = toolkit.transform(await device.pkg_value(pid))
+            if match_io := re.search(r"rchar.*?Realtime", union_info, re.S):
+                toolkit.text_content = match_io.group()
+                for i in [
+                    "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"
+                ]:
+                    io_map[i] = toolkit.fit(f"{i}: .*?(\\d+)")
 
-            return {"resume_map": resume_map, "memory_map": memory_map, "memory_vms": memory_vms}
+            return {"resume_map": resume_map, "memory_map": memory_map, "io_map": io_map}
 
-        async def flash_memory_launch() -> None:
+        async def track_launch() -> None:
             self.dumped.clear()
 
             dump_start_time = time.time()
@@ -288,13 +326,23 @@ class Memrix(object):
                 return logger.info(f"{msg}\n")
 
             logger.info(device)
-            self.memories.update({
-                "msg": (msg := f"Process -> {app_pid.member}"),
-            })
+            self.memories.update(
+                {"msg": (msg := f"Process -> {app_pid.member}")}
+            )
             logger.info(msg)
 
+            pid = list(app_pid.member.keys())[0]
+
+            activity, adj, mem_info, io_info = await asyncio.gather(
+                device.activity(), device.adj(pid), device.mem_info(pid), device.io_info(pid)
+            )
+            logger.warning(activity)
+            logger.warning(adj)
+            logger.warning(mem_analyze(mem_info))
+            logger.warning(io_analyze(io_info))
+
             if not all(current_info_list := await asyncio.gather(
-                device.adj_value(list(app_pid.member.keys())[0]), device.act_value()
+                device.adj(pid), device.activity()
             )):
                 self.dumped.set()
                 self.memories.update({
@@ -305,27 +353,25 @@ class Memrix(object):
                 })
                 return logger.info(f"{msg}\n")
 
-            adj, act = current_info_list
+            adj, activity = current_info_list
 
-            uid = uid if (uid := await device.uid_value(self.focus)) else 0
+            remark_map = {
+                "tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity
+            }
 
-            remark_map = {"tms": time.strftime("%Y-%m-%d %H:%M:%S")}
+            adj = await device.adj(pid)
 
             remark_map.update({
-                "uid": uid, "adj": adj, "act": act
-            })
-            remark_map.update({
-                "mode": "FG" if self.focus in act else "FG" if int(adj) <= 0 else "BG"
+                "mode": "FG" if self.focus in activity else "FG" if int(adj) <= 0 else "BG"
             })
 
             state = "foreground" if remark_map["mode"] == "FG" else "background"
             self.memories.update({
                 "mod": state,
-                "act": act
+                "act": activity
             })
 
-            logger.info(f"{remark_map['tms']}")
-            logger.info(f"UID: {remark_map['uid']}")
+            logger.info(f"TMS: {remark_map['tms']}")
             logger.info(f"ADJ: {remark_map['adj']}")
             logger.info(f"{remark_map['act']}")
             logger.info(f"{remark_map['mode']}")
@@ -333,19 +379,18 @@ class Memrix(object):
             for k, v in app_pid.member.items():
                 remark_map.update({"pid": k + " - " + v})
 
-            if all(memory_result := await asyncio.gather(
-                *(flash_memory(k) for k in list(app_pid.member.keys()))
-            )):
+            if all(result := await asyncio.gather(*(analyze(k) for k in list(app_pid.member.keys())))):
                 muster = defaultdict(lambda: defaultdict(float))
-                for result in memory_result:
-                    for key, value in result.items():
+                for r in result:
+                    for key, value in r.items():
                         for k, v in value.items():
                             muster[key][k] += v
                 muster = {k: dict(v) for k, v in muster.items()}
+
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Resp -> {memory_result}"),
+                    "msg": (msg := f"Resp -> {result}"),
                     "mod": "*",
                     "act": "*",
                     "pss": "*"
@@ -353,15 +398,16 @@ class Memrix(object):
                 return logger.info(f"{msg}\n")
 
             try:
-                logger.info(muster["resume_map"].copy() | {"VmRss": muster["memory_vms"]["vms"]})
+                logger.info(muster["resume_map"].copy())
             except KeyError:
                 return self.dumped.set()
 
-            ram = Ram({"remark_map": remark_map} | muster)
+
+            io_map, ram = muster.pop("io_map"), Ram({"remark_map": remark_map} | muster)
 
             if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
                 await Cubicle.insert_mem_data(
-                    db, self.file_folder, self.align.label, *maps, ram.memory_vms
+                    db, self.file_folder, self.align.label, *maps, io_map
                 )
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
@@ -387,14 +433,14 @@ class Memrix(object):
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        if not track_mem:
+        if not track_information:
             return None
 
         toolkit: "ToolKit" = ToolKit()
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
-            await flash_memory_launch()
+            await track_launch()
             await asyncio.sleep(self.align.speed)
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
@@ -413,7 +459,7 @@ class Memrix(object):
         )
 
         team_name = f"{prefix}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, reporter, self.focus, team_name)
+        traces = await self.refresh(device, reporter, self.focus, team_name, prefix)
 
         if self.title:
             safe = re.sub(r'[\\/:"*?<>|]+', '', self.title)
@@ -436,7 +482,7 @@ class Memrix(object):
             await perfetto.start()
 
             watcher = asyncio.create_task(self.watcher())
-            await self.memory_collector(self.storm, device, db)
+            await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
@@ -539,7 +585,7 @@ class Perfetto(object):
     async def close(self) -> None:
         if not self.__transports:
             return None
-        
+
         await self.__device.perfetto_close()
         await self.__device.pull(self.__target_folder, self.__trace_loc)
         await self.__device.remove(self.__target_folder)

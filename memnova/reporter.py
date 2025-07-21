@@ -112,23 +112,22 @@ class Reporter(object):
         )
         metadata, (title, timestamp) = {}, joint
 
-        io_data, *_ = await Cubicle.query_io_data(db, data_dir)
-        io, rss, block = io_data.values()
-
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
 
         df = pd.DataFrame(
             union_data_list,
             columns=[
-                "timestamp", "rss", "pss", "uss", "activity", "adj", "mode", "native_heap", "dalvik_heap", "graphics"
+                "timestamp", "rss", "pss", "uss", "activity", "adj", "mode",
+                "native_heap", "dalvik_heap", "graphics",
+                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
             ]
         )
 
-        ionic_task = asyncio.create_task(
-            Painter.draw_io_metrics(metadata, io, rss, block, str(io_loc)), name="draw io metrics"
+        io_task = asyncio.create_task(
+            Painter.draw_io_metrics(metadata, df, str(io_loc)), name="draw io metrics"
         )
-        self.background_tasks.append(ionic_task)
+        self.background_tasks.append(io_task)
 
         if baseline:
             leak_loc = gfx_loc = None
@@ -164,7 +163,7 @@ class Reporter(object):
 
         else:
             leak_loc, gfx_loc = Path(group) / f"{head}_leak.png", None
-            leak = Scores.analyze_mem_trend(df["pss"])
+            leak = Scores.analyze_mem_score(df["pss"])
             evaluate = [
                 {
                     "fields": [
@@ -180,10 +179,10 @@ class Reporter(object):
                 }
             ]
 
-            image_task = asyncio.create_task(
+            leak_task = asyncio.create_task(
                 Painter.draw_mem_metrics(df, str(leak_loc), **leak), name="draw mem metrics"
             )
-            self.background_tasks.append(image_task)
+            self.background_tasks.append(leak_task)
 
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
@@ -331,24 +330,15 @@ class Reporter(object):
         raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = gfx_data.values()
         metadata, (title, timestamp) = {}, joint
 
-        io_data, *_ = await Cubicle.query_io_data(db, data_dir)
-        io, rss, block = io_data.values()
-
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         gfx_loc = Path(group) / f"{head}_gfx.png"
-        io_loc = Path(group) / f"{head}_io.png"
 
-        image_task = asyncio.create_task(
+        gfx_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
                 metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc),
             ), name="draw gfx metrics"
         )
-        self.background_tasks.append(image_task)
-
-        ionic_task = asyncio.create_task(
-            Painter.draw_io_metrics(metadata, io, rss, block, str(io_loc)), name="draw io metrics"
-        )
-        self.background_tasks.append(ionic_task)
+        self.background_tasks.append(gfx_task)
 
         # 平均帧
         avg_fps = round(
@@ -374,7 +364,7 @@ class Reporter(object):
         for idx, (segment, roll, drag, jank, x_start, x_close) in enumerate(segments, start=1):
             padding = (x_close - x_start) * 0.05
 
-            if not (mk := Scores.score_segment(segment, roll, drag, jank, fps_key="fps_app")):
+            if not (mk := Scores.analyze_gfx_score(segment, roll, drag, jank, fps_key="fps_app")):
                 continue
 
             p = await templater.plot_gfx_analysis(
@@ -392,13 +382,11 @@ class Reporter(object):
         if not conspiracy:
             return {}
 
-        mkt = Scores.score_segment(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-        )
+        mkt = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers(None, gfx_loc, io_loc)
+        viewer_div = templater.generate_viewers(None, gfx_loc, None)
         save(column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width"))
         logger.info(f"{data_dir} Handler Done ...")
 

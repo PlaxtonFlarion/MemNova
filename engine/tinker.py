@@ -339,7 +339,7 @@ class Ram(object):
     """
     内存数据结构封装类，用于统一组织一次内存采集轮次中的各类数据分区。
 
-    封装了 remark、resume、memory、vms 四类结构化字典数据，便于统一传递、
+    封装了 remark、resume、memory 三类结构化字典数据，便于统一传递、
     插入数据库、绘图分析或报告生成。
 
     Parameters
@@ -349,7 +349,6 @@ class Ram(object):
         - remark_map : 应用运行时信息（时间戳、PID、UID、ADJ 等）
         - resume_map : 内存汇总指标（PSS、USS、RSS、SWAP 等）
         - memory_map : 内存详细构成（Native Heap、.so、.dex 等）
-        - memory_vms : 虚拟内存信息（如 VmRSS）
     """
 
     def __init__(self, details: dict[str, dict]):
@@ -375,13 +374,6 @@ class Ram(object):
         内存组成明细结构。
         """
         return self.__details.get("memory_map", None)
-
-    @property
-    def memory_vms(self) -> typing.Optional[dict]:
-        """
-        虚拟内存估值信息。
-        """
-        return self.__details.get("memory_vms", None)
 
 
 class ToolKit(object):

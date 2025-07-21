@@ -27,7 +27,13 @@ class Templater(object):
     def __init__(self, download: str):
         self.download = download
 
-    def generate_viewers(self, leak_path: "Path", gfx_path: "Path", io_path: "Path") -> "Div":
+    def generate_viewers(
+            self,
+            leak_path: typing.Optional["Path"] = None,
+            gfx_path: typing.Optional["Path"] = None,
+            io_path: typing.Optional["Path"] = None
+    ) -> "Div":
+
         parent = Path(self.download).parent.resolve()
         log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
 
@@ -332,7 +338,7 @@ class Templater(object):
 
         # 🟢 主折线
         p.line(
-            "timestamp_s", "duration_ms", 
+            "timestamp_s", "duration_ms",
             source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Frame Duration"
         )
 

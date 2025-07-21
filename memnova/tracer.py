@@ -225,64 +225,6 @@ class _Tracer(object):
             f["fps_sys"] = find_nearest(timestamp_ms, vsync_sys)
             f["fps_app"] = find_nearest(timestamp_ms, vsync_app)
 
-    # Notes: ======================== I/O ========================
-
-    async def extract_sys_io(self, tp: "TraceProcessor", *_) -> dict[str, list[dict]]:
-        sql = """
-            SELECT
-                ts / 1e6 AS time_sec,
-                t.name AS counter_name,
-                value,
-                COALESCE(value - LAG(value) OVER (PARTITION BY t.name ORDER BY ts), 0.0) AS delta
-            FROM counter c
-            JOIN counter_track t ON c.track_id = t.id
-            WHERE t.name IN ('pgpgin', 'pgpgout', 'pswpin', 'pswpout')
-            ORDER BY ts;
-        """
-        df = tp.query(sql).as_pandas_dataframe().dropna()
-
-        df["delta"] *= 4  # 单位（KB）
-        df["time_sec"] -= self.normalize_start_ts
-        return {
-            name: group[["time_sec", "delta"]].to_dict("records")
-            for name, group in df.groupby("counter_name")
-        }
-
-    async def extract_app_io(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
-        sql = f"""
-            SELECT
-                c.ts / 1e6 AS time_ms,
-                p.name AS process,
-                t.name AS counter_name,
-                c.value
-            FROM counter AS c
-            JOIN process_counter_track AS t ON c.track_id = t.id
-            JOIN process AS p USING (upid)
-            WHERE t.name LIKE 'io.%'
-              AND p.name = '{app_name}'
-            ORDER BY time_ms;
-        """
-        df = tp.query(sql).as_pandas_dataframe().dropna()
-        df["time_ms"] -= self.normalize_start_ts
-        return df.to_dict("records")
-
-    async def extract_block(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
-        sql = f"""
-            SELECT
-                slice.ts / 1e6 AS time_sec,
-                slice.name AS event
-            FROM slice
-            JOIN thread_track ON slice.track_id = thread_track.id
-            JOIN thread ON thread_track.utid = thread.utid
-            JOIN process ON thread.upid = process.upid
-            WHERE slice.name IN ('block_rq_issue', 'block_rq_complete')
-              AND process.name = '{app_name}'
-            ORDER BY slice.ts;
-        """
-        df = tp.query(sql).as_pandas_dataframe()
-        df["time_sec"] -= self.normalize_start_ts
-        return df[["time_sec", "event"]].to_dict("records")
-
     @staticmethod
     async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
         raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
@@ -326,22 +268,6 @@ class GfxAnalyzer(_Tracer):
             "roll_ranges": roll_ranges,
             "drag_ranges": drag_ranges,
             "jank_ranges": jank_ranges
-        }
-
-
-class IoAnalyzer(_Tracer):
-    """I/O"""
-
-    async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        await self.set_trace_start_ts(tp)
-
-        return {
-            "metadata": {
-                "source": "perfetto", "app": app_name
-            },
-            "io": await self.extract_sys_io(tp, app_name),
-            "rss": await self.extract_rss(tp, app_name),
-            "block": []
         }
 
 

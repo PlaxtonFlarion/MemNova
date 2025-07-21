@@ -105,19 +105,7 @@ class Device(object):
             except IndexError:
                 return None
 
-    async def uid_value(self, package: str, *_, **__) -> typing.Any:
-        """
-        获取指定包名对应的 UID。
-        """
-        cmd = self.__initial + ["shell", "dumpsys", "package", package, "|", "grep", "uid="]
-        response = await Terminal.cmd_line(cmd)
-
-        if response:
-            if match := re.search(r"(?<=uid=)\d+", response):
-                return match.group(0)
-        return None
-
-    async def act_value(self, *_, **__) -> typing.Any:
+    async def activity(self, *_, **__) -> typing.Any:
         """
         获取当前正在前台显示的 Activity 名称。
         """
@@ -130,7 +118,7 @@ class Device(object):
                 return match.group().split(sep)[-1]
         return None
 
-    async def adj_value(self, pid: str, *_, **__) -> typing.Any:
+    async def adj(self, pid: str, *_, **__) -> typing.Any:
         """
         获取进程 ADJ 值（前后台判定）。
         """
@@ -138,23 +126,21 @@ class Device(object):
         response = await Terminal.cmd_line(cmd)
         return None if "No such file" in response else response
 
-    async def pkg_value(self, pid: str, *_, **__) -> typing.Optional[str]:
-        """
-        获取进程内存 VmRSS 值（用于内存图补充）。
-        """
-        cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/status"]
-        response = await Terminal.cmd_line(cmd)
-
-        if response:
-            if match := re.search(r"VmRSS:.*?(\d+)", response):
-                return match.group(1)
-        return None
-
-    async def memory_info(self, package: str, *_, **__) -> typing.Any:
+    async def mem_info(self, package: str, *_, **__) -> typing.Any:
         """
         获取应用内存明细（dumpsys meminfo 原始文本）。
         """
         cmd = self.__initial + ["shell", "dumpsys", "meminfo", package]
+        return await Terminal.cmd_line(cmd)
+
+    async def io_info(self, pid: str, *_, **__) -> typing.Any:
+        cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/io"]
+        return await Terminal.cmd_line(cmd)
+
+    async def union_dump(self, pid: str, package: str, *_, **__) -> typing.Any:
+        cmd = self.__initial + [
+            "shell", "cat", f"/proc/{pid}/io", "&", "dumpsys", "meminfo", package
+        ]
         return await Terminal.cmd_line(cmd)
 
     async def device_online(self, *_, **__) -> typing.Any:
