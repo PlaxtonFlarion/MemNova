@@ -217,12 +217,12 @@ class Templater(object):
         p.add_layout(
             Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
-        p.add_layout(
-            Span(location=max_value, dimension="width", line_color=max_color, line_dash="dotted", line_width=2)
-        )
-        p.add_layout(
-            Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
-        )
+        # p.add_layout(
+        #    Span(location=max_value, dimension="width", line_color=max_color, line_dash="dotted", line_width=2)
+        # )
+        # p.add_layout(
+        #    Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
+        # )
 
         # === 悬浮提示 ===
         tooltips = [
