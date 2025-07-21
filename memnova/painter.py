@@ -241,7 +241,7 @@ class Painter(object):
             label="Frame Duration", color=line_color, linewidth=1.2
         )
         # 平均线
-        ax1.axhline(mean_dur, linestyle=":", linewidth=1.3, color="#448AFF", alpha=0.88, label="Avg Duration")
+        ax1.axhline(avg_dur, linestyle=":", linewidth=1.3, color="#448AFF", alpha=0.88, label="Avg Duration")
         # 最高线
         ax1.axhline(max_dur, linestyle="--", linewidth=1.1, color="#FF4081", alpha=0.88, label="Max Duration")
 
