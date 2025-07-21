@@ -404,7 +404,7 @@ class Painter(object):
         ax1.text(
             0.008, 0.98, summary_text,
             transform=ax1.transAxes,
-            ha="right", va="top",
+            ha="left", va="top",
             fontsize=9,
             color="#595959",
             bbox=dict(boxstyle="round,pad=0.25", facecolor="#F8F9FB", alpha=0.48, edgecolor="none")
