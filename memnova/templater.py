@@ -41,12 +41,12 @@ class Templater(object):
                     "label": "➤ 🧬Leak 查看",
                     "url": f"file:///{image_path.as_posix()}",
                     "color": "#F43F5E"
-                } if image_path and image_path.exists() else {})},
+                } if image_path else {})},
             {**({
                     "label": "➤ 📈I/O 查看",
                     "url": f"file:///{ionic_path.as_posix()}",
                     "color": "#10B981"
-                } if ionic_path and ionic_path.exists() else {})},
+                } if ionic_path else {})},
             {**({
                      "label": "➤ 📄日志 查看",
                      "url": f"file:///{log_list[0].as_posix()}",
