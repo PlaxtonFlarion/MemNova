@@ -253,7 +253,7 @@ class Painter(object):
         }
 
         for label, ms in fps_marks.items():
-            ax1.axhline(ms, linestyle="--", linewidth=1.2, color=fps_colors[label])
+            ax1.axhline(ms, linestyle="--", linewidth=1.0, color=fps_colors[label])
         
         ax1.text(
             x=0.003,
