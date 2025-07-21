@@ -317,7 +317,10 @@ class Templater(object):
         p.xaxis.major_label_orientation = 0.5
 
         # 🟢 主折线
-        p.line("timestamp_s", "duration_ms", source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Main Line")
+        p.line(
+            "timestamp_s", "duration_ms", 
+            source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Frame Duration"
+        )
 
         # 🟢 点图
         spot = p.scatter("timestamp_s", "duration_ms", source=source, size=4, color="color", alpha=0.8)
