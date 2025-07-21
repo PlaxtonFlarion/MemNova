@@ -248,6 +248,25 @@ class _Tracer(object):
             for name, group in df.groupby("counter_name")
         }
 
+    async def extract_app_io(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
+        # SQL 查询进程级 io.read_bytes/io.write_bytes 统计
+        sql = f"""
+            SELECT
+                c.ts / 1e6 AS time_ms,
+                p.name AS process,
+                t.name AS counter_name,
+                c.value
+            FROM counter AS c
+            JOIN process_counter_track AS t ON c.track_id = t.id
+            JOIN process AS p USING (upid)
+            WHERE t.name LIKE 'io.%'
+              AND p.name = '{app_name}'
+            ORDER BY time_ms;
+        """
+        df = tp.query(sql).as_pandas_dataframe().dropna()
+        df["time_ms"] -= self.normalize_start_ts
+        return df.to_dict("records")
+
     async def extract_block(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT
@@ -321,7 +340,7 @@ class IoAnalyzer(_Tracer):
             "metadata": {
                 "source": "perfetto", "app": app_name
             },
-            "io": await self.extract_sys_io(tp),
+            "io": await self.extract_app_io(tp),
             "rss": await self.extract_rss(tp, app_name),
             "block": []
         }
