@@ -159,9 +159,9 @@ class Painter(object):
 
         # 构造伪图例项
         line_handles = [
+            Line2D([0], [0], color=pss_color, linewidth=1.2, label="PSS"),
             Line2D([0], [0], color="#FEB96B", linewidth=1.1, linestyle="--", label="RSS"),
             Line2D([0], [0], color="#90B2C8", linewidth=1.1, linestyle=":", label="USS"),
-            Line2D([0], [0], color=pss_color, linewidth=1.2, label="PSS"),
             Line2D([0], [0], color="#A8BFFF", linestyle="--", label="Sliding Avg"),
             Line2D([0], [0], color=avg_color, linestyle=":", label="PSS AVG"),
             Line2D([0], [0], marker="o", color="#FF1D58", linestyle="None", markersize=7, label="Max"),
@@ -179,7 +179,7 @@ class Painter(object):
              edgecolor="#CCCCCC"
          )
 
-        # ====== 3. 评分信息显示在左上角，淡色小字 ======
+        # ====== 评分信息 ======
         ax.text(
             0.008, 0.98, summary_text,
             transform=ax.transAxes,
