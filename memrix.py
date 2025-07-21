@@ -537,6 +537,9 @@ class Perfetto(object):
         _ = asyncio.create_task(self.__error_stream())
 
     async def close(self) -> None:
+        if not self.__transports:
+            return None
+        
         await self.__device.perfetto_close()
         await self.__device.pull(self.__target_folder, self.__trace_loc)
         await self.__device.remove(self.__target_folder)
