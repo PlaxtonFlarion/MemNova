@@ -20,7 +20,7 @@ class Cubicle(object):
     __joint_table = "joint_table"
     __mem_data_table = "mem_data"
     __gfx_data_table = "gfx_data"
-    __io_data_table = "ion_data"
+    __io_data_table = "io_data"
 
     @staticmethod
     async def initialize_tables(
