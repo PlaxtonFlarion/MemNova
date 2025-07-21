@@ -85,7 +85,28 @@ class Painter(object):
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
             ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
-        # 主线
+        # 堆叠区
+        ax.stackplot(
+            df["num_x"],
+            df["native_heap"],
+            df["dalvik_heap"],
+            df["graphics"],
+            colors=["#FFD6E0", "#D4E7FF", "#CAE7E1"],
+            alpha=0.38,
+            labels=["Native Heap", "Dalvik Heap", "Graphics"]
+        )
+
+        # RSS折线
+        ax.plot(
+            df["num_x"], df["rss"],
+            color="#FEB96B", linewidth=1.1, linestyle="--", alpha=0.75, label="RSS"
+        )
+        # USS折线
+        ax.plot(
+            df["num_x"], df["uss"],
+            color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS"
+        )
+        # PSS主线
         ax.plot(
             df["num_x"], df["pss"],
             color=pss_color, linewidth=1.2, label="PSS"
