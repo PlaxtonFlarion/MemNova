@@ -340,7 +340,7 @@ class IoAnalyzer(_Tracer):
             "metadata": {
                 "source": "perfetto", "app": app_name
             },
-            "io": await self.extract_app_io(tp),
+            "io": await self.extract_app_io(tp, app_name),
             "rss": await self.extract_rss(tp, app_name),
             "block": []
         }
