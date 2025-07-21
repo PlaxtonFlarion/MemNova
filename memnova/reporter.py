@@ -116,7 +116,7 @@ class Reporter(object):
         io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        ionic_loc = Path(group) / f"{head}_ionic.png"
+        ionic_loc = Path(group) / f"{head}_io.png"
 
         df = pd.DataFrame(
             union_data_list,
@@ -163,7 +163,7 @@ class Reporter(object):
             ]
 
         else:
-            image_loc = Path(group) / f"{head}_image.png"
+            image_loc = Path(group) / f"{head}_leak.png"
             leak = Scores.analyze_mem_trend(df["pss"])
             evaluate = [
                 {
@@ -335,8 +335,8 @@ class Reporter(object):
         io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        image_loc = Path(group) / f"{head}_image.png"
-        ionic_loc = Path(group) / f"{head}_ionic.png"
+        image_loc = Path(group) / f"{head}_gfx.png"
+        ionic_loc = Path(group) / f"{head}_io.png"
 
         image_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
