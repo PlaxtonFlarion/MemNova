@@ -305,6 +305,7 @@ class Painter(object):
             metadata: dict,
             io: list,
             rss: list,
+            block: list,
             output_path: str
     ) -> str:
     
@@ -353,6 +354,14 @@ class Painter(object):
 
         ax2.set_ylabel("IO Delta (Bytes)", fontsize=12)
         ax2.tick_params(axis="y")
+
+        # === Block IO 垂线 ===
+        for event in block:
+            t = event["time_sec"]
+            if event["event"] == "block_rq_issue":
+                ax1.axvline(x=t, color="#E377C2", linestyle="--", alpha=0.3)
+            elif event["event"] == "block_rq_complete":
+                ax1.axvline(x=t, color="#7F7F7F", linestyle="--", alpha=0.3)
 
         # === 主图例项 ===
         legend_lines = [
