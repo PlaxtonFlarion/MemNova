@@ -227,7 +227,7 @@ class _Tracer(object):
 
     # Notes: ======================== I/O ========================
 
-    async def extract_sys_io(self, tp: "TraceProcessor") -> dict[str, list[dict]]:
+    async def extract_sys_io(self, tp: "TraceProcessor", *_) -> dict[str, list[dict]]:
         sql = """
             SELECT
                 ts / 1e6 AS time_sec,
@@ -249,7 +249,6 @@ class _Tracer(object):
         }
 
     async def extract_app_io(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
-        # SQL 查询进程级 io.read_bytes/io.write_bytes 统计
         sql = f"""
             SELECT
                 c.ts / 1e6 AS time_ms,
@@ -340,7 +339,7 @@ class IoAnalyzer(_Tracer):
             "metadata": {
                 "source": "perfetto", "app": app_name
             },
-            "io": await self.extract_app_io(tp, app_name),
+            "io": await self.extract_sys_io(tp, app_name),
             "rss": await self.extract_rss(tp, app_name),
             "block": []
         }
