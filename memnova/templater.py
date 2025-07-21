@@ -145,7 +145,7 @@ class Templater(object):
         stack_colors = [
             "#FFD6E0",  # Native Heap：淡粉
             "#D4E7FF",  # Dalvik Heap：淡蓝
-            "#CAE7E1",  # Graphics：淡青
+            "#CAE7E1",  # Graphics：   淡青
         ]
         stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
 
@@ -158,8 +158,7 @@ class Templater(object):
             x_axis_type="datetime",
             tools="pan,wheel_zoom,box_zoom,reset,save",
             title="Memory Usage over Time",
-            y_range=Range1d(y_start, y_end),
-            height=700
+            # y_range=Range1d(y_start, y_end),
         )
 
         # 分区底色
