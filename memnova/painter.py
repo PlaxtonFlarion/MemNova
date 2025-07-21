@@ -83,7 +83,12 @@ class Painter(object):
         for _, row in block_stats.iterrows():
             color = fg_color if row["mode"] == "FG" else bg_color
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
-            ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
+            ax.fill_between(
+                [row["start_time"], row["end_time"]],
+                y_min, y_max,
+                color=color, alpha=alpha, zorder=0
+            )
+            # ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
 
         # 堆叠区
         ax.stackplot(
@@ -97,30 +102,22 @@ class Painter(object):
         )
 
         # RSS折线
-        ax.plot(
-            df["num_x"], df["rss"],
-            color="#FEB96B", linewidth=1.1, linestyle="--", alpha=0.75, label="RSS"
-        )
+        ax.plot(df["num_x"], df["rss"], color="#FEB96B", linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
         # USS折线
-        ax.plot(
-            df["num_x"], df["uss"],
-            color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS"
-        )
+        ax.plot(df["num_x"], df["uss"], color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
         # PSS主线
-        ax.plot(
-            df["num_x"], df["pss"],
-            color=pss_color, linewidth=1.2, label="PSS"
-        )
+        ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
+        
         # 滑动平均
         ax.plot(
-            df["num_x"], df["pss_sliding_avg"],
-            color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
+            df["num_x"], df["pss_sliding_avg"], color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
         )
+        
         # 均值带
         ax.axhspan(
-            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range,
-            color="#D0D0FF", alpha=0.25, label="Average Range"
+            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range"
         )
+        
         # 均值/极值线
         ax.axhline(y=avg_val, linestyle=":", color=avg_color, linewidth=0.8)
         # ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
