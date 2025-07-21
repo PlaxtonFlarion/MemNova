@@ -84,11 +84,11 @@ class Painter(object):
             color = fg_color if row["mode"] == "FG" else bg_color
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
             ax.fill_between(
-                [row["start_time"], row["end_time"]],
-                y_min, y_max,
-                color=color, alpha=alpha, zorder=0
+                [row["start_time"], row["end_time"]], y_min, y_max, color=color, alpha=alpha, zorder=0
             )
-            # ax.axvspan(row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0)
+            # ax.axvspan(
+            #    row["start_time"], row["end_time"], color=color, alpha=alpha, zorder=0
+            # )
 
         # 堆叠区
         ax.stackplot(
