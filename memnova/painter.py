@@ -141,7 +141,7 @@ class Painter(object):
         ax.grid(True, linestyle="--", alpha=0.4)
         plt.xticks(rotation=30)
 
-        # 堆叠区 legend（用 Patch 颜色方块）
+        # 堆叠区 legend
         stack_handles = [
             Patch(facecolor=c, edgecolor="none", alpha=0.38, label=l)
             for c, l in zip(stack_colors, stack_labels)
@@ -209,9 +209,9 @@ class Painter(object):
             for r in ranges:
                 ax1.axvspan(r["start_ts"], r["end_ts"], color=color, alpha=alpha)
 
-        draw_background(roll_ranges, "#A2C8E6", 0.12)   # 滑动区
-        draw_background(drag_ranges, "#FFD39B", 0.16)   # 拖拽区
-        draw_background(jank_ranges, "#F24C4C", 0.32)   # 掉帧区
+        draw_background(roll_ranges, "#A2C8E6", 0.10)   # 滑动区
+        draw_background(drag_ranges, "#FFD39B", 0.15)   # 拖拽区
+        draw_background(jank_ranges, "#F24C4C", 0.35)   # 掉帧区
 
         # === 帧耗时主线 ===
         line_color = "#585858"
@@ -265,14 +265,8 @@ class Painter(object):
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
             Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
             Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
-            plt.Line2D(
-                [0], [0],
-                color=line_color, lw=2, label="Frame Duration"
-            ),
-            plt.Line2D(
-                [0], [0],
-                color="#D62728", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"
-            )
+            plt.Line2D([0], [0], color=line_color, lw=2, label="Frame Duration"),
+            plt.Line2D([0], [0], color="#D62728", lw=1.2, linestyle='--', label="16.67ms / 60 FPS")
         ]
 
         ax1.legend(
