@@ -62,6 +62,12 @@ class Painter(object):
 
         # 判断内存趋势
         trend, trend_score, jitter, r_squared, slope, pss_color = kwargs.values()
+        summary_text = (
+            f"Trend: {trend}\n"
+            f"Score: {trend_score:.2f}\n"
+            f"Shake: {jitter:.4f}\n"
+            f"Slope: {slope:.4f}"
+        )
 
         # 配色与视觉分区
         avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
@@ -152,28 +158,36 @@ class Painter(object):
         # 其他折线等如果需要可以用 Line2D...
 
         # 构造伪图例项
-        legend_items = [
-            Line2D([0], [0], color="none", label=f"Trend: {trend}"),
-            Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
-            Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
-            Line2D([0], [0], color="none", label=f"Slope: {slope:.4f}"),
-            Line2D([0], [0], color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"),
-            # Line2D([0], [0], color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"),
-            # Line2D([0], [0], color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"),
-            Line2D([0], [0], color="#A8BFFF", linestyle="--", label=f"Sliding Avg"),
-            Line2D([0], [0], color=pss_color, label="PSS Line")
+        line_handles = [
+            Line2D([0], [0], color="#FEB96B", linewidth=1.1, linestyle="--", label="RSS"),
+            Line2D([0], [0], color="#90B2C8", linewidth=1.1, linestyle=":", label="USS"),
+            Line2D([0], [0], color=pss_color, linewidth=1.2, label="PSS"),
+            Line2D([0], [0], color="#A8BFFF", linestyle="--", label="Sliding Avg"),
+            Line2D([0], [0], color=avg_color, linestyle=":", label="PSS AVG"),
+            Line2D([0], [0], marker="o", color="#FF1D58", linestyle="None", markersize=7, label="Max"),
+            Line2D([0], [0], marker="o", color="#009FFD", linestyle="None", markersize=7, label="Min"),
         ]
 
          # === 展示图例（主图例+堆叠区图例） ===
          ax.legend(
-             handles=stack_handles + legend_items,
-             loc="upper left",
+             handles=stack_handles + line_handles,
+             loc="upper right",
              fontsize=9,
              frameon=True,
              framealpha=0.3,
              facecolor="#F9F9F9",
              edgecolor="#CCCCCC"
          )
+
+        # ====== 3. 评分信息显示在左上角，淡色小字 ======
+        ax.text(
+            0.008, 0.98, summary_text,
+            transform=ax.transAxes,
+            ha="left", va="top",
+            fontsize=9,
+            color="#595959",
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="#F8F9FB", alpha=0.48, edgecolor="none")
+        )
 
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
