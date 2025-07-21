@@ -339,18 +339,10 @@ class Painter(object):
             return values
 
         all_io_vals = []
-        all_io_vals += plot_io_line(
-            "pgpgin", "#FF7F0E", "s", "Page In (KB)"
-        ) or []
-        all_io_vals += plot_io_line(
-            "pgpgout", "#2CA02C", "^", "Page Out (KB)"
-        ) or []
-        all_io_vals += plot_io_line(
-            "pswpin", "#D62728", "v", "Swap In (KB)"
-        ) or []
-        all_io_vals += plot_io_line(
-            "pswpout", "#9467BD", "x", "Swap Out (KB)"
-        ) or []
+        all_io_vals += plot_io_line("pgpgin", "#FF7F0E", "s", "Page In (KB)") or []
+        all_io_vals += plot_io_line("pgpgout", "#2CA02C", "^", "Page Out (KB)") or []
+        all_io_vals += plot_io_line("pswpin", "#D62728", "v", "Swap In (KB)") or []
+        all_io_vals += plot_io_line("pswpout", "#9467BD", "x", "Swap Out (KB)") or []
 
         ax2.set_ylabel("Page / Swap Delta (KB)", fontsize=12)
         ax2.tick_params(axis="y")
@@ -374,21 +366,9 @@ class Painter(object):
             Line2D([0], [0], color="#7F7F7F", linewidth=2, linestyle="--", marker="|", label="Block Complete")
         ]
 
-        # === 评估信息（伪图例项） ===
-        summary_lines = [
-            f"Score: {evaluate['score']} / 100",
-            f"Grade: {evaluate['grade']}",
-            f"Swap: {evaluate['swap_status']} ({evaluate['swap_max']} KB)",
-            f"Page IO: {evaluate['page_io_status']} ({evaluate['page_io_peak']} KB)",
-            f"Block IO: {evaluate['block_events']} events"
-        ]
-        summary_handles = [
-            Line2D([0], [0], color="none", label=line) for line in summary_lines
-        ]
-
-        # === 合并图例：主图例项 + 评估项 ===
+        # === 主图例项 ===
         ax1.legend(
-            handles=legend_lines + summary_handles,
+            handles=legend_lines,
             loc="upper left",
             fontsize=9,
             framealpha=0.4,
@@ -396,6 +376,23 @@ class Painter(object):
             handletextpad=0.4,
             labelspacing=0.3,
             borderpad=0.8
+        )
+
+        # === 评分信息 ===
+        summary_text = (
+            f"Score: {evaluate['score']} / 100\n"
+            f"Grade: {evaluate['grade']}\n"
+            f"Swap: {evaluate['swap_status']} ({evaluate['swap_max']} KB)\n"
+            f"Page IO: {evaluate['page_io_status']} ({evaluate['page_io_peak']} KB)\n"
+            f"Block IO: {evaluate['block_events']} events"
+        )
+        # 右上角展示评分
+        ax1.text(
+            0.99, 0.98, summary_text,
+            transform=ax1.transAxes,
+            ha="right", va="top",
+            fontsize=11,
+            bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFFBEA", alpha=0.8, edgecolor="none")
         )
 
         # === 图表设置 ===
