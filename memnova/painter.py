@@ -102,8 +102,8 @@ class Painter(object):
         )
         # 均值/极值线
         ax.axhline(y=avg_val, linestyle=":", color=avg_color, linewidth=0.8)
-        ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
-        ax.axhline(y=min_val, linestyle=":", color=min_color, linewidth=0.8)
+        # ax.axhline(y=max_val, linestyle=":", color=max_color, linewidth=0.8)
+        # ax.axhline(y=min_val, linestyle=":", color=min_color, linewidth=0.8)
 
         # 极值点
         ax.scatter(
@@ -116,7 +116,7 @@ class Painter(object):
         )
 
         # 设置轴与样式
-        ax.set_ylim(y_min, y_max)
+        # ax.set_ylim(y_min, y_max)
         ax.set_title("Memory Usage Over Time (PSS)")
         ax.set_xlabel("Timestamp")
         ax.set_ylabel("PSS (MB)")
@@ -125,42 +125,15 @@ class Painter(object):
 
         # 构造伪图例项
         legend_items = [
-            Line2D(
-                [0], [0],
-                color="none", label=f"Trend: {trend}"
-            ),
-            Line2D(
-                [0], [0],
-                color="none", label=f"Score: {trend_score:.2f}"
-            ),
-            Line2D(
-                [0], [0],
-                color="none", label=f"Jitter: {jitter:.4f}"
-            ),
-            Line2D(
-                [0], [0],
-                color="none", label=f"Slope: {slope:.4f}"
-            ),
-            Line2D(
-                [0], [0],
-                color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"
-            ),
-            Line2D(
-                [0], [0],
-                color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"
-            ),
-            Line2D(
-                [0], [0],
-                color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"
-            ),
-            Line2D(
-                [0], [0],
-                color="#A8BFFF", linestyle="--", label=f"Sliding Avg"
-            ),
-            Line2D(
-                [0], [0],
-                color=pss_color, label="PSS Line"
-            )
+            Line2D([0], [0], color="none", label=f"Trend: {trend}"),
+            Line2D([0], [0], color="none", label=f"Score: {trend_score:.2f}"),
+            Line2D([0], [0], color="none", label=f"Jitter: {jitter:.4f}"),
+            Line2D([0], [0], color="none", label=f"Slope: {slope:.4f}"),
+            Line2D([0], [0], color=avg_color, linestyle=":", label=f"PSS AVG: {avg_val:.2f} MB"),
+            # Line2D([0], [0], color=max_color, linestyle=":", label=f"PSS MAX: {max_val:.2f} MB"),
+            # Line2D([0], [0], color=min_color, linestyle=":", label=f"PSS MIN: {min_val:.2f} MB"),
+            Line2D([0], [0], color="#A8BFFF", linestyle="--", label=f"Sliding Avg"),
+            Line2D([0], [0], color=pss_color, label="PSS Line")
         ]
 
         # 展示图例
