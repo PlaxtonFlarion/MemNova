@@ -356,7 +356,7 @@ class Templater(object):
         # 🟢 用 Quad 绘制背景区间
         quad_top, quad_bottom = y_close, y_start
         quad_types = [
-            ("Roll Region", roll_ranges, "#ADD8E6", 0.30),
+            ("Scroll Region", roll_ranges, "#ADD8E6", 0.30),
             ("Drag Region", drag_ranges, "#FFA500", 0.25),
             ("Jank Region", jank_ranges, "#FF0000", 0.15),
         ]
