@@ -369,7 +369,7 @@ class Painter(object):
         # === 主图例项 ===
         ax1.legend(
             handles=legend_lines,
-            loc="upper left",
+            loc="upper right",
             fontsize=9,
             framealpha=0.4,
             handlelength=0,
@@ -388,11 +388,12 @@ class Painter(object):
         )
         # 右上角展示评分
         ax1.text(
-            0.99, 0.98, summary_text,
+            0.008, 0.98, summary_text,
             transform=ax1.transAxes,
             ha="right", va="top",
-            fontsize=11,
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="#FFFBEA", alpha=0.8, edgecolor="none")
+            fontsize=9,
+            color="#595959",
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="#F8F9FB", alpha=0.48, edgecolor="none")
         )
 
         # === 图表设置 ===
@@ -404,6 +405,8 @@ class Painter(object):
         plt.close()
 
         logger.info(f"[√] 图表已保存至: {output_path}")
+
+        return output_path
     
     @staticmethod
     async def draw_io_metrics_2(
