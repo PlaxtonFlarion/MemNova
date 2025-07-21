@@ -298,6 +298,16 @@ class Painter(object):
             edgecolor="#CCCCCC"
         )
 
+        # === 展示评分 ===
+        ax1.text(
+            0.008, 0.98, fps_summary,
+            transform=ax1.transAxes,
+            ha="left", va="top",
+            fontsize=9,
+            color="#595959",
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="#F8F9FB", alpha=0.48, edgecolor="none")
+        )
+
         # === 图表样式 ===
         ax1.set_title("Frame Duration Over Time")
         ax1.set_xlabel("Timestamp (s)")
@@ -402,7 +412,8 @@ class Painter(object):
             f"Page IO: {evaluate['page_io_status']} ({evaluate['page_io_peak']} KB)\n"
             f"Block IO: {evaluate['block_events']} events"
         )
-        # 右上角展示评分
+        
+        # === 展示评分 ===
         ax1.text(
             0.008, 0.98, summary_text,
             transform=ax1.transAxes,
