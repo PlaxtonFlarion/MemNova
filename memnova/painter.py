@@ -8,6 +8,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import numpy as np
 import pandas as pd
 import matplotlib.dates as md
 import matplotlib.pyplot as plt
@@ -218,6 +219,10 @@ class Painter(object):
         fps_sys = [f["fps"] for f in vsync_sys]
         fps_app = [f["fps"] for f in vsync_app]
 
+        # ==== 计算帧耗时平均和最大值 ====
+        avg_dur = np.mean(durations) if durations else 0
+        max_dur = np.max(durations) if durations else 0
+
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # === 背景区块绘制 ===
@@ -235,8 +240,12 @@ class Painter(object):
             timestamps, durations,
             label="Frame Duration", color=line_color, linewidth=1.2
         )
+        # 平均线
+        ax1.axhline(mean_dur, linestyle=":", linewidth=1.3, color="#448AFF", alpha=0.88, label="Avg Duration")
+        # 最高线
+        ax1.axhline(max_dur, linestyle="--", linewidth=1.1, color="#FF4081", alpha=0.88, label="Max Duration")
 
-        # === 多帧率基准线（不进图例，右侧标注） ===
+        # === 多帧率基准线 ===
         fps_marks = {
             "120 FPS": 1000 / 120,
             "90 FPS": 1000 / 90,
@@ -279,13 +288,15 @@ class Painter(object):
 
         # === 自定义图例（颜色区块 + 主线 + 60 FPS）===
         legend_elements = [
+            Line2D([0], [0], color=line_color, lw=1.2, label="Frame Duration"),
+            Line2D([0], [0], color="#D62728", lw=1.0, linestyle='--', label="16.67ms / 60 FPS"),
+            Line2D([0], [0], color="#448AFF", lw=1.3, linestyle=":", label="Avg Duration"),
+            Line2D([0], [0], color="#FF4081", lw=1.1, linestyle="--", label="Max Duration"),
+            Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
+            Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS"),
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
             Patch(facecolor="#FFD39B", edgecolor="none", label="Drag Area"),
             Patch(facecolor="#F5A9A9", edgecolor="none", label="Jank Area"),
-            Line2D([0], [0], color=line_color, lw=1.2, label="Frame Duration"),
-            Line2D([0], [0], color="#D62728", lw=1.0, linestyle='--', label="60 FPS"),
-            Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
-            Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS")
         ]
 
         ax1.legend(
