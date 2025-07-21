@@ -27,9 +27,18 @@ class Templater(object):
     def __init__(self, download: str):
         self.download = download
 
-    def generate_viewers(self, image_path: "Path", ionic_path: "Path") -> "Div":
+    def generate_viewers(self, leak_path: "Path", gfx_path: "Path", io_path: "Path") -> "Div":
         parent = Path(self.download).parent.resolve()
         log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
+
+        """
+        Traces      #38BDF8 亮天蓝
+        Leak        #F472B6 亮粉
+        Gfx         #A78BFA 淡紫
+        I/O         #34D399 鲜绿色
+        日志         #6366F1 靛蓝
+        Perfetto UI #FB923C 橙色
+        """
 
         viewers = [
             {**({
@@ -39,14 +48,19 @@ class Templater(object):
                 } if (traces_path := parent / const.TRACES_DIR).exists() else {})},
             {**({
                     "label": "➤ 🧬Leak 查看",
-                    "url": f"file:///{image_path.as_posix()}",
+                    "url": f"file:///{leak_path.as_posix()}",
                     "color": "#F43F5E"
-                } if image_path else {})},
+                } if leak_path else {})},
+            {**({
+                    "label": "➤ 🌊Gfx 查看",
+                    "url": f"file:///{gfx_path.as_posix()}",
+                    "color": "#A78BFA"
+                } if gfx_path else {})},
             {**({
                     "label": "➤ 📈I/O 查看",
-                    "url": f"file:///{ionic_path.as_posix()}",
+                    "url": f"file:///{io_path.as_posix()}",
                     "color": "#10B981"
-                } if ionic_path else {})},
+                } if io_path else {})},
             {**({
                      "label": "➤ 📄日志 查看",
                      "url": f"file:///{log_list[0].as_posix()}",
