@@ -303,6 +303,114 @@ class Painter(object):
     @staticmethod
     async def draw_io_metrics(
             metadata: dict,
+            io: dict,
+            rss: list,
+            block: list,
+            output_path: str
+    ) -> str:
+
+        _, evaluate = metadata, Scores.assess_io_score(io, block)
+
+        fig, ax1 = plt.subplots(figsize=(16, 6))
+
+        # === 左轴：RSS ===
+        rss_times, rss_vals = [d["time_sec"] / 1000 for d in rss], [d["rss_mb"] for d in rss]
+
+        ax1.plot(
+            rss_times, rss_vals,
+            color="#1F77B4", linewidth=2.0, label="RSS (MB)", marker="o", markersize=3
+        )
+        ax1.set_ylabel("RSS (MB)", fontsize=12, color="#1F77B4")
+        ax1.tick_params(axis="y", labelcolor="#1F77B4")
+
+        # === 右轴：IO ===
+        io_lines, ax2 = [], ax1.twinx()
+
+        def plot_io_line(series_name: str, color: str, marker: str, label: str) -> list[float]:
+            if not (data := io.get(series_name, [])):
+                return []
+            times = [d["time_sec"] / 1000 for d in data]
+            values = [d["delta"] for d in data]
+            io_line = ax2.plot(
+                times, values,
+                linestyle="--", linewidth=1.2, marker=marker, markersize=2, color=color, label=label
+            )
+            io_lines.append(io_line)
+            return values
+
+        all_io_vals = []
+        all_io_vals += plot_io_line(
+            "pgpgin", "#FF7F0E", "s", "Page In (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pgpgout", "#2CA02C", "^", "Page Out (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pswpin", "#D62728", "v", "Swap In (KB)"
+        ) or []
+        all_io_vals += plot_io_line(
+            "pswpout", "#9467BD", "x", "Swap Out (KB)"
+        ) or []
+
+        ax2.set_ylabel("Page / Swap Delta (KB)", fontsize=12)
+        ax2.tick_params(axis="y")
+
+        # === Block IO 垂线 ===
+        for event in block:
+            t = event["time_sec"]
+            if event["event"] == "block_rq_issue":
+                ax1.axvline(x=t, color="#E377C2", linestyle="--", alpha=0.3)
+            elif event["event"] == "block_rq_complete":
+                ax1.axvline(x=t, color="#7F7F7F", linestyle="--", alpha=0.3)
+
+        # === 主图例项 ===
+        legend_lines = [
+            Line2D([0], [0], color="#1F77B4", linewidth=2, marker="o", label="RSS (MB)"),
+            Line2D([0], [0], color="#FF7F0E", linestyle="--", marker="s", label="Page In"),
+            Line2D([0], [0], color="#2CA02C", linestyle="--", marker="^", label="Page Out"),
+            Line2D([0], [0], color="#D62728", linestyle="--", marker="v", label="Swap In"),
+            Line2D([0], [0], color="#9467BD", linestyle="--", marker="x", label="Swap Out"),
+            Line2D([0], [0], color="#E377C2", linewidth=2, linestyle="--", marker="|", label="Block Issue"),
+            Line2D([0], [0], color="#7F7F7F", linewidth=2, linestyle="--", marker="|", label="Block Complete")
+        ]
+
+        # === 评估信息（伪图例项） ===
+        summary_lines = [
+            f"Score: {evaluate['score']} / 100",
+            f"Grade: {evaluate['grade']}",
+            f"Swap: {evaluate['swap_status']} ({evaluate['swap_max']} KB)",
+            f"Page IO: {evaluate['page_io_status']} ({evaluate['page_io_peak']} KB)",
+            f"Block IO: {evaluate['block_events']} events"
+        ]
+        summary_handles = [
+            Line2D([0], [0], color="none", label=line) for line in summary_lines
+        ]
+
+        # === 合并图例：主图例项 + 评估项 ===
+        ax1.legend(
+            handles=legend_lines + summary_handles,
+            loc="upper left",
+            fontsize=9,
+            framealpha=0.4,
+            handlelength=0,
+            handletextpad=0.4,
+            labelspacing=0.3,
+            borderpad=0.8
+        )
+
+        # === 图表设置 ===
+        ax1.set_xlabel("Time (seconds)", fontsize=12)
+        plt.title("RSS + I/O Timeline", fontsize=16)
+        plt.grid(True, linestyle="--", alpha=0.4)
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+
+        logger.info(f"[√] 图表已保存至: {output_path}")
+    
+    @staticmethod
+    async def draw_io_metrics_2(
+            metadata: dict,
             io: list,
             rss: list,
             block: list,
