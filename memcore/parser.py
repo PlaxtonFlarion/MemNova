@@ -107,7 +107,7 @@ class Parser(object):
             '''),
         )
         minor_group.add_argument(
-            "--front", type=str, default=None,
+            "--front", action="store_true",
             help=textwrap.dedent(f'''\
                 \033[1;36m^*极昼极夜*^\033[0m
                 -------------------------
