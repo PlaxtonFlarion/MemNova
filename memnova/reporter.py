@@ -126,7 +126,7 @@ class Reporter(object):
         )
 
         ionic_task = asyncio.create_task(
-            Painter.draw_io_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw io metrics"
+            Painter.draw_io_metrics(metadata, io, rss, block, str(io_loc)), name="draw io metrics"
         )
         self.background_tasks.append(ionic_task)
 
@@ -181,7 +181,7 @@ class Reporter(object):
             ]
 
             image_task = asyncio.create_task(
-                Painter.draw_mem_metrics(df, str(image_loc), **leak), name="draw mem metrics"
+                Painter.draw_mem_metrics(df, str(leak_loc), **leak), name="draw mem metrics"
             )
             self.background_tasks.append(image_task)
 
@@ -340,13 +340,13 @@ class Reporter(object):
 
         image_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
-                metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(image_loc),
+                metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc),
             ), name="draw gfx metrics"
         )
         self.background_tasks.append(image_task)
 
         ionic_task = asyncio.create_task(
-            Painter.draw_io_metrics(metadata, io, rss, block, str(ionic_loc)), name="draw io metrics"
+            Painter.draw_io_metrics(metadata, io, rss, block, str(io_loc)), name="draw io metrics"
         )
         self.background_tasks.append(ionic_task)
 
