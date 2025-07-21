@@ -290,8 +290,8 @@ class Painter(object):
         legend_elements = [
             Line2D([0], [0], color=line_color, lw=1.2, label="Frame Duration"),
             Line2D([0], [0], color="#D62728", lw=1.0, linestyle='--', label="16.67ms / 60 FPS"),
-            Line2D([0], [0], color="#448AFF", lw=1.3, linestyle=":", label="Avg Duration"),
-            Line2D([0], [0], color="#FF4081", lw=1.1, linestyle="--", label="Max Duration"),
+            Line2D([0], [0], color="#448AFF", lw=1.3, linestyle=":", label=f"Avg Duration: {avg_dur:.1f}ms"),
+            Line2D([0], [0], color="#FF4081", lw=1.1, linestyle="--", label=f"Max Duration: {max_dur:.1f}ms"),
             Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
             Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS"),
             Patch(facecolor="#A2C8E6", edgecolor="none", label="Roll Area"),
