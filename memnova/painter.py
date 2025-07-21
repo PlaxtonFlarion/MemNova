@@ -40,15 +40,15 @@ class Painter(object):
         window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
+        # 区块分组
+        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
+
         # 全局统计
         max_val, min_val, avg_val = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         y_range = max_val - min_val if max_val > min_val else 1
         offset = 0.1
         y_min = max(0, min_val - offset * y_range)
         y_max = max_val + offset * y_range
-
-        # 区块分组
-        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
         # 区块统计
         block_stats = df.groupby(["block_id", "mode"]).agg(
