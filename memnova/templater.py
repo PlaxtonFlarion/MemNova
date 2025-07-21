@@ -114,11 +114,11 @@ class Templater(object):
         if value_span < 1e-6:
             pad = max(20, 0.05 * max_value)
             y_start = max(0, min_value - pad)
-            y_end = max_value + pad
+            y_close = max_value + pad
         else:
             pad = max(10, 0.12 * value_span)
             y_start = max(0, min_value - pad)
-            y_end = max_value + pad
+            y_close = max_value + pad
 
         # 区块统计
         block_stats = df.groupby(["block_id", "mode"]).agg(
@@ -158,7 +158,7 @@ class Templater(object):
             x_axis_type="datetime",
             tools="pan,wheel_zoom,box_zoom,reset,save",
             title="Memory Usage over Time",
-            # y_range=Range1d(y_start, y_end),
+            # y_range=Range1d(y_start, y_close),
         )
 
         # 分区底色
@@ -167,7 +167,7 @@ class Templater(object):
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
             p.quad(
                 left=row["start_time"], right=row["end_time"],
-                bottom=y_start, top=y_end,
+                bottom=y_start, top=y_close,
                 fill_color=color, fill_alpha=alpha, line_alpha=0
             )
 
@@ -346,11 +346,11 @@ class Templater(object):
         if "duration_ms" in df:
             p.line(
                 [x_start, x_close], [y_avg, y_avg],
-                line_color="#8700FF", line_dash="dotted", line_width=1, legend_label="Avg Duration"
+                line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg Duration: {y_avg:.1f}ms"
             )
             p.line(
                 [x_start, x_close], [y_max, y_max],
-                line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label="Max Duration"
+                line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max Duration: {y_max:.1f}ms"
             )
 
         # 🟢 用 Quad 绘制背景区间
