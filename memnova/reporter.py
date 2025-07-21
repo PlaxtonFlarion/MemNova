@@ -116,7 +116,7 @@ class Reporter(object):
         io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        ionic_loc = Path(group) / f"{head}_io.png"
+        io_loc = Path(group) / f"{head}_io.png"
 
         df = pd.DataFrame(
             union_data_list,
@@ -131,7 +131,7 @@ class Reporter(object):
         self.background_tasks.append(ionic_task)
 
         if baseline:
-            image_loc = None
+            leak_loc = gfx_loc = None
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -163,7 +163,7 @@ class Reporter(object):
             ]
 
         else:
-            image_loc = Path(group) / f"{head}_leak.png"
+            leak_loc, gfx_loc = Path(group) / f"{head}_leak.png", None
             leak = Scores.analyze_mem_trend(df["pss"])
             evaluate = [
                 {
@@ -199,7 +199,7 @@ class Reporter(object):
         plot = await templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers(image_loc, ionic_loc)
+        viewer_div = templater.generate_viewers(leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
         logger.info(f"{data_dir} Handler Done ...")
 
@@ -335,8 +335,8 @@ class Reporter(object):
         io, rss, block = io_data.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        image_loc = Path(group) / f"{head}_gfx.png"
-        ionic_loc = Path(group) / f"{head}_io.png"
+        gfx_loc = Path(group) / f"{head}_gfx.png"
+        io_loc = Path(group) / f"{head}_io.png"
 
         image_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
@@ -398,7 +398,7 @@ class Reporter(object):
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers(image_loc, ionic_loc)
+        viewer_div = templater.generate_viewers(None, gfx_loc, io_loc)
         save(column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width"))
         logger.info(f"{data_dir} Handler Done ...")
 
