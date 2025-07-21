@@ -141,6 +141,14 @@ class Painter(object):
         ax.grid(True, linestyle="--", alpha=0.4)
         plt.xticks(rotation=30)
 
+        # 堆叠区 legend（用 Patch 颜色方块）
+        stack_handles = [
+            Patch(facecolor=c, edgecolor="none", alpha=0.38, label=l)
+            for c, l in zip(stack_colors, stack_labels)
+        ]
+
+        # 其他折线等如果需要可以用 Line2D...
+
         # 构造伪图例项
         legend_items = [
             Line2D([0], [0], color="none", label=f"Trend: {trend}"),
@@ -154,16 +162,16 @@ class Painter(object):
             Line2D([0], [0], color=pss_color, label="PSS Line")
         ]
 
-        # 展示图例
-        ax.legend(
-            handles=legend_items,
-            loc="upper left",
-            fontsize=9,
-            frameon=True,
-            framealpha=0.3,
-            facecolor="#F9F9F9",
-            edgecolor="#CCCCCC"
-        )
+         # === 展示图例（主图例+堆叠区图例） ===
+         ax.legend(
+             handles=stack_handles + legend_items,
+             loc="upper left",
+             fontsize=9,
+             frameon=True,
+             framealpha=0.3,
+             facecolor="#F9F9F9",
+             edgecolor="#CCCCCC"
+         )
 
         plt.tight_layout()
         plt.savefig(output_path, dpi=300)
