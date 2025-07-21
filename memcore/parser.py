@@ -71,7 +71,7 @@ class Parser(object):
         )
         major_group.add_argument(
             "--forge",
-            type=lambda x: re.sub(r"[^a-zA-Z0-9\u4e00-\u9fa5]", "", x),
+            type=lambda x: re.sub(r"[^a-zA-Z0-9_\-.\u4e00-\u9fff]", "", x),
             help=textwrap.dedent(f'''\
                 \033[1;34m^*真相快照*^\033[0m
                 -------------------------
