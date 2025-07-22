@@ -130,7 +130,7 @@ class Device(object):
         """
         获取应用内存明细（dumpsys meminfo 原始文本）。
         """
-        cmd = self.__initial + ["shell", "dumpsys", "meminfo", package]
+        cmd = self.__initial + ["shell", f"echo ====MEM====; dumpsys meminfo {package}; echo ====EOF===="]
         return await Terminal.cmd_line(cmd)
 
     async def io_info(self, pid: str, *_, **__) -> typing.Any:
