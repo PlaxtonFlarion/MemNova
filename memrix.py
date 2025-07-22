@@ -266,7 +266,7 @@ class Memrix(object):
             toolkit.text_content = io_info
             io_map = {}
 
-            if re.search(r"rchar.*?Realtime", io_info, re.S):
+            if re.search(r"====I/O====.*?====EOF====", io_info, re.S):
                 for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
                     io_map[i] = toolkit.fit(f"{i}.*?(\\d+)")
 
