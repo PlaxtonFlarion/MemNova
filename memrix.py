@@ -236,7 +236,7 @@ class Memrix(object):
             db: "aiosqlite.Connection",
     ) -> None:
 
-        async def mem_analyze(pid: str) -> dict:
+        async def mem_analyze(pid: str) -> typing.Optional[dict]:
             if not (mem_info := await device.mem_info(pid, self.focus)):
                 return None
             
@@ -264,7 +264,7 @@ class Memrix(object):
             self.design.console.print_json(data=mem_map)
             return mem_map
 
-        async def io_analyze(pid: str) -> dict:            
+        async def io_analyze(pid: str) -> typing.Optional[dict]:            
             if not (io_info := await device.io_info(pid, self.focus)):
                 return None
                 
@@ -341,16 +341,14 @@ class Memrix(object):
 
             main_pid = list(app_pid.member.keys())[0]
 
-            activity, adj = await asyncio.gather(
-                device.activity(), device.adj(main_pid)
-            )
+            activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
             io_list = await asyncio.gather(
-                *(mem_analyze(pid) for pid in list(app_pid.member.keys()))
+                *(io_analyze(pid) for pid in list(app_pid.member.keys()))
             )
 
             if not all(current_info_list := await asyncio.gather(
-                device.adj(pid), device.activity()
+                device.adj(main_pid), device.activity()
             )):
                 self.dumped.set()
                 self.memories.update({
@@ -367,7 +365,7 @@ class Memrix(object):
                 "tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity
             }
 
-            adj = await device.adj(pid)
+            adj = await device.adj(main_pid)
 
             remark_map.update({
                 "mode": "FG" if self.focus in activity else "FG" if int(adj) <= 0 else "BG",
