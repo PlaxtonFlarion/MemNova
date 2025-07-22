@@ -134,7 +134,7 @@ class Device(object):
         return await Terminal.cmd_line(cmd)
 
     async def io_info(self, pid: str, *_, **__) -> typing.Any:
-        cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/io"]
+        cmd = self.__initial + ["shell", f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF===="]
         return await Terminal.cmd_line(cmd)
 
     async def union_dump(self, pid: str, package: str, *_, **__) -> typing.Any:
