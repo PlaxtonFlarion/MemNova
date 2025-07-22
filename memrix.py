@@ -26,7 +26,6 @@ import secrets
 import aiosqlite
 
 # ====[ from: 内置模块 ]====
-from io import StringIO
 from pathlib import Path
 from collections import defaultdict
 
@@ -237,24 +236,16 @@ class Memrix(object):
             db: "aiosqlite.Connection",
     ) -> None:
 
-        def mem_analyze(mem_info: str) -> dict:
-            logger.info(mem_info)
+        def mem_analyze(pid: str) -> dict:
+            if not (mem_info := await device.mem_info(pid, self.focus)):
+                return None
+            
             mem_map = {}
             t2 = ToolKit()
-
-            # 直接跳过前3行标题行
-            df = pd.read_fwf(
-                StringIO(text), 
-                skiprows=3, 
-                colspecs=[(0, 16), (16, 28), (28, 40)], 
-                header=None, 
-                names=["type", "pss", "rss"]
-            )
-            df["type"] = df["type"].str.replace(":", "").str.strip()
-            print(df)
-
+            
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
                 t2.text_content = app_meminfo.group()
+                logger.info(f"\n{t2.text_content}")
                 for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
@@ -264,6 +255,7 @@ class Memrix(object):
 
             if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S):
                 t2.text_content = app_summary.group()
+                logger.info(f"\n{t2.text_content}")
                 for i in [
                     "Java Heap", "Code", "Stack", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
@@ -272,12 +264,18 @@ class Memrix(object):
             self.design.console.print_json(data=mem_map)
             return mem_map
 
-        def io_analyze(io_info: str) -> dict:
+        def io_analyze(pid: str) -> dict:            
+            if not (io_info := await device.io_info(pid, self.focus)):
+                return None
+                
             io_map = {}
-
-            if re.search(r"====I/O====.*?====EOF====", io_info, re.S):
+            t2 = ToolKit()
+            
+            if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):
+                t2.text_content = app_io.group()
+                logger.info(f"\n{t2.text_content}")
                 for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = toolkit.fit(f"{i}.*?(\\d+)")  # TODO 需要toolkit额外适配
+                    io_map[i] = t2.fit(f"{i}.*?(\\d+)")  # TODO 需要toolkit额外适配
 
             self.design.console.print_json(data=io_map)
             return io_map
