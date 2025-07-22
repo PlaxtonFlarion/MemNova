@@ -236,7 +236,7 @@ class Memrix(object):
             db: "aiosqlite.Connection",
     ) -> None:
 
-        def mem_analyze(pid: str) -> dict:
+        async def mem_analyze(pid: str) -> dict:
             if not (mem_info := await device.mem_info(pid, self.focus)):
                 return None
             
@@ -264,7 +264,7 @@ class Memrix(object):
             self.design.console.print_json(data=mem_map)
             return mem_map
 
-        def io_analyze(pid: str) -> dict:            
+        async def io_analyze(pid: str) -> dict:            
             if not (io_info := await device.io_info(pid, self.focus)):
                 return None
                 
