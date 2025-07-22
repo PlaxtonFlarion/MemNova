@@ -292,48 +292,6 @@ class Memrix(object):
 
             return {"io": io_map}
 
-        async def union_analyze(pid: str) -> dict:
-            mem_map, io_map = await asyncio.gather(mem_analyze(), io_analyze(pid))
-            return mem_map | io_map
-
-        async def analyze(pid: str) -> typing.Optional[dict[str, dict]]:
-            if not (union_info := await device.union_dump(pid, self.focus)):
-                return None
-
-            logger.info(f"Dump -> [{pid}] - [{self.focus}]")
-            resume_map, memory_map, io_map = {}, {}, {}
-
-            if match_memory := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", union_info, re.S):
-                toolkit.text_content = (clean_memory := re.sub(r"\s+", " ", match_memory.group()))
-
-                for i in [
-                    "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
-                    ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
-                    "Other mmap", "GL mtrack", "Unknown"
-                ]:
-                    memory_map[i] = toolkit.fit(f"{i} .*?(\\d+)")
-
-                if total_memory := re.search(r"TOTAL.*\d+", clean_memory, re.S):
-                    if part := total_memory.group().split():
-                        resume_map["TOTAL USS"] = toolkit.transform(part[2])
-
-            if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", union_info, re.S):
-                toolkit.text_content = re.sub(r"\s+", " ", match_resume.group())
-
-                resume_map["Graphics"] = toolkit.fit("Graphics: .*?(\\d+)")
-                resume_map["TOTAL RSS"] = toolkit.fit("TOTAL RSS: .*?(\\d+)")
-                resume_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
-                resume_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
-
-            if match_io := re.search(r"rchar.*?Realtime", union_info, re.S):
-                toolkit.text_content = match_io.group()
-                for i in [
-                    "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"
-                ]:
-                    io_map[i] = toolkit.fit(f"{i}: .*?(\\d+)")
-
-            return {"resume_map": resume_map, "memory_map": memory_map, "io_map": io_map}
-
         async def track_launch() -> None:
             self.dumped.clear()
 
@@ -370,8 +328,7 @@ class Memrix(object):
             else:
                 mode = "FG" if adj and int(adj) <= 0 else "BG"
 
-            mark_map["mark"]["mode"] = mode
-            mark_map["mark"]["adj"] = adj
+            mark_map["mark"]["mode"], mark_map["mark"]["adj"] = mode, adj
 
             state = "foreground" if mark_map["mark"]["mode"] == "FG" else "background"
             self.memories.update({
