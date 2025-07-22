@@ -40,7 +40,7 @@ from engine.device import Device
 from engine.manage import Manage
 from engine.terminal import Terminal
 from engine.tinker import (
-    Active, Period, Ram, FileAssist, MemrixError
+    Active, Period, FileAssist, MemrixError
 )
 from memcore.api import Api
 from memcore import authorize
@@ -237,10 +237,10 @@ class Memrix(object):
     ) -> None:
 
         def fit(text: str, text_content: str) -> float:
-            try
+            try:
                 match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
                 return round(float(match.group(1)), 2)
-            except (AttibuteError, TypeError, ValueError):
+            except (AttributeError, TypeError, ValueError):
                 return 0.00
 
         async def mem_analyze() -> dict:
@@ -365,7 +365,7 @@ class Memrix(object):
                 "mark": {"mode": mode, "adj": adj}
             })
 
-            state = "foreground" if remark_map["mode"] == "FG" else "background"
+            state = "foreground" if mark_map["mark"]["mode"] == "FG" else "background"
             self.memories.update({
                 "mod": state,
                 "act": activity
@@ -377,7 +377,7 @@ class Memrix(object):
             logger.info(f"{mark_map['mark']['mode']}")
 
             for k, v in app_pid.member.items():
-                remark_map.update({"pid": k + " - " + v})
+                mark_map.update({"mark": {"pid": k + " - " + v}})
 
             if all(result := await asyncio.gather(*(union_analyze(pid) for pid in list(app_pid.member.keys())))):
                 muster = defaultdict(lambda: defaultdict(float))
