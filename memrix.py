@@ -236,49 +236,50 @@ class Memrix(object):
             db: "aiosqlite.Connection",
     ) -> None:
 
-        async def mem_analyze(pid: str) -> typing.Optional[dict]:
-            if not (mem_info := await device.mem_info(pid, self.focus)):
-                return None
-            
+        async def mem_analyze() -> dict:
             mem_map = {}
-            t2 = ToolKit()
             
+            if not (mem_info := await device.mem_info(self.focus)):
+                return mem_map
+
+            if not re.search(r"====MEM====.*?====EOF====", mem_info, re.S):
+                return mem_map
+                 
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
-                t2.text_content = app_meminfo.group()
-                logger.info(f"\n{t2.text_content}")
+                logger.info(f"\n{(text_content := app_meminfo.group())}")
                 for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = t2.fit(f"{i}.*?(\\d+)")
+                    mem_map[i] = ToolKit.fit(i)
 
-            if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S):
-                t2.text_content = app_summary.group()
-                logger.info(f"\n{t2.text_content}")
+            if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S): 
+                logger.info(f"\n{(text_content := app_summary.group())}")
                 for i in [
                     "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = t2.fit(f"{i}.*?(\\d+)")
+                    mem_map[i] = ToolKit.fit(i)
 
-            self.design.console.print_json(data=mem_map)
             return mem_map
 
-        async def io_analyze(pid: str) -> typing.Optional[dict]:            
-            if not (io_info := await device.io_info(pid, self.focus)):
-                return None
-                
+        async def io_analyze(pid: str) -> dict:  
             io_map = {}
-            t2 = ToolKit()
             
-            if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):
-                t2.text_content = app_io.group()
-                logger.info(f"\n{t2.text_content}")
-                for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = t2.fit(f"{i}.*?(\\d+)")  # TODO 需要toolkit额外适配
+            if not (io_info := await device.io_info(pid, self.focus)):
+                return io_map
 
-            self.design.console.print_json(data=io_map)
+            if not re.search(r"====I/O====.*?====EOF====", io_info, re.S):
+                return io_map
+                
+            logger.info(f"\n{(text_content := io_info.group())}")
+            for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
+                io_map[i] = ToolKit.fit(i)
+
             return io_map
+
+        async def union_analyze(pid: str) -> dict:
+            mem_map, io_map = await asyncio.gather(mem_analyze(), io_analyze(pid))
 
         async def analyze(pid: str) -> typing.Optional[dict[str, dict]]:
             if not (union_info := await device.union_dump(pid, self.focus)):
@@ -343,9 +344,10 @@ class Memrix(object):
 
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
-            io_list = await asyncio.gather(
-                *(io_analyze(pid) for pid in list(app_pid.member.keys()))
+            u_list = await asyncio.gather(
+                *(union_analyze(pid) for pid in list(app_pid.member.keys()))
             )
+            self.design.console.print(u_list)
 
             if not all(current_info_list := await asyncio.gather(
                 device.adj(main_pid), device.activity()
