@@ -26,6 +26,7 @@ import secrets
 import aiosqlite
 
 # ====[ from: 内置模块 ]====
+from io import StringIO
 from pathlib import Path
 from collections import defaultdict
 
@@ -237,29 +238,38 @@ class Memrix(object):
     ) -> None:
 
         def mem_analyze(mem_info: str) -> dict:
+            logger.info(mem_info)
             mem_map = {}
+            t2 = ToolKit()
 
-            if match := re.search(r"(\*\*.*?TOTAL (?:\s+\d+){8})", mem_info, re.DOTALL):
-                toolkit.text_content = (clean_mem := re.sub(r"\s+", " ", match.group()))
+            # 直接跳过前3行标题行
+            df = pd.read_fwf(
+                StringIO(text), 
+                skiprows=3, 
+                colspecs=[(0, 16), (16, 28), (28, 40)], 
+                header=None, 
+                names=["type", "pss", "rss"]
+            )
+            df["type"] = df["type"].str.replace(":", "").str.strip()
+            print(df)
+
+            if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
+                t2.text_content = app_meminfo.group()
                 for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = toolkit.fit(f"{i} .*?(\\d+)")
+                    mem_map[i] = t2.fit(f"{i}.*?(\\d+)")
 
-                if total_memory := re.search(r"TOTAL.*\d+", clean_mem, re.DOTALL):
-                    if part := total_memory.group().split():
-                        mem_map["TOTAL USS"] = toolkit.transform(part[2])
+            if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S):
+                t2.text_content = app_summary.group()
+                for i in [
+                    "Java Heap", "Code", "Stack", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
+                ]:
+                    mem_map[i] = t2.fit(f"{i}.*?(\\d+)")
 
-            if match_resume := re.search(r"App Summary.*?TOTAL SWAP.*(\d+)", mem_info, re.DOTALL):
-                toolkit.text_content = re.sub(r"\s+", " ", match_resume.group())
-
-                mem_map["Graphics"] = toolkit.fit("Graphics: .*?(\\d+)")
-                mem_map["TOTAL RSS"] = toolkit.fit("TOTAL RSS: .*?(\\d+)")
-                mem_map["TOTAL PSS"] = toolkit.fit("TOTAL PSS: .*?(\\d+)")
-                mem_map["TOTAL SWAP"] = toolkit.fit("TOTAL SWAP.*(\\d+)")
-
+            self.design.console.print_json(data=mem_map)
             return mem_map
 
         def io_analyze(io_info: str) -> dict:
