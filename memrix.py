@@ -40,7 +40,7 @@ from engine.device import Device
 from engine.manage import Manage
 from engine.terminal import Terminal
 from engine.tinker import (
-    Active, Period, Ram, FileAssist, ToolKit, MemrixError
+    Active, Period, Ram, FileAssist, MemrixError
 )
 from memcore.api import Api
 from memcore import authorize
@@ -236,6 +236,13 @@ class Memrix(object):
             db: "aiosqlite.Connection",
     ) -> None:
 
+        def fit(text: str, text_content: str) -> float:
+            try
+                match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
+                return round(float(match.group(1)), 2)
+            except (AttibuteError, TypeError, ValueError):
+                return 0.00
+
         async def mem_analyze() -> dict:
             mem_map = {}
             
@@ -246,22 +253,22 @@ class Memrix(object):
                 return mem_map
                  
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
-                logger.info(f"\n{(text_content := app_meminfo.group())}")
+                logger.info(f"Current APP MEMINFO\n{(text_content := app_meminfo.group())}")
                 for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = ToolKit.fit(i, text_content)
+                    mem_map[i] = fit(i, text_content)
 
             if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S): 
-                logger.info(f"\n{(text_content := app_summary.group())}")
+                logger.info(f"Current APP SUMMARY\n{(text_content := app_summary.group())}")
                 for i in [
                     "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = ToolKit.fit(i, text_content)
+                    mem_map[i] = fit(i, text_content)
 
-            return mem_map
+            return {"mem": mem_map}
 
         async def io_analyze(pid: str) -> dict:  
             io_map = {}
@@ -270,11 +277,11 @@ class Memrix(object):
                 return io_map
 
             if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):   
-                logger.info(f"\n{(text_content := app_io.group())}")
+                logger.info(f"Current APP IO\n{(text_content := app_io.group())}")
                 for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = ToolKit.fit(i, text_content)
+                    io_map[i] = fit(i, text_content)
 
-            return io_map
+            return {"io": io_map}
 
         async def union_analyze(pid: str) -> dict:
             mem_map, io_map = await asyncio.gather(mem_analyze(), io_analyze(pid))
@@ -343,34 +350,19 @@ class Memrix(object):
 
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
-            u_list = await asyncio.gather(
-                *(union_analyze(pid) for pid in list(app_pid.member.keys()))
-            )
-            self.design.console.print(u_list)
-
-            if not all(current_info_list := await asyncio.gather(
-                device.adj(main_pid), device.activity()
-            )):
-                self.dumped.set()
-                self.memories.update({
-                    "msg": (msg := f"Info -> {current_info_list}"),
-                    "mod": "*",
-                    "act": "*",
-                    "pss": "*"
-                })
-                return logger.info(f"{msg}\n")
-
-            adj, activity = current_info_list
-
-            remark_map = {
-                "tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity
+            mark_map = {
+                "mark": {
+                    "tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity
+                }
             }
 
-            adj = await device.adj(main_pid)
+            if self.focus in activity:
+                mode = "FG"
+            else:
+                mode = "FG" if adj and int(adj) <= 0 else "BG"
 
-            remark_map.update({
-                "mode": "FG" if self.focus in activity else "FG" if int(adj) <= 0 else "BG",
-                "adj": adj
+            mark_map.update({
+                "mark": {"mode": mode, "adj": adj}
             })
 
             state = "foreground" if remark_map["mode"] == "FG" else "background"
@@ -379,15 +371,15 @@ class Memrix(object):
                 "act": activity
             })
 
-            logger.info(f"TMS: {remark_map['tms']}")
-            logger.info(f"ADJ: {remark_map['adj']}")
-            logger.info(f"{remark_map['act']}")
-            logger.info(f"{remark_map['mode']}")
+            logger.info(f"TMS: {mark_map['mark']['tms']}")
+            logger.info(f"ADJ: {mark_map['mark']['adj']}")
+            logger.info(f"{mark_map['mark']['act']}")
+            logger.info(f"{mark_map['mark']['mode']}")
 
             for k, v in app_pid.member.items():
                 remark_map.update({"pid": k + " - " + v})
 
-            if all(result := await asyncio.gather(*(analyze(k) for k in list(app_pid.member.keys())))):
+            if all(result := await asyncio.gather(*(union_analyze(pid) for pid in list(app_pid.member.keys())))):
                 muster = defaultdict(lambda: defaultdict(float))
                 for r in result:
                     for key, value in r.items():
@@ -406,23 +398,20 @@ class Memrix(object):
                 return logger.info(f"{msg}\n")
 
             try:
-                logger.info(muster["resume_map"].copy())
+                logger.info(muster)
             except KeyError:
                 return self.dumped.set()
 
-
-            io_map, ram = muster.pop("io_map"), Ram({"remark_map": remark_map} | muster)
-
-            if all(maps := (ram.remark_map, ram.resume_map, ram.memory_map)):
+            if final_map := mark_map | muster:
                 await Cubicle.insert_mem_data(
-                    db, self.file_folder, self.align.label, *maps, io_map
+                    db, self.file_folder, self.align.label, final_map
                 )
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
                 self.memories[state] += 1
                 self.memories.update({
-                    "pss": f"{ram.resume_map['TOTAL PSS']:.2f} MB"
+                    "pss": f"{muster.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
 
             else:
@@ -443,8 +432,6 @@ class Memrix(object):
 
         if not track_information:
             return None
-
-        toolkit: "ToolKit" = ToolKit()
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
