@@ -339,15 +339,15 @@ class Memrix(object):
             )
             logger.info(msg)
 
-            pid = list(app_pid.member.keys())[0]
+            main_pid = list(app_pid.member.keys())[0]
 
-            activity, adj, mem_info, io_info = await asyncio.gather(
-                device.activity(), device.adj(pid), device.mem_info(pid), device.io_info(pid)
+            activity, adj = await asyncio.gather(
+                device.activity(), device.adj(main_pid)
             )
-            logger.warning(activity)
-            logger.warning(adj)
-            logger.warning(mem_analyze(mem_info))
-            logger.warning(io_analyze(io_info))
+
+            io_list = await asyncio.gather(
+                *(mem_analyze(pid) for pid in list(app_pid.member.keys()))
+            )
 
             if not all(current_info_list := await asyncio.gather(
                 device.adj(pid), device.activity()
