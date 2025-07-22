@@ -116,15 +116,14 @@ class Device(object):
             if match := re.search(r"(?<=Window\{).*?(?=})", response):
                 sep = "/" if "/" in match.group() else None
                 return match.group().split(sep)[-1]
-        return None
+        return "Unknown"
 
     async def adj(self, pid: str, *_, **__) -> typing.Any:
         """
         获取进程 ADJ 值（前后台判定）。
         """
         cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/oom_adj"]
-        response = await Terminal.cmd_line(cmd)
-        return None if "No such file" in response else response
+        return await Terminal.cmd_line(cmd)
 
     async def mem_info(self, package: str, *_, **__) -> typing.Any:
         """
@@ -139,7 +138,7 @@ class Device(object):
 
     async def union_dump(self, pid: str, package: str, *_, **__) -> typing.Any:
         cmd = self.__initial + [
-            "shell", "cat", f"/proc/{pid}/io", "&", "dumpsys", "meminfo", package
+            "shell", f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; dumpsys meminfo {package}; echo ====EOF===="
         ]
         return await Terminal.cmd_line(cmd)
 
