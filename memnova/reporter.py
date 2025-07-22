@@ -119,7 +119,7 @@ class Reporter(object):
             union_data_list,
             columns=[
                 "timestamp", "rss", "pss", "uss", "activity", "adj", "mode",
-                "native_heap", "dalvik_heap", "graphics",
+                "native_heap", "dalvik_heap", "java_heap", "graphics",
                 "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
             ]
         )
