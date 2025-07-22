@@ -361,9 +361,8 @@ class Memrix(object):
             else:
                 mode = "FG" if adj and int(adj) <= 0 else "BG"
 
-            mark_map.update({
-                "mark": {"mode": mode, "adj": adj}
-            })
+            mark_map["mark"]["mode"] = mode
+            mark_map["mark"]["adj"] = adj
 
             state = "foreground" if mark_map["mark"]["mode"] == "FG" else "background"
             self.memories.update({
@@ -377,7 +376,7 @@ class Memrix(object):
             logger.info(f"{mark_map['mark']['mode']}")
 
             for k, v in app_pid.member.items():
-                mark_map.update({"mark": {"pid": k + " - " + v}})
+                mark_map["mark"]["pid"] = k + " - " + v
 
             if all(result := await asyncio.gather(*(union_analyze(pid) for pid in list(app_pid.member.keys())))):
                 muster = defaultdict(lambda: defaultdict(float))
