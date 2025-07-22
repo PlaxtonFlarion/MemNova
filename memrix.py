@@ -282,7 +282,7 @@ class Memrix(object):
         async def io_analyze(pid: str) -> dict:  
             io_map = {}
             
-            if not (io_info := await device.io_info(pid, self.focus)):
+            if not (io_info := await device.io_info(pid)):
                 return io_map
 
             if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):   
