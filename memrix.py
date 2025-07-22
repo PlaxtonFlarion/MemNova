@@ -257,7 +257,7 @@ class Memrix(object):
                 t2.text_content = app_summary.group()
                 logger.info(f"\n{t2.text_content}")
                 for i in [
-                    "Java Heap", "Code", "Stack", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
+                    "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
                     mem_map[i] = t2.fit(f"{i}.*?(\\d+)")
 
