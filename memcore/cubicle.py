@@ -30,11 +30,8 @@ class Cubicle(object):
     ) -> typing.Any:
 
         await asyncio.gather(
-            Cubicle.__create_joint_table(db),
-            Cubicle.__create_mem_table(db),
-            Cubicle.__create_gfx_table(db)
+            Cubicle.__create_joint_table(db), Cubicle.__create_mem_table(db), Cubicle.__create_gfx_table(db)
         )
-
         return await Cubicle.insert_joint_data(db, data_dir, title, timestamp)
 
     @staticmethod
@@ -173,7 +170,7 @@ class Cubicle(object):
                 payload["mark"]["adj"],
                 payload["mark"]["act"],
                 payload["mark"]["mode"],
-            
+
                 payload["mem"]["Java Heap"],
                 payload["mem"]["Graphics"],
                 payload["mem"]["TOTAL PSS"],

@@ -40,7 +40,7 @@ from engine.device import Device
 from engine.manage import Manage
 from engine.terminal import Terminal
 from engine.tinker import (
-    Active, Period, FileAssist, MemrixError
+    Active, Period, FileAssist, ToolKit, MemrixError
 )
 from memcore.api import Api
 from memcore import authorize
@@ -84,6 +84,7 @@ class Memrix(object):
         self.adb: str = kwargs["adb"]
         self.perfetto: str = kwargs["perfetto"]
         self.tp_shell: str = kwargs["tp_shell"]
+        self.trace_conv: str = kwargs["trace_conv"]
 
         self.ft_file: str = kwargs["ft_file"]
 
@@ -102,6 +103,8 @@ class Memrix(object):
 
         self.task_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
         self.dumped: typing.Optional["asyncio.Event"] = None
+
+        self.data_queue: "asyncio.Queue" = asyncio.Queue()
 
     @property
     def remote(self) -> dict:
@@ -231,35 +234,20 @@ class Memrix(object):
 
     async def track_collector(
             self,
-            track_information: bool,
+            track_enabled: bool,
             device: "Device",
             db: "aiosqlite.Connection",
     ) -> None:
 
-        def fit(text: str, text_content: str) -> float:
-            try:
-                match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
-                return round(float(match.group(1)), 2)
-            except (AttributeError, TypeError, ValueError):
-                return 0.00
-
-        def uss_addition(text_content: str) -> float:
-            try:
-                match = re.search(r"(?<=TOTAL).*(\d+)", text_content, re.S)
-                total = match.group().split()
-                return round(sum([float(total[1]), float(total[2])]), 2)
-            except (AttributeError, TypeError, ValueError):
-                return 0.00
-
         async def mem_analyze() -> dict:
             mem_map = {}
-            
+
             if not (mem_info := await device.mem_info(self.focus)):
                 return mem_map
 
             if not re.search(r"====MEM====.*?====EOF====", mem_info, re.S):
                 return mem_map
-                 
+
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
                 logger.info(f"Current APP MEMINFO\n{(meminfo_c := app_meminfo.group())}")
                 for i in [
@@ -267,30 +255,49 @@ class Memrix(object):
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = fit(i, meminfo_c)
-                mem_map["TOTAL USS"] = uss_addition(meminfo_c)
+                    mem_map[i] = ToolKit.fit_mem(i, meminfo_c)
+                mem_map["TOTAL USS"] = ToolKit.uss_addition(meminfo_c)
 
-            if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S): 
+            if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S):
                 logger.info(f"Current APP SUMMARY\n{(summary_c := app_summary.group())}")
                 for i in [
                     "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = fit(i, summary_c)
+                    mem_map[i] = ToolKit.fit_mem(i, summary_c)
 
             return {"mem": mem_map}
 
-        async def io_analyze(pid: str) -> dict:  
+        async def io_analyze(pid: str) -> dict:
             io_map = {}
-            
+
             if not (io_info := await device.io_info(pid)):
                 return io_map
 
-            if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):   
+            if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):
                 logger.info(f"Current APP IO\n{(text_content := app_io.group())}")
-                for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = fit(i, text_content)
+                for i in ["rchar", "wchar", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
+                    io_map[i] = ToolKit.fit_io(i, text_content)
+                for j in ["syscr", "syscw"]:
+                    io_map[j] = ToolKit.fit_io_count(i, text_content)
 
             return {"io": io_map}
+
+        async def union_analyze(pid: str) -> dict:
+            mem_map, io_map = await asyncio.gather(
+                *(mem_analyze(), io_analyze(pid))
+            )
+            return mem_map | io_map
+
+        async def consumer() -> None:
+            while True:
+                data = await self.data_queue.get()
+                try:
+                    final_map = data.get("final_map")
+                    await Cubicle.insert_mem_data(
+                        db, self.file_folder, self.align.label, final_map
+                    )
+                finally:
+                    self.data_queue.task_done()
 
         async def track_launch() -> None:
             self.dumped.clear()
@@ -300,10 +307,7 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Process -> {app_pid}"),
-                    "mod": "*",
-                    "act": "*",
-                    "pss": "*"
+                    "msg": (msg := f"Process -> {app_pid}"), "mod": "*", "act": "*", "pss": "*"
                 })
                 return logger.info(f"{msg}\n")
 
@@ -313,14 +317,19 @@ class Memrix(object):
             )
             logger.info(msg)
 
-            main_pid = list(app_pid.member.keys())[0]
+            try:
+                main_pid = list(app_pid.member.keys())[0]
+            except (KeyError, IndexError) as e:
+                self.dumped.set()
+                self.memories.update({
+                    "msg": (msg := f"Pid -> {e}"), "mod": "*", "act": "*", "pss": "*"
+                })
+                return logger.info(f"{msg}\n")
 
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
             mark_map = {
-                "mark": {
-                    "tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity
-                }
+                "mark": {"tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity}
             }
 
             if self.focus in activity:
@@ -331,18 +340,14 @@ class Memrix(object):
             mark_map["mark"]["mode"], mark_map["mark"]["adj"] = mode, adj
 
             state = "foreground" if mark_map["mark"]["mode"] == "FG" else "background"
-            self.memories.update({
-                "mod": state,
-                "act": activity
-            })
+            self.memories.update({"mod": state, "act": activity})
 
             logger.info(f"TMS: {mark_map['mark']['tms']}")
             logger.info(f"ADJ: {mark_map['mark']['adj']}")
             logger.info(f"{mark_map['mark']['act']}")
             logger.info(f"{mark_map['mark']['mode']}")
 
-            for k, v in app_pid.member.items():
-                mark_map["mark"]["pid"] = k + " - " + v
+            mark_map["mark"]["pid"] = json.dumps(app_pid.member)
 
             if all(result := await asyncio.gather(*(union_analyze(pid) for pid in list(app_pid.member.keys())))):
                 muster = defaultdict(lambda: defaultdict(float))
@@ -355,10 +360,7 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Resp -> {result}"),
-                    "mod": "*",
-                    "act": "*",
-                    "pss": "*"
+                    "msg": (msg := f"Resp -> {result}"), "mod": "*", "act": "*", "pss": "*"
                 })
                 return logger.info(f"{msg}\n")
 
@@ -368,40 +370,39 @@ class Memrix(object):
                 return self.dumped.set()
 
             if final_map := mark_map | muster:
-                await Cubicle.insert_mem_data(
-                    db, self.file_folder, self.align.label, final_map
-                )
+                await self.data_queue.put(final_map)
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
                 self.memories[state] += 1
                 self.memories.update({
-                    "pss": f"{muster.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
+                    "pss": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
 
             else:
                 msg = f"Data insert skipped"
                 self.memories.update({
-                    "mod": "*",
-                    "act": "*",
-                    "pss": "*"
+                    "mod": "*", "act": "*", "pss": "*"
                 })
 
-            self.memories.update({
-                "msg": msg
-            })
+            self.memories.update({"msg": msg})
             logger.info(msg)
 
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
-        if not track_information:
+        if not track_enabled:
             return None
+
+        consumer_task = asyncio.create_task(consumer())
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
             await track_launch()
             await asyncio.sleep(self.align.speed)
+
+        await self.data_queue.join()
+        consumer_task.cancel()
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
     async def track_core_task(self, device: "Device") -> None:
@@ -429,7 +430,9 @@ class Memrix(object):
 
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
-        perfetto = Perfetto(device, self.ft_file, trace_loc)
+        perfetto = Perfetto(
+            self.sleek, self.task_close_event, device, self.ft_file, trace_loc, self.trace_conv
+        )
 
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
@@ -439,7 +442,7 @@ class Memrix(object):
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, animation_event := asyncio.Event())
             )
-            await perfetto.start()
+            merged_trace = await perfetto.auto_pilot()
 
             watcher = asyncio.create_task(self.watcher())
             await self.track_collector(self.storm, device, db)
@@ -447,7 +450,7 @@ class Memrix(object):
             await self.task_close_event.wait()
 
             await perfetto.close()
-            await self.sample_analyze(self.sleek, db, trace_loc, now_time)
+            await self.sample_analyze(self.sleek, db, merged_trace, now_time)
 
             animation_event.set()
 
@@ -504,31 +507,44 @@ class Memrix(object):
 class Perfetto(object):
     """Perfetto"""
 
-    __transports: typing.Optional["asyncio.subprocess.Process"] = None
-
     def __init__(
             self,
+            track_enabled: bool,
+            track_event: "asyncio.Event",
             device: "Device",
             ft_file: typing.Union["Path", str],
-            trace_loc: typing.Union["Path", str]
+            trace_loc: typing.Union["Path", str],
+            trace_conv: str
     ) -> None:
 
+        self.__track_enabled = track_enabled
+        self.__track_event = track_event
         self.__device = device
         self.__ft_file = str(ft_file)
         self.__trace_loc = str(trace_loc)
 
+        self.__trace_conv = trace_conv
+
         self.__device_folder: typing.Optional[str] = None
         self.__target_folder: typing.Optional[str] = None
 
-    async def __input_stream(self) -> None:
-        async for line in self.__transports.stdout:
+        self.__backs: list["asyncio.Task"] = []
+        self.__merge_task: typing.Optional["asyncio.Task"] = None
+
+    @staticmethod
+    async def __input_stream(transports: "asyncio.subprocess.Process") -> None:
+        async for line in transports.stdout:
             logger.info(line.decode(const.CHARSET).strip())
 
-    async def __error_stream(self) -> None:
-        async for line in self.__transports.stderr:
+    @staticmethod
+    async def __error_stream(transports: "asyncio.subprocess.Process") -> None:
+        async for line in transports.stderr:
             logger.info(line.decode(const.CHARSET).strip())
 
     async def start(self) -> None:
+        if not self.__track_enabled:
+            return None
+
         unique_id = uuid.uuid4().hex[:8]
         self.__device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
         self.__target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
@@ -536,20 +552,55 @@ class Perfetto(object):
         await self.__device.push(self.__ft_file, self.__device_folder)
         await self.__device.change_mode(777, self.__device_folder)
 
-        self.__transports = await self.__device.perfetto_start(
+        transports = await self.__device.perfetto_start(
             self.__device_folder, self.__target_folder
         )
-        _ = asyncio.create_task(self.__input_stream())
-        _ = asyncio.create_task(self.__error_stream())
+        _ = asyncio.create_task(self.__input_stream(transports))
+        _ = asyncio.create_task(self.__error_stream(transports))
 
     async def close(self) -> None:
-        if not self.__transports:
+        if not self.__track_enabled:
             return None
 
         await self.__device.perfetto_close()
         await self.__device.pull(self.__target_folder, self.__trace_loc)
         await self.__device.remove(self.__target_folder)
-        self.__transports = None
+
+    async def auto_pilot(self) -> typing.Optional[str]:
+        if not self.__track_enabled:
+            return None
+
+        self.__merge_task = asyncio.create_task(self.__trace_merge())
+
+        while not self.__track_event.is_set():
+            await self.start()
+            await asyncio.sleep(10)
+            self.__backs.append(
+                asyncio.create_task(self.close())
+            )
+
+        await asyncio.gather(*self.__backs)
+        return await self.__merge_task
+
+    async def __trace_merge(self) -> typing.Optional[str]:
+        while not self.__track_event.is_set():
+            await asyncio.sleep(2)
+
+            merge = sorted(Path(self.__trace_loc).parent.glob("*perfetto-trace"))
+            if len(merge := [str(f) for f in merge]) >= 2:
+                unique_id = uuid.uuid4().hex[:8]
+                self.__trace_loc = str(Path(self.__trace_loc).with_name(f"{unique_id}.perfetto-trace"))
+
+                cmd = [self.__trace_conv, "cat", *merge, "-o", self.__trace_loc]
+                logger.warning(f"[合并Trace] {' '.join(cmd)}")
+                await Terminal.cmd_line(cmd)
+
+                await asyncio.gather(
+                    *(asyncio.to_thread(os.remove, f) for f in merge if Path(f).stem != unique_id),
+                )
+                logger.warning(f"[√] Trace合并完成: {self.__trace_loc}")
+
+        return self.__trace_loc
 
 
 # """Main"""
@@ -683,19 +734,22 @@ async def main() -> typing.Any:
     if platform == "win32":
         supports = os.path.join(turbo, "Windows").format()
         adb, perfetto, tp_shell = "adb.exe", "perfetto.exe", "trace_processor_shell.exe"
+        trace_conv = "traceconv.exe"
     elif platform == "darwin":
         supports = os.path.join(turbo, "MacOS").format()
         adb, perfetto, tp_shell = "adb", "perfetto", "trace_processor_shell"
+        trace_conv = "traceconv"
     else:
         raise MemrixError(f"{const.APP_DESC} is not supported on this platform: {platform}.")
 
     adb = os.path.join(supports, "platform-tools", adb)
     perfetto = os.path.join(supports, "perfetto-kit", perfetto)
     tp_shell = os.path.join(supports, "perfetto-kit", tp_shell)
+    trace_conv = os.path.join(supports, "perfetto-kit", trace_conv)
 
     ft_file = os.path.join(supports, "perfetto-kit", "frametime.pbtxt")
 
-    for tls in (tools := [adb, perfetto, tp_shell]):
+    for tls in (tools := [adb, perfetto, tp_shell, trace_conv]):
         os.environ["PATH"] = os.path.dirname(tls) + env_symbol + os.environ.get("PATH", "")
 
     # Notes: ========== 模板与工具检查 ==========
@@ -766,6 +820,7 @@ async def main() -> typing.Any:
         "adb": adb,
         "perfetto": perfetto,
         "tp_shell": tp_shell,
+        "trace_conv": trace_conv,
         "ft_file": ft_file,
     }
     remote = await global_config_task

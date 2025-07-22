@@ -138,7 +138,8 @@ class Device(object):
 
     async def union_dump(self, pid: str, package: str, *_, **__) -> typing.Any:
         cmd = self.__initial + [
-            "shell", f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; dumpsys meminfo {package}; echo ====EOF===="
+            "shell",
+            f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; dumpsys meminfo {package}; echo ====EOF===="
         ]
         return await Terminal.cmd_line(cmd)
 

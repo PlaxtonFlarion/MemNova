@@ -131,15 +131,14 @@ class Painter(object):
         # 极值点
         ax.scatter(
             df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"],
-            s=60, color="#FF1D58", zorder=3, label="Max"
+            s=60, color=max_color, zorder=3, label="Max"
         )
         ax.scatter(
             df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"],
-            s=60, color="#009FFD", zorder=3, label="Min"
+            s=60, color=min_color, zorder=3, label="Min"
         )
 
         # 设置轴与样式
-        # ax.set_ylim(y_min, y_max)
         ax.set_title("Memory Usage Over Time (PSS)")
         ax.set_xlabel("Timestamp")
         ax.set_ylabel("PSS (MB)")
