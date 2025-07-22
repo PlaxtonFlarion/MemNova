@@ -263,13 +263,13 @@ class Memrix(object):
             return mem_map
 
         def io_analyze(io_info: str) -> dict:
-            toolkit.text_content = io_info
             io_map = {}
 
             if re.search(r"====I/O====.*?====EOF====", io_info, re.S):
                 for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = toolkit.fit(f"{i}.*?(\\d+)")
+                    io_map[i] = toolkit.fit(f"{i}.*?(\\d+)")  # TODO 需要toolkit额外适配
 
+            self.design.console.print_json(data=io_map)
             return io_map
 
         async def analyze(pid: str) -> typing.Optional[dict[str, dict]]:
