@@ -252,14 +252,14 @@ class Memrix(object):
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = ToolKit.fit(i)
+                    mem_map[i] = ToolKit.fit(i, text_content)
 
             if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S): 
                 logger.info(f"\n{(text_content := app_summary.group())}")
                 for i in [
                     "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = ToolKit.fit(i)
+                    mem_map[i] = ToolKit.fit(i, text_content)
 
             return mem_map
 
@@ -269,12 +269,10 @@ class Memrix(object):
             if not (io_info := await device.io_info(pid, self.focus)):
                 return io_map
 
-            if not re.search(r"====I/O====.*?====EOF====", io_info, re.S):
-                return io_map
-                
-            logger.info(f"\n{(text_content := io_info.group())}")
-            for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                io_map[i] = ToolKit.fit(i)
+            if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):   
+                logger.info(f"\n{(text_content := app_io.group())}")
+                for i in ["rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
+                    io_map[i] = ToolKit.fit(i, text_content)
 
             return io_map
 
