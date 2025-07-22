@@ -174,7 +174,7 @@ class Cubicle(object):
                 payload["mark"]["act"],
                 payload["mark"]["mode"],
             
-                payload["mem"]["Java Heap"]
+                payload["mem"]["Java Heap"],
                 payload["mem"]["Graphics"],
                 payload["mem"]["TOTAL PSS"],
                 payload["mem"]["TOTAL RSS"],
