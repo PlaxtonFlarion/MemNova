@@ -118,7 +118,7 @@ class Reporter(object):
         df = pd.DataFrame(
             union_data_list,
             columns=[
-                "timestamp", "rss", "pss", "uss", "activity", "adj", "mode",
+                "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
                 "native_heap", "dalvik_heap", "java_heap", "graphics",
                 "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
             ]
