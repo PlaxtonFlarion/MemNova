@@ -278,6 +278,7 @@ class Memrix(object):
 
         async def union_analyze(pid: str) -> dict:
             mem_map, io_map = await asyncio.gather(mem_analyze(), io_analyze(pid))
+            return mem_map | io_map
 
         async def analyze(pid: str) -> typing.Optional[dict[str, dict]]:
             if not (union_info := await device.union_dump(pid, self.focus)):
