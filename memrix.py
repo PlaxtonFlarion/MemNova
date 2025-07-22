@@ -243,6 +243,14 @@ class Memrix(object):
             except (AttributeError, TypeError, ValueError):
                 return 0.00
 
+        def uss_addition(text_content: str) -> float:
+            try:
+                match = re.search(r"(?<=TOTAL).*(\d+)", text_content, re.S)
+                total = match.group().split()
+                return round(sum([float(total[1]), float(total[2])]), 2)
+            except (AttributeError, TypeError, ValueError):
+                return 0.00
+
         async def mem_analyze() -> dict:
             mem_map = {}
             
@@ -253,20 +261,21 @@ class Memrix(object):
                 return mem_map
                  
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
-                logger.info(f"Current APP MEMINFO\n{(text_content := app_meminfo.group())}")
+                logger.info(f"Current APP MEMINFO\n{(meminfo_c := app_meminfo.group())}")
                 for i in [
                     "Native Heap", "Dalvik Heap", "Dalvik Other", "Stack", "Ashmem", "Other dev",
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = fit(i, text_content)
+                    mem_map[i] = fit(i, meminfo_c)
+                mem_map["TOTAL USS"] = uss_addition(meminfo_c)
 
             if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S): 
-                logger.info(f"Current APP SUMMARY\n{(text_content := app_summary.group())}")
+                logger.info(f"Current APP SUMMARY\n{(summary_c := app_summary.group())}")
                 for i in [
                     "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = fit(i, text_content)
+                    mem_map[i] = fit(i, summary_c)
 
             return {"mem": mem_map}
 
