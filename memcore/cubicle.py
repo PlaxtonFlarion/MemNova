@@ -160,12 +160,12 @@ class Cubicle(object):
             other_mmap,
             gl_mtrack,
             unknown,
-            rchar
-            wchar
-            syscr
-            syscw
-            read_bytes
-            write_bytes
+            rchar,
+            wchar,
+            syscr,
+            syscw,
+            read_bytes,
+            write_bytes,
             cancelled_write_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
