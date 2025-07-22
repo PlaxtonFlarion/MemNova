@@ -362,7 +362,8 @@ class Memrix(object):
             adj = await device.adj(pid)
 
             remark_map.update({
-                "mode": "FG" if self.focus in activity else "FG" if int(adj) <= 0 else "BG"
+                "mode": "FG" if self.focus in activity else "FG" if int(adj) <= 0 else "BG",
+                "adj": adj
             })
 
             state = "foreground" if remark_map["mode"] == "FG" else "background"
