@@ -370,7 +370,7 @@ class Memrix(object):
                 return self.dumped.set()
 
             if final_map := mark_map | muster:
-                await self.data_queue.put(final_map)
+                await self.data_queue.put({"final_map": final_map})
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
