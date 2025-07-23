@@ -29,7 +29,7 @@ class Templater(object):
 
     def generate_viewers(
             self,
-            trace_path: typing.Optional["Path"] = None
+            trace_path: typing.Optional["Path"] = None,
             leak_path: typing.Optional["Path"] = None,
             gfx_path: typing.Optional["Path"] = None,
             io_path: typing.Optional["Path"] = None
