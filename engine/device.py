@@ -124,7 +124,8 @@ class Device(object):
         获取进程 ADJ 值（前后台判定）。
         """
         cmd = self.__initial + ["shell", "cat", f"/proc/{pid}/oom_adj"]
-        return await Terminal.cmd_line(cmd)
+        response = await Terminal.cmd_line(cmd)
+        return int(response) if re.fullmatch(r"-?\d+", response or "") else None
 
     async def mem_info(self, package: str, *_, **__) -> typing.Any:
         """
