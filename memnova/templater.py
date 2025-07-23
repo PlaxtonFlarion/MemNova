@@ -114,7 +114,7 @@ class Templater(object):
 
     @staticmethod
     async def plot_mem_analysis(df: "pd.DataFrame") -> "figure":
-        # === 数据处理 ===
+        # 🟡 ==== 数据处理 ====
         df = df.copy()
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -122,14 +122,14 @@ class Templater(object):
             df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
         df["activity"] = df["activity"].fillna("")
 
-        # ==== 滑动窗口均值 ====
+        # 🟡 ==== 滑动窗口均值 ====
         window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
-        # ==== 区块分组 ====
+        # 🟡 ==== 区块分组 ====
         df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
-        # ==== 主统计 ====
+        # 🟡 ==== 主统计 ====
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         value_span = max_value - min_value
         if value_span < 1e-6:
@@ -141,13 +141,13 @@ class Templater(object):
             y_start = max(0, min_value - padding)
             y_close = max_value + padding
 
-        # ==== 前后台区块统计 ====
+        # 🟡 ==== 前后台区块统计 ====
         block_stats = df.groupby(["block_id", "mode"]).agg(
             start_time=("x", "first"),
             end_time=("x", "last"),
         ).reset_index()
 
-        # ==== 主线折线 & 极值 ====
+        # 🟡 ==== 主线折线 & 极值 ====
         pss_color = "#3564B0"  # 主线深蓝
         rss_color = "#FEB96B"  # RSS淡橙
         uss_color = "#90B2C8"  # USS淡蓝灰
@@ -155,13 +155,13 @@ class Templater(object):
         max_color = "#FF5872"  # 峰值桃红
         min_color = "#54E3AF"  # 谷值薄荷绿
 
-        # ==== 区块色 ====
+        # 🟡 ==== 区块色 ====
         fg_color = "#8FE9FC"  # 前台湖蓝
         bg_color = "#F1F1F1"  # 后台淡灰
         fg_alpha = 0.15
         bg_alpha = 0.35
 
-        # ==== 堆叠配色（马卡龙/莫兰迪风）====
+        # 🟡 ==== 堆叠配色（马卡龙/莫兰迪风）====
         stack_fields = ["native_heap", "dalvik_heap", "graphics"]
         stack_colors = [
             "#FFD6E0",  # Native Heap 淡粉
@@ -170,10 +170,10 @@ class Templater(object):
         ]
         stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
 
-        # ==== 堆叠数据 ====
+        # 🟡 ==== 堆叠数据 ====
         stack_source = ColumnDataSource(df)
 
-        # === 绘图主对象 ===
+        # 🟡 === 绘图主对象 ===
         p = figure(
             sizing_mode="stretch_both",
             x_axis_type="datetime",
@@ -181,7 +181,7 @@ class Templater(object):
             title="Memory Usage over Time"
         )
 
-        # ==== 前后台分区底色 ====
+        # 🟡 ==== 前后台分区底色 ====
         for _, row in block_stats.iterrows():
             color = fg_color if row["mode"] == "FG" else bg_color
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
@@ -191,7 +191,7 @@ class Templater(object):
                 fill_color=color, fill_alpha=alpha, line_alpha=0
             )
 
-        # ==== 面积堆叠 ====
+        # 🟡 ==== 面积堆叠 ====
         p.varea_stack(
             stackers=stack_fields,
             x="x",
@@ -201,49 +201,49 @@ class Templater(object):
             alpha=0.4
         )
 
-        # ==== 折线 & 极值点 ====
+        # 🟡 ==== 折线 & 极值点 ====
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
         )
         df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
         source = ColumnDataSource(df)
 
-        # ==== PSS 主线 ====
+        # 🟡 ==== PSS 主线 ====
         p.line(
             "x", "pss",
             source=source, line_width=2.5, color=pss_color, legend_label="PSS"
         )
 
-        # ==== RSS 辅助线 ====
+        # 🟡 ==== RSS 辅助线 ====
         p.line(
             "x", "rss",
             source=source, line_width=1.2, color=rss_color, alpha=0.7, legend_label="RSS", line_dash="dashed"
         )
 
-        # ==== USS 辅助线 ====
+        # 🟡 ==== USS 辅助线 ====
         p.line(
             "x", "uss",
             source=source, line_width=1.2, color=uss_color, alpha=0.7, legend_label="USS", line_dash="dotted"
         )
 
-        # ==== 滑窗均值线 ====
+        # 🟡 ==== 滑窗均值线 ====
         p.line(
             "x", "pss_sliding_avg",
             source=source, line_width=1.5, color=avg_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
         )
 
-        # ==== 极值点 ====
+        # 🟡 ==== 极值点 ====
         pss_spot = p.scatter(
             "x", "pss",
             source=source, size="sizes", color="colors", alpha=0.98
         )
 
-        # ==== 均值线 ====
+        # 🟡 ==== 均值线 ====
         p.add_layout(
             Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
 
-        # ==== 悬浮提示 ====
+        # 🟡 ==== 悬浮提示 ====
         tooltips = [
             ("时间", "@timestamp{%H:%M:%S}"),
             ("滑窗均值", "@pss_sliding_avg{0.00} MB"),
@@ -261,7 +261,7 @@ class Templater(object):
         )
         p.add_tools(hover)
 
-        # ==== 主题 & 坐标轴 ====
+        # 🟡 ==== 主题 & 坐标轴 ====
         p.xgrid.grid_line_color = "#E3E3E3"
         p.ygrid.grid_line_color = "#E3E3E3"
         p.xgrid.grid_line_alpha = 0.25
