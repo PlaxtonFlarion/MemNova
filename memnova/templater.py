@@ -35,7 +35,6 @@ class Templater(object):
             io_path: typing.Optional["Path"] = None
     ) -> "Div":
 
-        parent = Path(self.download).parent.resolve()
         log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
 
         """
