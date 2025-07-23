@@ -331,7 +331,7 @@ class Reporter(object):
         metadata, (title, timestamp) = {}, joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        trace_loc = Path(templater.download).parent / const.TRACES / data_dir
+        trace_loc = Path(templater.download).parent / const.TRACES_DIR / data_dir
         leak_loc = None
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
