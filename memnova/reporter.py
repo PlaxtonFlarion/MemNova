@@ -378,7 +378,7 @@ class Reporter(object):
                 drag_ranges=drag,
                 jank_ranges=jank
             )
-            p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}] - [{mk['label']}]"
+            p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}]"
             p.title.text_color = mk["color"]
             conspiracy.append(p)
 
