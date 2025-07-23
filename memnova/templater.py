@@ -177,8 +177,7 @@ class Templater(object):
             sizing_mode="stretch_both",
             x_axis_type="datetime",
             tools="pan,wheel_zoom,box_zoom,reset,save",
-            title="Memory Usage over Time",
-            # y_range=Range1d(y_start, y_close),
+            title="Memory Usage over Time"
         )
 
         # 分区底色
@@ -237,12 +236,6 @@ class Templater(object):
         p.add_layout(
             Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
-        # p.add_layout(
-        #    Span(location=max_value, dimension="width", line_color=max_color, line_dash="dotted", line_width=2)
-        # )
-        # p.add_layout(
-        #    Span(location=min_value, dimension="width", line_color=min_color, line_dash="dotted", line_width=2)
-        # )
 
         # === 悬浮提示 ===
         tooltips = [
