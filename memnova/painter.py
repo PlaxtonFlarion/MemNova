@@ -360,7 +360,7 @@ class Painter(object):
         ]
         byte_handles = []
         for col, color, label, marker in byte_fields:
-            vals = df[col].astype(float).diff().fillna(0) / 1024 / 1024   # 转为 MB
+            vals = df[col].astype(float).diff().fillna(0)
             vals = vals.clip(lower=0)   # 负值归零
             ax1.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.4, markersize=2.5, alpha=0.95)
             byte_handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2))
