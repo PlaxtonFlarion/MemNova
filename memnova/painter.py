@@ -340,43 +340,59 @@ class Painter(object):
     ) -> str:
 
         _, evaluate = metadata, Scores.analyze_io_score(df)
+        
         io_summary = (
             f"Grade: {evaluate['grade']}\n"
             f"Score: {evaluate['score']}\n"
         )
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
+        ax2 = ax1.twinx()
 
         # === 时间轴 ===
         ts = pd.to_datetime(df["timestamp"])
         x = (ts - ts.iloc[0]).dt.total_seconds()
 
-        # === 计算各项 I/O 差分速率（每秒增量） ===
-        io_fields = [
+        # === 字节量主轴（MB） ===
+        byte_fields = [
             ("read_bytes", "#4F8CFD", "Read Bytes Δ", "o"),
             ("write_bytes", "#6BE675", "Write Bytes Δ", "^"),
             ("rchar", "#F09F3E", "RChar Δ", "s"),
             ("wchar", "#F46C9D", "WChar Δ", "x"),
+        ]
+        byte_handles = []
+        for col, color, label, marker in byte_fields:
+            vals = df[col].astype(float).diff().fillna(0) / 1024 / 1024   # 转为 MB
+            vals = vals.clip(lower=0)   # 负值归零
+            ax1.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.4, markersize=2.5, alpha=0.95)
+            byte_handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2))
+
+        # === 次数副轴 ===
+        count_fields = [
             ("syscr", "#9B8FBA", "Syscr Δ", "*"),
             ("syscw", "#A8D8EA", "Syscw Δ", "+"),
         ]
-        handles = []
-        for col, color, label, marker in io_fields:
+        count_handles = []
+        for col, color, label, marker in count_fields:
             vals = df[col].astype(float).diff().fillna(0)
-            ax1.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.2, markersize=2, alpha=0.92)
-            handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2))
+            vals = vals.clip(lower=0)   # 负值归零
+            ax2.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.5, markersize=2.8, alpha=0.88, linestyle="--")
+            count_handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2, linestyle="--"))
 
-        ax1.set_ylabel("Delta Value (s)", fontsize=12)
+        # === 坐标轴和标题 ===
+        ax1.set_ylabel("Delta (MB/s)", fontsize=12)
+        ax2.set_ylabel("Syscalls (Count/s)", fontsize=12)
         ax1.set_xlabel("Time (s)", fontsize=12)
         ax1.set_title("I/O Timeline", fontsize=16)
-        ax1.grid(True, linestyle="--", alpha=0.4)
+        ax1.grid(True, linestyle="--", alpha=0.35, zorder=0)
 
         # === 图例 ===
+        handles = byte_handles + count_handles
         ax1.legend(
             handles=handles,
             loc="upper right",
             fontsize=9,
-            framealpha=0.5,
+            framealpha=0.6,
             facecolor="#F8F9FB",
             edgecolor="#CCCCCC"
         )
