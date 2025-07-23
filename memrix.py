@@ -542,11 +542,11 @@ class Perfetto(object):
         device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
-        await self.__device.push(self.__ft_file, self.__device_folder)
-        await self.__device.change_mode(777, self.__device_folder)
+        await self.__device.push(self.__ft_file, device_folder)
+        await self.__device.change_mode(777, device_folder)
 
         transports = await self.__device.perfetto_start(
-            self.__device_folder, self.__target_folder
+            device_folder, target_folder
         )
         _ = asyncio.create_task(self.__input_stream(transports))
         _ = asyncio.create_task(self.__error_stream(transports))
