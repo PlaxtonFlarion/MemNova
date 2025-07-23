@@ -81,7 +81,7 @@ class Reporter(object):
 
         Design.build_file_tree(html_file)
 
-    # Workflow: ======================== MEM & I/O ========================
+    # Workflow: 🟡 ======================== MEM & I/O ========================
 
     @staticmethod
     def __mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
@@ -121,7 +121,7 @@ class Reporter(object):
         # ==== running loop ====
         loop = asyncio.get_running_loop()
 
-        # ==== I/O Painter ====
+        # 🔵 ==== I/O Painter ====
         draw_io_future = loop.run_in_executor(
             executor, Painter.draw_io_metrics, metadata, union_data_list, str(io_loc)
         )
@@ -184,7 +184,7 @@ class Reporter(object):
                 }
             ]
 
-            # ==== MEM Painter ====
+            # 🟡 ==== MEM Painter ====
             func = partial(Painter.draw_mem_metrics, **leak)
             draw_leak_future = loop.run_in_executor(
                 executor, func, union_data_list
@@ -202,6 +202,7 @@ class Reporter(object):
                 }
             ]
 
+        # 📄 ==== Html Create ====
         plot = await templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
@@ -283,7 +284,7 @@ class Reporter(object):
             "minor_summary_items": minor_summary,
         }
 
-    # Workflow: ======================== GFX & I/O ========================
+    # Workflow: 🟢 ======================== GFX & I/O ========================
 
     @staticmethod
     def __split_frames_with_ranges(
@@ -348,7 +349,7 @@ class Reporter(object):
         # ==== running loop ====
         loop = asyncio.get_running_loop()
 
-        # ==== GFX Painter ====
+        # 🟢 ==== GFX Painter ====
         draw_future = loop.run_in_executor(
             executor,
             Painter.draw_gfx_metrics,
@@ -373,6 +374,7 @@ class Reporter(object):
             raw_frames, roll_ranges, drag_ranges, jank_ranges
         )
 
+        # 📄 ==== Html Create ====
         plots = await asyncio.gather(
             *(templater.plot_gfx_analysis(segment, roll, drag, jank)
               for segment, roll, drag, jank, *_ in segments)
