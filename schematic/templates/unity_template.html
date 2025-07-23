@@ -544,7 +544,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                     {% if tag.fields %}
                         <div class="tag-detail">
                             {% for field in tag.fields %}
-                                {% if field.label and field.value and field.unit %}
+                                {% if field.label %}
                                     <p data-label="{{ field.label }}" data-value="{{ field.value }}" class="tag-line">
                                         {{ field.label }} {{ field.value }} {{ field.unit }}
                                     </p>
