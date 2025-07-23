@@ -335,7 +335,7 @@ class Memrix(object):
             if self.focus in activity:
                 mode = "FG"
             else:
-                mode = "FG" if adj and int(adj) <= 0 else "BG"
+                mode = "FG" if adj is not None and int(adj) <= 0 else "BG"
 
             mark_map["mark"]["mode"], mark_map["mark"]["adj"] = mode, adj
 
