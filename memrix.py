@@ -442,15 +442,15 @@ class Memrix(object):
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, animation_event := asyncio.Event())
             )
-            merged_trace = await perfetto.auto_pilot()
+            target_folder = await perfetto.start()
 
             watcher = asyncio.create_task(self.watcher())
             await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
-            await perfetto.close()
-            await self.sample_analyze(self.sleek, db, merged_trace, now_time)
+            await perfetto.close(target_folder)
+            await self.sample_analyze(self.sleek, db, target_folder, now_time)
 
             animation_event.set()
 
@@ -522,14 +522,7 @@ class Perfetto(object):
         self.__device = device
         self.__ft_file = str(ft_file)
         self.__trace_loc = str(trace_loc)
-
         self.__trace_conv = trace_conv
-
-        self.__device_folder: typing.Optional[str] = None
-        self.__target_folder: typing.Optional[str] = None
-
-        self.__backs: list["asyncio.Task"] = []
-        self.__merge_task: typing.Optional["asyncio.Task"] = None
 
     @staticmethod
     async def __input_stream(transports: "asyncio.subprocess.Process") -> None:
@@ -541,13 +534,13 @@ class Perfetto(object):
         async for line in transports.stderr:
             logger.info(line.decode(const.CHARSET).strip())
 
-    async def start(self) -> None:
+    async def start(self) -> typing.Optional[str]:
         if not self.__track_enabled:
             return None
 
         unique_id = uuid.uuid4().hex[:8]
-        self.__device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
-        self.__target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
+        device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
+        target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
         await self.__device.push(self.__ft_file, self.__device_folder)
         await self.__device.change_mode(777, self.__device_folder)
@@ -558,49 +551,24 @@ class Perfetto(object):
         _ = asyncio.create_task(self.__input_stream(transports))
         _ = asyncio.create_task(self.__error_stream(transports))
 
-    async def close(self) -> None:
+        return target_folder
+
+    async def close(self, target_folder: str) -> None:
         if not self.__track_enabled:
             return None
 
         await self.__device.perfetto_close()
-        await self.__device.pull(self.__target_folder, self.__trace_loc)
-        await self.__device.remove(self.__target_folder)
+        await self.__device.pull(target_folder, self.__trace_loc)
+        await self.__device.remove(target_folder)
 
     async def auto_pilot(self) -> typing.Optional[str]:
         if not self.__track_enabled:
             return None
 
-        self.__merge_task = asyncio.create_task(self.__trace_merge())
-
         while not self.__track_event.is_set():
-            await self.start()
-            await asyncio.sleep(10)
-            self.__backs.append(
-                asyncio.create_task(self.close())
-            )
-
-        await asyncio.gather(*self.__backs)
-        return await self.__merge_task
-
-    async def __trace_merge(self) -> typing.Optional[str]:
-        while not self.__track_event.is_set():
-            await asyncio.sleep(2)
-
-            merge = sorted(Path(self.__trace_loc).parent.glob("*perfetto-trace"))
-            if len(merge := [str(f) for f in merge]) >= 2:
-                unique_id = uuid.uuid4().hex[:8]
-                self.__trace_loc = str(Path(self.__trace_loc).with_name(f"{unique_id}.perfetto-trace"))
-
-                cmd = [self.__trace_conv, "cat", *merge, "-o", self.__trace_loc]
-                logger.warning(f"[合并Trace] {' '.join(cmd)}")
-                await Terminal.cmd_line(cmd)
-
-                await asyncio.gather(
-                    *(asyncio.to_thread(os.remove, f) for f in merge if Path(f).stem != unique_id),
-                )
-                logger.warning(f"[√] Trace合并完成: {self.__trace_loc}")
-
-        return self.__trace_loc
+            target_folder = await self.start()
+            await asyncio.sleep(5)
+            await self.close(target_folder)
 
 
 # """Main"""
