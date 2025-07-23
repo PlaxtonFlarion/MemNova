@@ -274,11 +274,11 @@ class Memrix(object):
                 return io_map
 
             if app_io := re.search(r"====I/O====.*?====EOF====", io_info, re.S):
-                logger.info(f"Current APP IO\n{(text_content := app_io.group())}")
+                logger.info(f"Current APP IO\n{(app_io_c := app_io.group())}")
                 for i in ["rchar", "wchar", "read_bytes", "write_bytes", "cancelled_write_bytes"]:
-                    io_map[i] = ToolKit.fit_io(i, text_content)
+                    io_map[i] = ToolKit.fit_io(i, app_io_c)
                 for j in ["syscr", "syscw"]:
-                    io_map[j] = ToolKit.fit_io_count(i, text_content)
+                    io_map[j] = ToolKit.fit_io_count(j, app_io_c)
 
             return {"io": io_map}
 
