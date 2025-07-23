@@ -24,7 +24,7 @@ class Painter(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    def draw_mem_metrics(
+    async def draw_mem_metrics(
             df: "pd.DataFrame",
             output_path: str,
             *_,
@@ -71,9 +71,9 @@ class Painter(object):
         )
 
         # 配色与视觉分区
-        avg_color = "#BD93F9"   # 均值线（淡紫/莫兰迪紫）
-        max_color = "#FFB86C"   # 峰值线（温暖橙/沙金色）
-        min_color = "#50FA7B"   # 谷值线（绿色/薄荷绿）
+        avg_color = "#BD93F9"   # 均值
+        max_color = "#FF1D58"   # 峰值
+        min_color = "#009FFD"   # 谷值
         # 区块配色
         fg_color = "#3386E6"
         bg_color = "#757575"
@@ -151,8 +151,6 @@ class Painter(object):
             for c, l in zip(stack_colors, stack_labels)
         ]
 
-        # 其他折线等如果需要可以用 Line2D...
-
         # 构造伪图例项
         line_handles = [
             Line2D([0], [0], color=pss_color, linewidth=1.2, label="PSS"),
@@ -160,8 +158,8 @@ class Painter(object):
             Line2D([0], [0], color="#90B2C8", linewidth=1.1, linestyle=":", label="USS"),
             Line2D([0], [0], color="#A8BFFF", linestyle="--", label="Sliding Avg"),
             Line2D([0], [0], color=avg_color, linestyle=":", label="PSS AVG"),
-            Line2D([0], [0], marker="o", color="#FF1D58", linestyle="None", markersize=7, label="Max"),
-            Line2D([0], [0], marker="o", color="#009FFD", linestyle="None", markersize=7, label="Min"),
+            Line2D([0], [0], marker="o", color=max_color, linestyle="None", markersize=7, label="Max"),
+            Line2D([0], [0], marker="o", color=min_color, linestyle="None", markersize=7, label="Min"),
         ]
 
         # === 展示图例（主图例+堆叠区图例） ===
@@ -196,7 +194,7 @@ class Painter(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    def draw_gfx_metrics(
+    async def draw_gfx_metrics(
             metadata: dict,
             raw_frames: list[dict],
             vsync_sys: list[dict],
@@ -333,7 +331,7 @@ class Painter(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    def draw_io_metrics(
+    async def draw_io_metrics(
             metadata: dict,
             df: "pd.DataFrame",
             output_path: str
