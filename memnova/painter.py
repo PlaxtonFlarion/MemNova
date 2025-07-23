@@ -24,7 +24,7 @@ class Painter(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def draw_mem_metrics(
+    def draw_mem_metrics(
             df: "pd.DataFrame",
             output_path: str,
             *_,
@@ -196,7 +196,7 @@ class Painter(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def draw_gfx_metrics(
+    def draw_gfx_metrics(
             metadata: dict,
             raw_frames: list[dict],
             vsync_sys: list[dict],
@@ -333,7 +333,7 @@ class Painter(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def draw_io_metrics(
+    def draw_io_metrics(
             metadata: dict,
             df: "pd.DataFrame",
             output_path: str
