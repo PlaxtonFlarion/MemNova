@@ -449,7 +449,7 @@ class Memrix(object):
 
             await self.task_close_event.wait()
 
-            await perfetto.close(target_folder)
+            await perfetto.close(trace_loc)
             await self.sample_analyze(self.sleek, db, target_folder, now_time)
 
             animation_event.set()
