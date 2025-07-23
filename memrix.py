@@ -431,7 +431,8 @@ class Memrix(object):
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
         perfetto = Perfetto(
-            self.sleek, self.task_close_event, device, self.ft_file, trace_loc, self.trace_conv
+            self.sleek, self.task_close_event, device,
+            self.ft_file, traces, trace_loc, self.trace_conv
         )
 
         # Workflow: ========== 开始采样 ==========
@@ -449,8 +450,8 @@ class Memrix(object):
 
             await self.task_close_event.wait()
 
-            await perfetto.close(trace_loc)
-            await self.sample_analyze(self.sleek, db, target_folder, now_time)
+            trace_file = await perfetto.close(target_folder)
+            await self.sample_analyze(self.sleek, db, trace_file, now_time)
 
             animation_event.set()
 
@@ -512,16 +513,18 @@ class Perfetto(object):
             track_enabled: bool,
             track_event: "asyncio.Event",
             device: "Device",
-            ft_file: typing.Union["Path", str],
-            trace_loc: typing.Union["Path", str],
+            ft_file: str,
+            traces_dir: "Path",
+            trace_loc: "Path",
             trace_conv: str
     ) -> None:
 
         self.__track_enabled = track_enabled
         self.__track_event = track_event
         self.__device = device
-        self.__ft_file = str(ft_file)
-        self.__trace_loc = str(trace_loc)
+        self.__ft_file = ft_file
+        self.__traces_dir = traces_dir
+        self.__trace_loc = trace_loc
         self.__trace_conv = trace_conv
 
     @staticmethod
@@ -553,22 +556,29 @@ class Perfetto(object):
 
         return target_folder
 
-    async def close(self, target_folder: str) -> None:
+    async def close(self, target_folder: str) -> typing.Optional[str]:
         if not self.__track_enabled:
             return None
 
+        trace_file = str(self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace")
+
         await self.__device.perfetto_close()
-        await self.__device.pull(target_folder, self.__trace_loc)
+        await self.__device.pull(target_folder, trace_file)
         await self.__device.remove(target_folder)
+
+        return trace_file
 
     async def auto_pilot(self) -> typing.Optional[str]:
         if not self.__track_enabled:
             return None
 
+        trace_file = None
         while not self.__track_event.is_set():
             target_folder = await self.start()
-            await asyncio.sleep(5)
-            await self.close(target_folder)
+            await asyncio.sleep(60)
+            trace_file = await self.close(target_folder)
+
+        return trace_file or str(self.__trace_loc)
 
 
 # """Main"""

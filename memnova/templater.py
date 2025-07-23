@@ -19,10 +19,11 @@ from bokeh.models import (
     ColumnDataSource, Span, Div,
     DatetimeTickFormatter, Range1d, HoverTool
 )
-from memnova import const
+from memnova.scores import Scores
 
 
 class Templater(object):
+    """Templater"""
 
     def __init__(self, download: str):
         self.download = download
@@ -121,32 +122,32 @@ class Templater(object):
             df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
         df["activity"] = df["activity"].fillna("")
 
-        # 滑动窗口均值
+        # ==== 滑动窗口均值 ====
         window_size = max(3, len(df) // 20)
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
-        # 区块分组
+        # ==== 区块分组 ====
         df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
-        # 主统计
+        # ==== 主统计 ====
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         value_span = max_value - min_value
         if value_span < 1e-6:
-            pad = max(20, 0.05 * max_value)
-            y_start = max(0, min_value - pad)
-            y_close = max_value + pad
+            padding = max(20, 0.05 * max_value)
+            y_start = max(0, min_value - padding)
+            y_close = max_value + padding
         else:
-            pad = max(10, 0.12 * value_span)
-            y_start = max(0, min_value - pad)
-            y_close = max_value + pad
+            padding = max(10, 0.12 * value_span)
+            y_start = max(0, min_value - padding)
+            y_close = max_value + padding
 
-        # 区块统计
+        # ==== 前后台区块统计 ====
         block_stats = df.groupby(["block_id", "mode"]).agg(
             start_time=("x", "first"),
             end_time=("x", "last"),
         ).reset_index()
 
-        # 主线折线 &极值
+        # ==== 主线折线 & 极值 ====
         pss_color = "#3564B0"  # 主线深蓝
         rss_color = "#FEB96B"  # RSS淡橙
         uss_color = "#90B2C8"  # USS淡蓝灰
@@ -154,22 +155,22 @@ class Templater(object):
         max_color = "#FF5872"  # 峰值桃红
         min_color = "#54E3AF"  # 谷值薄荷绿
 
-        # 区块色
+        # ==== 区块色 ====
         fg_color = "#8FE9FC"  # 前台湖蓝
         bg_color = "#F1F1F1"  # 后台淡灰
         fg_alpha = 0.15
         bg_alpha = 0.35
 
-        # 堆叠配色（马卡龙/莫兰迪风）
+        # ==== 堆叠配色（马卡龙/莫兰迪风）====
         stack_fields = ["native_heap", "dalvik_heap", "graphics"]
         stack_colors = [
-            "#FFD6E0",  # Native Heap：淡粉
-            "#D4E7FF",  # Dalvik Heap：淡蓝
-            "#CAE7E1",  # Graphics：   淡青
+            "#FFD6E0",  # Native Heap 淡粉
+            "#D4E7FF",  # Dalvik Heap 淡蓝
+            "#CAE7E1",  # Graphics    淡青
         ]
         stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
 
-        # 堆叠数据
+        # ==== 堆叠数据 ====
         stack_source = ColumnDataSource(df)
 
         # === 绘图主对象 ===
@@ -180,7 +181,7 @@ class Templater(object):
             title="Memory Usage over Time"
         )
 
-        # 分区底色
+        # ==== 前后台分区底色 ====
         for _, row in block_stats.iterrows():
             color = fg_color if row["mode"] == "FG" else bg_color
             alpha = fg_alpha if row["mode"] == "FG" else bg_alpha
@@ -200,44 +201,49 @@ class Templater(object):
             alpha=0.4
         )
 
-        # === 折线&极值点 ===
+        # ==== 折线 & 极值点 ====
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
         )
         df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
         source = ColumnDataSource(df)
 
-        # 主线
+        # ==== PSS 主线 ====
         p.line(
             "x", "pss",
             source=source, line_width=2.5, color=pss_color, legend_label="PSS"
         )
-        # 辅助线
+
+        # ==== RSS 辅助线 ====
         p.line(
             "x", "rss",
             source=source, line_width=1.2, color=rss_color, alpha=0.7, legend_label="RSS", line_dash="dashed"
         )
+
+        # ==== USS 辅助线 ====
         p.line(
             "x", "uss",
             source=source, line_width=1.2, color=uss_color, alpha=0.7, legend_label="USS", line_dash="dotted"
         )
-        # 滑窗均值
+
+        # ==== 滑窗均值线 ====
         p.line(
             "x", "pss_sliding_avg",
             source=source, line_width=1.5, color=avg_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
         )
-        # 极值点
+
+        # ==== 极值点 ====
         pss_spot = p.scatter(
             "x", "pss",
             source=source, size="sizes", color="colors", alpha=0.98
         )
 
-        # 均值/极值线
+        # ==== 均值线 ====
         p.add_layout(
             Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
 
-        # === 悬浮提示 ===
+        # ==== 悬浮提示 ====
         tooltips = [
             ("时间", "@timestamp{%H:%M:%S}"),
             ("滑窗均值", "@pss_sliding_avg{0.00} MB"),
@@ -255,7 +261,7 @@ class Templater(object):
         )
         p.add_tools(hover)
 
-        # === 主题 & 坐标轴 ===
+        # ==== 主题 & 坐标轴 ====
         p.xgrid.grid_line_color = "#E3E3E3"
         p.ygrid.grid_line_color = "#E3E3E3"
         p.xgrid.grid_line_alpha = 0.25
@@ -288,14 +294,30 @@ class Templater(object):
     @staticmethod
     async def plot_gfx_analysis(
             frames: list[dict],
-            x_start: int | float,
-            x_close: int | float,
             roll_ranges: typing.Optional[list[dict]],
             drag_ranges: typing.Optional[list[dict]],
-            jank_ranges: list[dict]
+            jank_ranges: typing.Optional[list[dict]]
     ) -> "figure":
 
-        # 🟢 颜色预处理
+        # 🟢 ==== 计算得分 ====
+        evaluate = Scores.analyze_gfx_score(
+            frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+        )
+
+        # 🟢 ==== 汇总所有区间时间 ====
+        all_starts, all_closes = [], []
+
+        all_starts.append(frames[0]["timestamp_ms"])
+        all_closes.append(frames[-1]["timestamp_ms"])
+
+        for sequence in [roll_ranges, drag_ranges, jank_ranges]:
+            if sequence:
+                all_starts += [r["start_ts"] for r in sequence]
+                all_closes += [r["end_ts"] for r in sequence]
+
+        x_start, x_close = min(all_starts) / 1000, max(all_closes) / 1000
+
+        # 🟢 ==== 掉帧颜色预处理 ====
         for frame in frames:
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
@@ -303,7 +325,7 @@ class Templater(object):
         df["timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
 
-        # 🟢 动态 Y 轴范围
+        # 🟢 ==== 动态 Y 轴范围 ====
         y_avg = df["duration_ms"].mean()
         y_min = df["duration_ms"].min()
         y_max = df["duration_ms"].max()
@@ -311,10 +333,7 @@ class Templater(object):
         y_start = max(0, y_min - 0.05 * y_range)
         y_close = y_max + 0.1 * y_range
 
-        x_start_s, x_close_s = x_start / 1000, x_close / 1000
-
         p = figure(
-            x_range=Range1d(x_start_s, x_close_s),
             y_range=Range1d(y_start, y_close),
             x_axis_label="Time (s)",
             y_axis_label="Frame Duration (ms)",
@@ -329,16 +348,19 @@ class Templater(object):
         p.xaxis.axis_label = f"Time (s) - Start {align_start}s"
         p.xaxis.major_label_orientation = 0.5
 
-        # 🟢 主折线
+        # 🟢 ==== 主折线 ====
         p.line(
             "timestamp_s", "duration_ms",
             source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Frame Duration"
         )
 
-        # 🟢 点图
-        spot = p.scatter("timestamp_s", "duration_ms", source=source, size=4, color="color", alpha=0.8)
+        # 🟢 ==== 点图 ====
+        spot = p.scatter(
+            "timestamp_s", "duration_ms",
+            source=source, size=4, color="color", alpha=0.8
+        )
 
-        # 🟢 Hover 信息
+        # 🟢 ==== Hover 信息 ====
         p.add_tools(HoverTool(tooltips="""
             <div style="padding: 5px;">
                 <b>时间:</b> @timestamp_s{0.0} s<br/>
@@ -351,29 +373,26 @@ class Templater(object):
             </div>
         """, mode="mouse", renderers=[spot]))
 
-        # 🟢 阈值线 + 平均线 + 最大值线
+        # 🟢 ==== 阈值线 + 平均线 + 最大值线 ====
         p.line(
             [x_start, x_close], [16.67, 16.67],
             line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
         )
-        if "duration_ms" in df:
-            p.line(
-                [x_start, x_close], [y_avg, y_avg],
-                line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg Duration: {y_avg:.1f}ms"
-            )
-            p.line(
-                [x_start, x_close], [y_max, y_max],
-                line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max Duration: {y_max:.1f}ms"
-            )
+        p.line(
+            [x_start, x_close], [y_avg, y_avg],
+            line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg Duration: {y_avg:.1f}ms"
+        )
+        p.line(
+            [x_start, x_close], [y_max, y_max],
+            line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max Duration: {y_max:.1f}ms"
+        )
 
-        # 🟢 用 Quad 绘制背景区间
-        quad_top, quad_bottom = y_close, y_start
-        quad_types = [
+        # 🟢 ==== Quad 绘制背景区间 ====
+        quad_top, quad_bottom, quad_types = y_close, y_start, [
             ("Scroll Region", roll_ranges, "#ADD8E6", 0.30),
             ("Drag Region", drag_ranges, "#FFA500", 0.25),
             ("Jank Region", jank_ranges, "#FF0000", 0.15),
         ]
-
         for label, ranges, color, alpha in quad_types:
             if ranges:
                 quad_source = ColumnDataSource({
@@ -384,17 +403,18 @@ class Templater(object):
                 })
                 p.quad(
                     left="left", right="right", top="top", bottom="bottom",
-                    source=quad_source, fill_color=color, fill_alpha=alpha, line_alpha=0,
-                    legend_label=label
+                    source=quad_source, fill_color=color, fill_alpha=alpha, line_alpha=0, legend_label=label
                 )
 
-        # 🟢 图例设置
+        # 🟢 ==== 图例设置 ====
         p.legend.location = "top_right"
         p.legend.click_policy = "hide"
         p.legend.label_text_font_size = "10pt"
 
-        # 🟢 样式设定
+        # 🟢 ==== 标题设置 ====
         p.title.text_font_size = "16pt"
+        p.title.text = f"[Range] - [{evaluate['score']}] - [{evaluate['level']}]"
+        p.title.text_color = evaluate["color"]
 
         return p
 

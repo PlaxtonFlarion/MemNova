@@ -19,17 +19,24 @@ from memnova.scores import Scores
 
 
 class Painter(object):
-    """绘图"""
+    """Painter"""
 
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def draw_mem_metrics(
-            df: "pd.DataFrame",
+    def draw_mem_metrics(
+            union_data_list: list[tuple],
             output_path: str,
             *_,
             **kwargs
     ) -> str:
+
+        df = pd.DataFrame(
+            union_data_list, columns=[
+                "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
+                "native_heap", "dalvik_heap", "java_heap", "graphics",
+            ]
+        )
 
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -194,7 +201,7 @@ class Painter(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def draw_gfx_metrics(
+    def draw_gfx_metrics(
             metadata: dict,
             raw_frames: list[dict],
             vsync_sys: list[dict],
@@ -256,17 +263,6 @@ class Painter(object):
 
         for label, ms in fps_marks.items():
             ax1.axhline(ms, linestyle="--", linewidth=1.0, color=fps_colors[label])
-
-        ax1.text(
-            x=0.003,
-            y=fps_marks["60 FPS"],
-            s="16.67ms",
-            transform=ax1.get_yaxis_transform(),
-            color=fps_colors["60 FPS"],
-            fontsize=8,
-            verticalalignment="bottom",
-            horizontalalignment="left"
-        )
 
         # === FPS 统计信息 ===
         max_sys = max(fps_sys, default=0)
@@ -331,14 +327,20 @@ class Painter(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def draw_io_metrics(
+    def draw_io_metrics(
             metadata: dict,
-            df: "pd.DataFrame",
+            union_data_list: list[tuple],
             output_path: str
     ) -> str:
 
+        df = pd.DataFrame(
+            union_data_list, columns=[
+                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
+            ]
+        )
+
         _, evaluate = metadata, Scores.analyze_io_score(df)
-        
+
         io_summary = (
             f"Grade: {evaluate['grade']}\n"
             f"Score: {evaluate['score']}\n"

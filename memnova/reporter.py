@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from loguru import logger
+from functools import partial
 from bokeh.plotting import save
 from bokeh.models import Spacer
 from bokeh.io import output_file
@@ -28,6 +29,7 @@ from bokeh.layouts import column
 from jinja2 import (
     Environment, FileSystemLoader
 )
+from concurrent.futures import ProcessPoolExecutor
 from engine.tinker import Period
 from memcore.cubicle import Cubicle
 from memcore.design import Design
@@ -58,7 +60,7 @@ class Reporter(object):
 
         logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
-        self.background_tasks: list["asyncio.Task"] = []
+        self.background_tasks: list = []
 
     @staticmethod
     async def make_report(template: str, destination: str, *args, **kwargs) -> None:
@@ -97,6 +99,7 @@ class Reporter(object):
 
     async def __classify_rendering(
             self,
+            executor: "ProcessPoolExecutor",
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str,
@@ -115,19 +118,21 @@ class Reporter(object):
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
 
+        # ==== running loop ====
+        loop = asyncio.get_running_loop()
+
+        # ==== I/O Painter ====
+        draw_io_future = loop.run_in_executor(
+            executor, Painter.draw_io_metrics, metadata, union_data_list, str(io_loc)
+        )
+        self.background_tasks.append(draw_io_future)
+
         df = pd.DataFrame(
-            union_data_list,
-            columns=[
+            union_data_list, columns=[
                 "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
                 "native_heap", "dalvik_heap", "java_heap", "graphics",
-                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
             ]
         )
-
-        io_task = asyncio.create_task(
-            Painter.draw_io_metrics(metadata, df, str(io_loc)), name="draw io metrics"
-        )
-        self.background_tasks.append(io_task)
 
         if baseline:
             trace_loc = leak_loc = gfx_loc = None
@@ -179,10 +184,12 @@ class Reporter(object):
                 }
             ]
 
-            leak_task = asyncio.create_task(
-                Painter.draw_mem_metrics(df, str(leak_loc), **leak), name="draw mem metrics"
+            # ==== MEM Painter ====
+            func = partial(Painter.draw_mem_metrics, **leak)
+            draw_leak_future = loop.run_in_executor(
+                executor, func, union_data_list
             )
-            self.background_tasks.append(leak_task)
+            self.background_tasks.append(draw_leak_future)
 
             mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
@@ -220,9 +227,10 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
 
-        compilation = await asyncio.gather(
-            *(self.__classify_rendering(db, templater, d, baseline) for d in cur_data)
-        )
+        with ProcessPoolExecutor() as executor:
+            compilation = await asyncio.gather(
+                *(self.__classify_rendering(executor, db, templater, d, baseline) for d in cur_data)
+            )
 
         major_summary = [
             {"label": "测试时间", "value": [{"text": cur_time, "class": "time"}]}
@@ -268,11 +276,11 @@ class Reporter(object):
             minor_summary += [{"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}]
 
         return {
+            "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
             "headline": headline,
             "major_summary_items": major_summary,
             "minor_summary_items": minor_summary,
-            "report_list": compilation
         }
 
     # Workflow: ======================== GFX & I/O ========================
@@ -314,6 +322,7 @@ class Reporter(object):
 
     async def __gfx_rendering(
             self,
+            executor: "ProcessPoolExecutor",
             db: "aiosqlite.Connection",
             templater: "Templater",
             data_dir: str,
@@ -336,61 +345,47 @@ class Reporter(object):
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
 
-        gfx_task = asyncio.create_task(
-            Painter.draw_gfx_metrics(
-                metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc),
-            ), name="draw gfx metrics"
-        )
-        self.background_tasks.append(gfx_task)
+        # ==== running loop ====
+        loop = asyncio.get_running_loop()
 
-        # 平均帧
-        avg_fps = round(
-            sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2
+        # ==== GFX Painter ====
+        draw_future = loop.run_in_executor(
+            executor,
+            Painter.draw_gfx_metrics,
+            metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
-        # 掉帧率
-        jnk_fps = round(
-            sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2
-        )
-        # 最低帧率
-        min_fps = round(
-            min(fps for f in raw_frames if (fps := f["fps_app"])), 2
-        )
-        # 95分位帧率
-        p95_fps = round(
-            float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2
-        )
+        self.background_tasks.append(draw_future)
 
-        conspiracy, segments = [], self.__split_frames_with_ranges(
+        # ==== 最低帧率 ====
+        min_fps = round(min(fps for f in raw_frames if (fps := f["fps_app"])), 2)
+
+        # ==== 平均帧 ====
+        avg_fps = round(sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2)
+
+        # ==== 掉帧率 ====
+        jnk_fps = round(sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2)
+
+        # ==== 95分位帧率 ====
+        p95_fps = round(float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2)
+
+        # ==== 分段切割 ====
+        segments = self.__split_frames_with_ranges(
             raw_frames, roll_ranges, drag_ranges, jank_ranges
         )
 
-        for idx, (segment, roll, drag, jank, x_start, x_close) in enumerate(segments, start=1):
-            padding = (x_close - x_start) * 0.05
+        plots = await asyncio.gather(
+            *(templater.plot_gfx_analysis(segment, roll, drag, jank)
+              for segment, roll, drag, jank, *_ in segments)
+        )
 
-            if not (mk := Scores.analyze_gfx_score(segment, roll, drag, jank, fps_key="fps_app")):
-                continue
-
-            p = await templater.plot_gfx_analysis(
-                frames=segment,
-                x_start=x_start - padding,
-                x_close=x_close + padding,
-                roll_ranges=roll,
-                drag_ranges=drag,
-                jank_ranges=jank
-            )
-            p.title.text = f"[Range {idx:02}] - [{mk['score']}] - [{mk['level']}]"
-            p.title.text_color = mk["color"]
-            conspiracy.append(p)
-
-        if not conspiracy:
-            return {}
-
-        mkt = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        evaluate = Scores.analyze_gfx_score(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+        )
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
-        save(column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width"))
+        save(column(viewer_div, *plots, Spacer(height=10), sizing_mode="stretch_width"))
         logger.info(f"{data_dir} Handler Done ...")
 
         return {
@@ -399,8 +394,14 @@ class Reporter(object):
             "evaluate": [
                 {
                     "fields": [
-                        {"text": f"Score: {mkt['score'] * 100:.2f}", "class": "refer"},
-                        {"text": f"Level: {mkt['level']}", "class": "refer"}
+                        {"text": f"Score: {evaluate['score'] * 100:.2f}", "class": "refer"},
+                        {"text": f"Level: {evaluate['level']}", "class": "refer"}
+                    ]
+                },
+                {
+                    "fields": [
+                        {"label": "P95: ", "value": p95_fps, "unit": "FPS"},
+                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"}
                     ]
                 }
             ],
@@ -409,12 +410,6 @@ class Reporter(object):
                     "fields": [
                         {"label": "MIN: ", "value": min_fps, "unit": "FPS"},
                         {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
-                    ]
-                },
-                {
-                    "fields": [
-                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"},
-                        {"label": "P95: ", "value": p95_fps, "unit": "FPS"}
                     ]
                 }
             ]
@@ -430,18 +425,21 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time"), team_data["file"]
 
-        compilation = await asyncio.gather(
-            *(self.__gfx_rendering(db, templater, d) for d in cur_data)
-        )
+        with ProcessPoolExecutor() as executor:
+            compilation = await asyncio.gather(
+                *(self.__gfx_rendering(executor, db, templater, d) for d in cur_data)
+            )
+
+        major_summary_items = [
+            {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},
+            {"label": "准出标准", "value": [{"text": self.align.gfx_criteria, "class": "criteria"}]}
+        ]
 
         return {
+            "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
             "headline": self.align.gfx_headline,
-            "major_summary_items": [
-                {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},
-                {"label": "准出标准", "value": [{"text": self.align.gfx_criteria, "class": "criteria"}]}
-            ],
-            "report_list": compilation
+            "major_summary_items": major_summary_items,
         }
 
 
