@@ -85,6 +85,7 @@ class Device(object):
 
     async def perfetto_start(self, src: str, dst: str, *_, **__) -> "asyncio.subprocess.Process":
         cmd = self.__initial + ["shell", "perfetto", "--txt", "-c", src, "-o", dst, "--background"]
+        # cmd = self.__initial + ["shell", "-tt", f"cat {src} | perfetto --txt -c - -o {dst}"]
         return await Terminal.cmd_link(cmd)
 
     async def perfetto_close(self, *_, **__) -> typing.Any:
