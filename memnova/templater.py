@@ -29,6 +29,7 @@ class Templater(object):
 
     def generate_viewers(
             self,
+            trace_path: typing.Optional["Path"] = None
             leak_path: typing.Optional["Path"] = None,
             gfx_path: typing.Optional["Path"] = None,
             io_path: typing.Optional["Path"] = None
@@ -49,9 +50,9 @@ class Templater(object):
         viewers = [
             {**({
                     "label": "➤ 🛰️Traces 查看",
-                    "url": f"file:///{traces_path.as_posix()}",
+                    "url": f"file:///{trace_path.as_posix()}",
                     "color": "#38BDF8"
-                } if (traces_path := parent / const.TRACES_DIR).exists() else {})},
+                } if trace_path else {})},
             {**({
                     "label": "➤ 🧬Leak 查看",
                     "url": f"file:///{leak_path.as_posix()}",
