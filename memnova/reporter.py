@@ -130,7 +130,7 @@ class Reporter(object):
         self.background_tasks.append(io_task)
 
         if baseline:
-            leak_loc = gfx_loc = None
+            trace_loc = leak_loc = gfx_loc = None
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -162,7 +162,7 @@ class Reporter(object):
             ]
 
         else:
-            leak_loc, gfx_loc = Path(group) / f"{head}_leak.png", None
+            trace_loc, leak_loc, gfx_loc = None, Path(group) / f"{head}_leak.png", None
             leak = Scores.analyze_mem_score(df["pss"])
             evaluate = [
                 {
@@ -198,7 +198,7 @@ class Reporter(object):
         plot = await templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers(leak_loc, gfx_loc, io_loc)
+        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
         logger.info(f"{data_dir} Handler Done ...")
 
@@ -331,7 +331,10 @@ class Reporter(object):
         metadata, (title, timestamp) = {}, joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        trace_loc = Path(templater.download).parent / const.TRACES / data_dir
+        leak_loc = None
         gfx_loc = Path(group) / f"{head}_gfx.png"
+        io_loc = None
 
         gfx_task = asyncio.create_task(
             Painter.draw_gfx_metrics(
@@ -386,7 +389,7 @@ class Reporter(object):
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
-        viewer_div = templater.generate_viewers(None, gfx_loc, None)
+        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, *conspiracy, Spacer(height=10), sizing_mode="stretch_width"))
         logger.info(f"{data_dir} Handler Done ...")
 
