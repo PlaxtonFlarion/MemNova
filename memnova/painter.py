@@ -337,7 +337,18 @@ class Painter(object):
         io_summary = (
             f"Grade: {evaluate['grade']}\n"
             f"Score: {evaluate['score']}\n"
+            f"Peak RW: {evaluate['rw_peak']} KB\n"
+            f"RW Std: {evaluate['rw_std']} KB\n"
+            f"RW Burst Ratio: {evaluate['rw_burst_ratio']:.2%}\n"
+            f"Idle Ratio: {evaluate['rw_idle_ratio']:.2%}\n"
+            f"Swap Max: {evaluate.get('swap_max', 0)} KB\n"
+            f"Swap Burst: {evaluate.get('swap_burst_count', 0)} / {evaluate.get('swap_burst_ratio', 0):.2%}\n"
+            f"Sys Burst Events: {evaluate['sys_burst']}\n"
         )
+        if evaluate["tags"]:
+            io_summary += f"Tags: {', '.join(evaluate['tags'])}\n"
+        if evaluate["risk"]:
+            io_summary += f"Risk: {', '.join(evaluate['risk'])}"
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()
