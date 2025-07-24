@@ -129,7 +129,7 @@ class Reporter(object):
         )
         self.background_tasks.append(draw_io_future)
 
-        df = pd.DataFrame(union_data_lis)
+        df = pd.DataFrame(union_data_list)
 
         if baseline:
             trace_loc = leak_loc = gfx_loc = None
