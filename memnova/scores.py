@@ -169,6 +169,8 @@ class Scores(object):
             }
 
     # Notes: ======================== I/O ========================
+
+    @staticmethod
     def analyze_io_score(
             df: "pd.DataFrame",
             swap_threshold: int = 10240,
