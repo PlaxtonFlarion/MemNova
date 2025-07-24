@@ -337,7 +337,7 @@ class Reporter(object):
 
         # ==== 先提取所有 start_ts ====
         normalize_list = [
-            record.get("metadata", {}).get("normalize", 0) for record in records
+            record.get("metadata", {}).get("normalize", 0) for record in gfx_data
         ]
 
         # ==== 以最早的 start_ts 作为基准 ====
@@ -346,29 +346,28 @@ class Reporter(object):
         # ==== 初始化合并结构 ====
         merged = {key: [] for key in gfx_data[0]}
 
-        # ==== raw_frames: timestamp_ms 毫秒 ====
-        for frame in record["raw_frames"]:
-            frame["timestamp_ms"] -= normalize_start_ts
-
-        # ==== vsync_sys / vsync_app: ts 毫秒 ====
-        for point in record["vsync_sys"]:
-            point["ts"] -= normalize_start_ts
-        for point in record["vsync_app"]:
-            point["ts"] = normalize_start_ts
-
-        # ==== roll / drag / jank ====
-        for r in record["roll_ranges"]:
-            r["start_ts"] -= normalize_start_ts
-            r["end_ts"] -= normalize_start_ts
-        for d in record["drag_ranges"]:
-            d["start_ts"] -= normalize_start_ts
-            d["end_ts"] -= normalize_start_ts
-        for j in record["jank_ranges"]:
-            j["start_ts"] -= normalize_start_ts
-            j["end_ts"] -= normalize_start_ts
-
-        # 合并
         for record in gfx_data:
+            # ==== raw_frames: timestamp_ms 毫秒 ====
+            for frame in record["raw_frames"]:
+                frame["timestamp_ms"] -= normalize_start_ts
+
+            # ==== vsync_sys / vsync_app: ts 毫秒 ====
+            for point in record["vsync_sys"]:
+                point["ts"] -= normalize_start_ts
+            for point in record["vsync_app"]:
+                point["ts"] = normalize_start_ts
+
+            # ==== roll / drag / jank ====
+            for r in record["roll_ranges"]:
+                r["start_ts"] -= normalize_start_ts
+                r["end_ts"] -= normalize_start_ts
+            for d in record["drag_ranges"]:
+                d["start_ts"] -= normalize_start_ts
+                d["end_ts"] -= normalize_start_ts
+            for j in record["jank_ranges"]:
+                j["start_ts"] -= normalize_start_ts
+                j["end_ts"] -= normalize_start_ts
+
             for key, value in record.items():
                 if isinstance(value, list):
                     merged[key].extend(value)
