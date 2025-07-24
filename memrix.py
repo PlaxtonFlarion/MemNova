@@ -115,6 +115,7 @@ class Memrix(object):
         self.__remote = value
 
     def task_clean_up(self, *_, **__) -> None:
+        logger.info("Cleanup command: // EXECUTED // — Shutting down background operations.")
         self.task_close_event.set()
 
     async def watcher(self) -> None:
