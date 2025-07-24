@@ -331,11 +331,21 @@ class Reporter(object):
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        (gfx_data, *_), (joint, *_) = await asyncio.gather(
+        gfx_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-        raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = gfx_data.values()
-        metadata, (title, timestamp) = {}, joint
+
+        merged = {key: [] for key in gfx_data[0]}
+
+        for record in gfx_data:
+            for key, value in record.items():
+                if isinstance(value, list):
+                    merged[key].extend(value)
+                else:
+                    merged[key].append(value)
+            
+        metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = merged.values()
+        title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = Path(templater.download).parent / const.TRACES_DIR / data_dir
