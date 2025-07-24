@@ -278,7 +278,7 @@ class GfxAnalyzer(_Tracer):
 
         return {
             "metadata": {
-                "source": "perfetto", "app": app_name
+                "source": "perfetto", "app": app_name, "normalize": self.normalize_start_ts
             },
             "raw_frames": raw_frames,
             "vsync_sys": vsync_sys,
