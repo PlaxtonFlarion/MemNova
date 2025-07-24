@@ -347,6 +347,7 @@ class Reporter(object):
         merged = {key: [] for key in gfx_data[0]}
 
         for record in gfx_data:
+            logger.info(f"Meta: {record.get('metadata')}")
             # ==== raw_frames: timestamp_ms 毫秒 ====
             for frame in record["raw_frames"]:
                 frame["timestamp_ms"] -= normalize_start_ts
@@ -374,7 +375,7 @@ class Reporter(object):
                 else:
                     merged[key].append(value)   
             
-        metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = merged.values()
+        _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = merged.values()
         title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
@@ -390,7 +391,7 @@ class Reporter(object):
         draw_future = loop.run_in_executor(
             executor,
             Painter.draw_gfx_metrics,
-            metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
+            raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
         self.background_tasks.append(draw_future)
 
