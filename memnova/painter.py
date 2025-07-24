@@ -346,9 +346,7 @@ class Painter(object):
             f"Sys Burst Events: {evaluate['sys_burst']}\n"
         )
         if evaluate["tags"]:
-            io_summary += f"Tags: {', '.join(evaluate['tags'])}\n"
-        if evaluate["risk"]:
-            io_summary += f"Risk: {', '.join(evaluate['risk'])}"
+            io_summary += f"Tags: {', '.join(evaluate['tags'])}"
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()
