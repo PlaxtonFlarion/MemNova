@@ -166,7 +166,6 @@ class _Tracer(object):
 
         return fps_points
 
-    @staticmethod
     async def extract_sf_fps(self, tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts/1e6 AS time_sec, value AS fps
