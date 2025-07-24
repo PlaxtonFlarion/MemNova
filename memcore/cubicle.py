@@ -207,7 +207,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
+    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
                 timestamp,
@@ -231,8 +231,10 @@ class Cubicle(object):
             WHERE data_dir = ? AND pss != ''
             ORDER BY timestamp ASC
         """
+        db.row_factory = aiosqlite.Row
         async with db.execute(sql, (data_dir,)) as cursor:
-            return await cursor.fetchall()
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
 
     # Notes: ======================== GFX ========================
 
