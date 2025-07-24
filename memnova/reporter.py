@@ -129,13 +129,7 @@ class Reporter(object):
         )
         self.background_tasks.append(draw_io_future)
 
-        df = pd.DataFrame(
-            union_data_list, columns=[
-                "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
-                "native_heap", "dalvik_heap", "java_heap", "graphics",
-                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
-            ]
-        )
+        df = pd.DataFrame(union_data_lis)
 
         if baseline:
             trace_loc = leak_loc = gfx_loc = None
