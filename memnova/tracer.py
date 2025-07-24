@@ -34,7 +34,7 @@ class _Tracer(object):
                ORDER BY c.ts;
            """
         df = tp.query(sql).as_pandas_dataframe().dropna()
-        df["time_sec"] -= self.normalize_start_ts
+        # df["time_sec"] -= self.normalize_start_ts
         return df.to_dict("records")
 
     # Notes: ======================== GFX ========================
@@ -68,7 +68,8 @@ class _Tracer(object):
 
         return [
             {
-                "timestamp_ms": (row.actual_ts / 1e6) - self.normalize_start_ts,
+                # "timestamp_ms": (row.actual_ts / 1e6) - self.normalize_start_ts,
+                "timestamp_ms": (row.actual_ts / 1e6),
                 "duration_ms": row.actual_dur / 1e6,
                 "drop_count": (drop_count := max(0, round(row.actual_dur / int(1e9 / 60)) - 1)),
                 "is_jank": drop_count > 0,
@@ -88,8 +89,10 @@ class _Tracer(object):
         """
         return [
             {
-                "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
-                "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
+                # "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
+                # "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts,
+                "start_ts": (row.ts / 1e6),
+                "end_ts": ((row.ts + row.dur) / 1e6),
             } for row in tp.query(sql)
         ]
 
@@ -101,8 +104,10 @@ class _Tracer(object):
         """
         return [
             {
-                "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
-                "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts
+                # "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
+                # "end_ts": ((row.ts + row.dur) / 1e6) - self.normalize_start_ts,
+                "start_ts": (row.ts / 1e6),
+                "end_ts": ((row.ts + row.dur) / 1e6),
             } for row in tp.query(sql)
         ]
 
@@ -130,7 +135,8 @@ class _Tracer(object):
 
             fps = round(1e9 / interval_ns, 2)
             fps_points.append({
-                "ts": (ts_curr / 1e6) - self.normalize_start_ts,  # 转为 ms
+                # "ts": (ts_curr / 1e6) - self.normalize_start_ts,
+                "ts": (ts_curr / 1e6),
                 "fps": fps
             })
 
@@ -160,7 +166,8 @@ class _Tracer(object):
 
             fps = round(1e9 / interval_ns, 2)
             fps_points.append({
-                "ts": (ts_curr / 1e6) - self.normalize_start_ts,  # 转为 ms
+                # "ts": (ts_curr / 1e6) - self.normalize_start_ts,
+                "ts": (ts_curr / 1e6),
                 "fps": fps
             })
 
@@ -174,7 +181,7 @@ class _Tracer(object):
             ORDER BY ts
         """
         df = tp.query(sql).as_pandas_dataframe()
-        df["ts"] -‎= self.normalize_start_ts
+        # df["ts"] -‎= self.normalize_start_ts
         return df.to_dict("records")
 
     @staticmethod
