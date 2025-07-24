@@ -167,6 +167,18 @@ class _Tracer(object):
         return fps_points
 
     @staticmethod
+    async def extract_sf_fps(self, tp: "TraceProcessor") -> list[dict]:
+        sql = """
+            SELECT ts/1e6 AS time_sec, value AS fps
+            FROM counter
+            WHERE track_id = (SELECT id FROM track WHERE name = 'SfCpu_fps')
+            ORDER BY ts
+        """
+        df = tp.query(sql).as_pandas_dataframe()
+        df["time_sec"] -‎= self.normalize_start_ts
+        return df.to_dict("records")
+
+    @staticmethod
     async def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
         jank_ranges = []
         count = 0
