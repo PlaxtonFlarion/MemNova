@@ -115,7 +115,7 @@ class Reporter(object):
         union_data_list, (joint, *_) = await asyncio.gather(
             Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-        metadata, (title, timestamp) = {}, joint
+        title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
@@ -125,7 +125,7 @@ class Reporter(object):
 
         # 🔵 ==== I/O Painter ====
         draw_io_future = loop.run_in_executor(
-            executor, Painter.draw_io_metrics, metadata, union_data_list, str(io_loc)
+            executor, Painter.draw_io_metrics, union_data_list, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
 
