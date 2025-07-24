@@ -214,6 +214,7 @@ class Cubicle(object):
                 pss,
                 rss,
                 uss,
+                swap,
                 activity,
                 adj,
                 mode,
