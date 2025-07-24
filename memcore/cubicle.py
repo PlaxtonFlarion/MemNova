@@ -246,6 +246,7 @@ class Cubicle(object):
             data_dir TEXT,
             label TEXT,
             timestamp TEXT,
+            metadata TEXT,
             raw_frames TEXT,
             vsync_sys TEXT,
             vsync_app TEXT,
@@ -267,15 +268,17 @@ class Cubicle(object):
             data_dir,
             label,
             timestamp,
+            metadata,
             raw_frames,
             vsync_sys,
             vsync_app,
             roll_ranges,
             drag_ranges,
-            jank_ranges) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            jank_ranges) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
                 timestamp,
+                payload["metadata"],
                 payload["raw_frames"],
                 payload["vsync_sys"],
                 payload["vsync_app"],
@@ -290,6 +293,7 @@ class Cubicle(object):
     async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
+                metadata,
                 raw_frames,
                 vsync_sys,
                 vsync_app,
@@ -303,6 +307,7 @@ class Cubicle(object):
             rows = await cursor.fetchall()
             return [
                 {
+                    "metadata": json.loads(md),
                     "raw_frames": json.loads(rf),
                     "vsync_sys": json.loads(vs),
                     "vsync_app": json.loads(va),
@@ -310,7 +315,7 @@ class Cubicle(object):
                     "drag_ranges": json.loads(dr),
                     "jank_ranges": json.loads(jr),
                 }
-                for rf, vs, va, rr, dr, jr in rows
+                for md, rf, vs, va, rr, dr, jr in rows
             ]
 
 
