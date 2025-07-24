@@ -198,7 +198,6 @@ class Painter(object):
 
     @staticmethod
     def draw_gfx_metrics(
-            metadata: dict,
             raw_frames: list[dict],
             vsync_sys: list[dict],
             vsync_app: list[dict],
@@ -207,8 +206,6 @@ class Painter(object):
             jank_ranges: list[dict],
             output_path: str
     ) -> str:
-
-        _ = metadata
 
         timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
         durations = [f["duration_ms"] for f in raw_frames]
