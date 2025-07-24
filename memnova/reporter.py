@@ -335,14 +335,45 @@ class Reporter(object):
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
 
+        # ==== 先提取所有 start_ts ====
+        normalize_list = [
+            record.get("metadata", {}).get("normalize", 0) for record in records
+        ]
+
+        # ==== 以最早的 start_ts 作为基准 ====
+        normalize_start_ts = min(normalize_list)
+
+        # ==== 初始化合并结构 ====
         merged = {key: [] for key in gfx_data[0]}
 
+        # ==== raw_frames: timestamp_ms 毫秒 ====
+        for frame in record["raw_frames"]:
+            frame["timestamp_ms"] -= normalize_start_ts
+
+        # ==== vsync_sys / vsync_app: ts 毫秒 ====
+        for point in record["vsync_sys"]:
+            point["ts"] -= normalize_start_ts
+        for point in record["vsync_app"]:
+            point["ts"] = normalize_start_ts
+
+        # ==== roll / drag / jank ====
+        for r in record["roll_ranges"]:
+            r["start_ts"] -= normalize_start_ts
+            r["end_ts"] -= normalize_start_ts
+        for d in record["drag_ranges"]:
+            d["start_ts"] -= normalize_start_ts
+            d["end_ts"] -= normalize_start_ts
+        for j in record["jank_ranges"]:
+            j["start_ts"] -= normalize_start_ts
+            j["end_ts"] -= normalize_start_ts
+
+        # 合并
         for record in gfx_data:
             for key, value in record.items():
                 if isinstance(value, list):
                     merged[key].extend(value)
                 else:
-                    merged[key].append(value)
+                    merged[key].append(value)   
             
         metadata, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = merged.values()
         title, timestamp = joint
