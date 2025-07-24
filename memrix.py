@@ -209,6 +209,19 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
+    async def mem_consumer(db: "aiosqlite.Connection") -> None:
+        while True:
+            data = await self.data_queue.get()
+            final_map = data.get("final_map")
+                
+            try:
+                await Cubicle.insert_mem_data(
+                    db, self.file_folder, self.align.label, final_map
+                )
+                
+            finally:
+                self.data_queue.task_done()
+                
     async def sample_analyze(
             self,
             track_enabled: bool,
@@ -293,17 +306,6 @@ class Memrix(object):
                 *(mem_analyze(), io_analyze(pid))
             )
             return mem_map | io_map
-
-        async def consumer() -> None:
-            while True:
-                data = await self.data_queue.get()
-                try:
-                    final_map = data.get("final_map")
-                    await Cubicle.insert_mem_data(
-                        db, self.file_folder, self.align.label, final_map
-                    )
-                finally:
-                    self.data_queue.task_done()
 
         async def track_launch() -> None:
             self.dumped.clear()
@@ -400,15 +402,14 @@ class Memrix(object):
         if not track_enabled:
             return None
 
-        consumer_task = asyncio.create_task(consumer())
+        mem_consumer_task = asyncio.create_task(self.mem_consumer(db))
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
             await track_launch()
             await asyncio.sleep(self.align.speed)
 
-        await self.data_queue.join()
-        consumer_task.cancel()
+        mem_consumer_task.cancel()
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
     async def track_core_task(self, device: "Device") -> None:
