@@ -1002,7 +1002,7 @@ class Design(object):
                 if index >= len(phase_sequence):
                     index, phase_sequence = 0, generate_phase_sequence(rows, cols)
                     letter = insert_letters(phase_sequence)
-                await asyncio.sleep(1)
+                await asyncio.sleep(2.5)
 
             # 收束动画：清空 → 中心扩散铺满
             for i in range(rows + cols):
