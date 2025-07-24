@@ -281,7 +281,7 @@ class Reporter(object):
             "minor_summary_items": minor_summary,
         }
 
-    # Workflow: 🟢 ======================== GFX & I/O ========================
+    # Workflow: 🟢 ======================== GFX ========================
 
     @staticmethod
     def __split_frames_with_ranges(
@@ -399,8 +399,8 @@ class Reporter(object):
                 },
                 {
                     "fields": [
-                        {"label": "P95: ", "value": p95_fps, "unit": "FPS"},
-                        {"label": "JNK: ", "value": jnk_fps, "unit": "%"}
+                        {"text": f"P95: {p95_fps} FPS", "class": "refer"},
+                        {"text": f"JNK: {jnk_fps} %", "class": "refer"}
                     ]
                 }
             ],
