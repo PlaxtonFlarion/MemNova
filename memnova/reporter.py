@@ -187,7 +187,7 @@ class Reporter(object):
             # 🟡 ==== MEM Painter ====
             func = partial(Painter.draw_mem_metrics, **leak)
             draw_leak_future = loop.run_in_executor(
-                executor, func, union_data_list
+                executor, func, union_data_list, str(leak_loc)
             )
             self.background_tasks.append(draw_leak_future)
 
@@ -228,7 +228,7 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
 
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(initializer=Active.active, initargs=("WARNING",)) as executor:
             compilation = await asyncio.gather(
                 *(self.__classify_rendering(executor, db, templater, d, baseline) for d in cur_data)
             )
@@ -427,7 +427,7 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time"), team_data["file"]
 
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(initializer=Active.active, initargs=("WARNING",)) as executor:
             compilation = await asyncio.gather(
                 *(self.__gfx_rendering(executor, db, templater, d) for d in cur_data)
             )
