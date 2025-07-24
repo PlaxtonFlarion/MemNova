@@ -169,22 +169,20 @@ class Scores(object):
             }
 
     # Notes: ======================== I/O ========================
-
-    @staticmethod
     def analyze_io_score(
             df: "pd.DataFrame",
             swap_threshold: int = 10240,
             rw_peak_threshold: int = 102400,
             idle_threshold=10
     ) -> dict:
-
+        
         result = {
             "swap_status": "PASS",
-            "swap_max": 0.0,
+            "swap_max_kb": 0.0,
             "swap_burst_ratio": 0.0,
             "swap_burst_count": 0,
-            "rw_peak": 0.0,
-            "rw_std": 0.0,
+            "rw_peak_kb": 0.0,
+            "rw_std_kb": 0.0,
             "rw_burst_ratio": 0.0,
             "rw_idle_ratio": 0.0,
             "sys_burst": 0.0,
@@ -197,64 +195,62 @@ class Scores(object):
 
         tags, penalties = [], []
 
-        # 1. Δ 速率序列
+        df = df.copy()
         for col in ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]:
             df[col] = df[col].astype(float).diff().fillna(0).clip(lower=0)
 
-        # 2. 峰值与抖动
+        # ==== RW峰值与抖动 ====
         rw_vals = pd.concat([df["read_bytes"], df["write_bytes"]])
         rw_peak = rw_vals.max()
         rw_std = rw_vals.std()
-        result["rw_peak"] = round(rw_peak, 2)
-        result["rw_std"] = round(rw_std, 2)
+        result["rw_peak_kb"] = round(rw_peak, 2)
+        result["rw_std_kb"] = round(rw_std, 2)
         if rw_peak > rw_peak_threshold:
             penalties.append(15)
             tags.append("rw_peak_high")
             result["risk"].append("RW高峰")
 
-        # 3. 爆发段：连续n帧高于均值+std，视为“IO burst”
-        threshold = rw_vals.mean() + rw_vals.std()
-        burst_mask = (rw_vals > threshold)
-        burst_ratio = burst_mask.sum() / len(rw_vals)
-        result["rw_burst_ratio"] = round(burst_ratio, 2)
-        if burst_ratio > burst_ratio:
+        # ==== 爆发段 ====
+        rw_burst_ratio = (rw_vals > (rw_vals.mean() + rw_vals.std())).sum() / len(rw_vals)
+        result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
+        if rw_burst_ratio > 0.1:
             penalties.append(10)
             tags.append("rw_burst")
             result["risk"].append("RW爆发")
 
-        # 4. Idle段：所有列加起来几乎全为0的比例
+        # ==== Idle段 ====
         idle_mask = ((df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1)) < idle_threshold)
-
-        result["rw_idle_ratio"] = round((idle_ratio := idle_mask.sum() / len(df)), 2)
+        idle_ratio = idle_mask.sum() / len(df)
+        result["rw_idle_ratio"] = round(idle_ratio, 2)
         if idle_ratio > 0.4:
             penalties.append(10)
             tags.append("rw_idle")
             result["risk"].append("IO异常空闲")
 
-        # 5. 系统调用突变
+        # ==== 系统调用突变 ====
         cr_burst = (df["syscr"] > df["syscr"].mean() + 2 * df["syscr"].std()).sum()
         cw_burst = (df["syscw"] > df["syscw"].mean() + 2 * df["syscw"].std()).sum()
-
-        result["sys_burst"] = (sys_burst_events := cr_burst + cw_burst)
+        sys_burst_events = cr_burst + cw_burst
+        result["sys_burst"] = sys_burst_events
         if sys_burst_events > 3:
             penalties.append(5)
             tags.append("sys_burst")
             result["risk"].append("系统调用爆发")
 
-        # 6. Swap爆发（如后续加swap字段可加）
+        # ==== Swap ====
         swap_vals = df["swap"].astype(float) * 1024
         swap_max = swap_vals.max()
-        result["swap_max"] = round(swap_max, 2)
+        result["swap_max_kb"] = round(swap_max, 2)
         if swap_max > swap_threshold:
             penalties.append(20)
             tags.append("swap_burst")
             result["risk"].append("Swap爆发")
         swap_burst_mask = (swap_vals > swap_threshold)
-        burst_ratio = swap_burst_mask.sum() / len(df)
-        result["swap_burst_ratio"] = round(burst_ratio, 2)
+        swap_burst_ratio = swap_burst_mask.sum() / len(df)
+        result["swap_burst_ratio"] = round(swap_burst_ratio, 2)
         result["swap_burst_count"] = swap_burst_mask.sum()
 
-        # 7. 赋分
+        # ==== Score/Level ====
         score = max(100 - sum(penalties), 0)
         result["score"], result["tags"] = score, tags
 
