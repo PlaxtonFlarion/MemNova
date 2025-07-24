@@ -256,7 +256,7 @@ class Memrix(object):
             track_enabled: bool,
             device: "Device",
             db: "aiosqlite.Connection",
-    ) -> None:
+    ) -> typing.Optional["asyncio.Task"]:
 
         async def mem_analyze() -> dict:
             mem_map = {}
@@ -409,7 +409,7 @@ class Memrix(object):
             await track_launch()
             await asyncio.sleep(self.align.speed)
 
-        mem_consumer_task.cancel()
+        return mem_consumer_task
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
     async def track_core_task(self, device: "Device") -> None:
@@ -457,7 +457,7 @@ class Memrix(object):
             auto_pilot_task = asyncio.create_task(perfetto.auto_pilot())
 
             watcher = asyncio.create_task(self.watcher())
-            await self.track_collector(self.storm, device, db)
+            mem_consumer_task = await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
@@ -466,6 +466,7 @@ class Memrix(object):
         await self.data_queue.join()
         sample_analyze_task.cancel()
         auto_pilot_task.cancel()
+        _ = mct.cancel() if (mct := mem_consumer_task) else None
         await asyncio.gather(watcher, self.sample_stop(reporter))
 
     # """真相快照"""
@@ -540,6 +541,8 @@ class Perfetto(object):
         self.__trace_loc = trace_loc
         self.__trace_conv = trace_conv
 
+        self.__backs: list["asyncio.Task"] = []
+
     @staticmethod
     async def __input_stream(transports: "asyncio.subprocess.Process") -> None:
         async for line in transports.stdout:
@@ -574,10 +577,11 @@ class Perfetto(object):
             return None
 
         trace_file = str(self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace")
-
-        await self.__device.perfetto_close()
+        
         await self.__device.pull(target_folder, trace_file)
         await self.__device.remove(target_folder)
+
+        await self.__data_queue.put({"trace_file": trace_file})
 
         return trace_file
 
@@ -587,9 +591,12 @@ class Perfetto(object):
 
         while not self.__track_event.is_set():
             target_folder = await self.start()
-            await asyncio.sleep(60)
-            trace_file = await self.close(target_folder)
-            await self.__data_queue.put({"trace_file": trace_file})
+            await asyncio.sleep(5)
+            await self.__device.perfetto_close()
+            self.__backs.append(
+                asyncio.create_task(self.close(target_folder))
+            )
+            # trace_file = await self.close(target_folder)
 
 
 # """Main"""
