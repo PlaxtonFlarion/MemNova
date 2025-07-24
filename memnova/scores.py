@@ -242,6 +242,17 @@ class Scores(object):
             result["risk"].append("系统调用爆发")
 
         # 6. Swap爆发（如后续加swap字段可加）
+        swap_vals = df["swap"].astype(float) * 1024
+        swap_max = swap_vals.max()
+        result["swap_max"] = round(swap_max, 2)
+        if swap_max > swap_threshold:
+            penalties.append(20)
+            tags.append("swap_burst")
+            result["risk"].append("Swap爆发")
+        swap_burst_mask = (swap_vals > swap_threshold)
+        burst_ratio = swap_burst_mask.sum() / len(df)
+        result["swap_burst_ratio"] = round(burst_ratio, 2)
+        result["swap_burst_count"] = swap_burst_mask.sum()
 
         # 7. 赋分
         score = max(100 - sum(penalties), 0)
