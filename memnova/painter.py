@@ -31,7 +31,7 @@ class Painter(object):
             **kwargs
     ) -> str:
 
-        df = pd.DataFrame(union_data_lis)
+        df = pd.DataFrame(union_data_list)
 
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -329,7 +329,7 @@ class Painter(object):
             output_path: str
     ) -> str:
 
-        df = pd.DataFrame(union_data_lis)
+        df = pd.DataFrame(union_data_list)
 
         # 🔵 ==== 获取评分 ====
         _, evaluate = metadata, Scores.analyze_io_score(df)
@@ -337,11 +337,11 @@ class Painter(object):
         io_summary = (
             f"Grade: {evaluate['grade']}\n"
             f"Score: {evaluate['score']}\n"
-            f"Peak RW: {evaluate['rw_peak']} KB\n"
-            f"RW Std: {evaluate['rw_std']} KB\n"
+            f"Peak RW: {evaluate['rw_peak_kb']} KB\n"
+            f"RW Std: {evaluate['rw_std_kb']} KB\n"
             f"RW Burst Ratio: {evaluate['rw_burst_ratio']:.2%}\n"
             f"Idle Ratio: {evaluate['rw_idle_ratio']:.2%}\n"
-            f"Swap Max: {evaluate.get('swap_max', 0)} KB\n"
+            f"Swap Max: {evaluate.get('swap_max_kb', 0)} KB\n"
             f"Swap Burst: {evaluate.get('swap_burst_count', 0)} / {evaluate.get('swap_burst_ratio', 0):.2%}\n"
             f"Sys Burst Events: {evaluate['sys_burst']}\n"
         )
