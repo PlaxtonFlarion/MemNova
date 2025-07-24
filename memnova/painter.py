@@ -324,7 +324,6 @@ class Painter(object):
 
     @staticmethod
     def draw_io_metrics(
-            metadata: dict,
             union_data_list: list[dict],
             output_path: str
     ) -> str:
@@ -332,7 +331,7 @@ class Painter(object):
         df = pd.DataFrame(union_data_list)
 
         # 🔵 ==== 获取评分 ====
-        _, evaluate = metadata, Scores.analyze_io_score(df)
+        evaluate = Scores.analyze_io_score(df)
 
         io_summary = (
             f"Grade: {evaluate['grade']}\n"
