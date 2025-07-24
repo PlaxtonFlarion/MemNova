@@ -25,19 +25,13 @@ class Painter(object):
 
     @staticmethod
     def draw_mem_metrics(
-            union_data_list: list[tuple],
+            union_data_list: list[dict],
             output_path: str,
             *_,
             **kwargs
     ) -> str:
 
-        df = pd.DataFrame(
-            union_data_list, columns=[
-                "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
-                "native_heap", "dalvik_heap", "java_heap", "graphics",
-                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
-            ]
-        )
+        df = pd.DataFrame(union_data_lis)
 
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -331,17 +325,11 @@ class Painter(object):
     @staticmethod
     def draw_io_metrics(
             metadata: dict,
-            union_data_list: list[tuple],
+            union_data_list: list[dict],
             output_path: str
     ) -> str:
 
-        df = pd.DataFrame(
-            union_data_list, columns=[
-                "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
-                "native_heap", "dalvik_heap", "java_heap", "graphics",
-                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
-            ]
-        )
+        df = pd.DataFrame(union_data_lis)
 
         # 🔵 ==== 获取评分 ====
         _, evaluate = metadata, Scores.analyze_io_score(df)
