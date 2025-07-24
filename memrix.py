@@ -209,7 +209,7 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    async def mem_consumer(db: "aiosqlite.Connection") -> None:
+    async def mem_consumer(self, db: "aiosqlite.Connection") -> None:
         while True:
             data = await self.data_queue.get()
             final_map = data.get("final_map")
