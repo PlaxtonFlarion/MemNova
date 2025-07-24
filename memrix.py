@@ -213,7 +213,6 @@ class Memrix(object):
             self,
             track_enabled: bool,
             db: "aiosqlite.Connection",
-            trace_loc: typing.Union["Path", str],
             now_time: str,
     ) -> None:
 
@@ -225,7 +224,7 @@ class Memrix(object):
             trace_file = data.get("trace_file")
 
             try:            
-                with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
+                with TraceProcessor(trace_file, config=TraceProcessorConfig(self.tp_shell)) as tp:
                     gfx_analyzer = GfxAnalyzer()
                     gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
                     gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
@@ -461,12 +460,9 @@ class Memrix(object):
 
             await self.task_close_event.wait()
 
-            trace_file = await perfetto.close(target_folder)
-            await self.sample_analyze(self.sleek, db, trace_file, now_time)
-
             animation_event.set()
 
-        self.data_queue.join()
+        await self.data_queue.join()
         sample_analyze_task.cancel()
         auto_pilot_task.cancel()
         await asyncio.gather(watcher, self.sample_stop(reporter))
