@@ -211,27 +211,33 @@ class Memrix(object):
 
     async def sample_analyze(
             self,
-            track_gfx: bool,
+            track_enabled: bool,
             db: "aiosqlite.Connection",
             trace_loc: typing.Union["Path", str],
             now_time: str,
     ) -> None:
 
-        if not track_gfx or not Path(trace_loc).exists():
+        if not track_enabled:
             return None
 
-        gfx_fmt_data, now_time = {}, Period.convert_time(now_time)
+        while True:
+            data = await self.data_queue.get()
+            trace_file = data.get("trace_file")
 
-        with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
-            gfx_analyzer = GfxAnalyzer()
-            gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
-            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-            await Cubicle.insert_gfx_data(
-                db, self.file_folder, self.align.label, now_time, gfx_fmt_data
-            )
+            try:            
+                with TraceProcessor(str(trace_loc), config=TraceProcessorConfig(self.tp_shell)) as tp:
+                    gfx_analyzer = GfxAnalyzer()
+                    gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
+                    gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+                    await Cubicle.insert_gfx_data(
+                        db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
+                    )
 
-        self.file_insert += len(gfx_fmt_data)
-        logger.info(f"Article {self.file_insert} data insert success")
+                self.file_insert += len(gfx_fmt_data)
+                logger.info(f"Article {self.file_insert} data insert success")
+            
+            finally:
+                self.data_queue.task_done()
 
     async def track_collector(
             self,
@@ -432,8 +438,8 @@ class Memrix(object):
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
         perfetto = Perfetto(
-            self.sleek, self.task_close_event, device,
-            self.ft_file, traces, trace_loc, self.trace_conv
+            self.sleek, self.task_close_event, self.data_queue, 
+            device, self.ft_file, traces, trace_loc, self.trace_conv
         )
 
         # Workflow: ========== 开始采样 ==========
@@ -444,7 +450,11 @@ class Memrix(object):
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, animation_event := asyncio.Event())
             )
-            target_folder = await perfetto.start()
+
+            sample_analyze_task = asyncio.create_task(
+                self.sample_analyze(self.sleek, db, now_time)
+            )
+            auto_pilot_task = asyncio.create_task(perfetto.auto_pilot())
 
             watcher = asyncio.create_task(self.watcher())
             await self.track_collector(self.storm, device, db)
@@ -456,6 +466,9 @@ class Memrix(object):
 
             animation_event.set()
 
+        self.data_queue.join()
+        sample_analyze_task.cancel()
+        auto_pilot_task.cancel()
         await asyncio.gather(watcher, self.sample_stop(reporter))
 
     # """真相快照"""
@@ -513,6 +526,7 @@ class Perfetto(object):
             self,
             track_enabled: bool,
             track_event: "asyncio.Event",
+            data_queue: "asyncio.Queue",
             device: "Device",
             ft_file: str,
             traces_dir: "Path",
@@ -522,6 +536,7 @@ class Perfetto(object):
 
         self.__track_enabled = track_enabled
         self.__track_event = track_event
+        self.__data_queue = data_queue
         self.__device = device
         self.__ft_file = ft_file
         self.__traces_dir = traces_dir
@@ -573,13 +588,11 @@ class Perfetto(object):
         if not self.__track_enabled:
             return None
 
-        trace_file = None
         while not self.__track_event.is_set():
             target_folder = await self.start()
             await asyncio.sleep(60)
             trace_file = await self.close(target_folder)
-
-        return trace_file or str(self.__trace_loc)
+            await self.__data_queue.put({"trace_file": trace_file})
 
 
 # """Main"""
