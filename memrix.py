@@ -210,6 +210,7 @@ class Memrix(object):
         for arg in args:
             if isinstance(arg, asyncio.Task):
                 arg.cancel()
+                await arg  # TODO
 
     async def mem_alignment(self, db: "aiosqlite.Connection") -> None:
         while True:
