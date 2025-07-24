@@ -621,25 +621,25 @@ class Design(object):
             return None
 
         start_banner = [
-            "Launching quantum sweep of address space.",
-            "Calibrating neural lanes for low-latency tracking.",
-            "Activating dimensional scan of memory substrata.",
-            "Deploying spectral probes into RAM topology.",
-            "Scanning volatile structures for temporal drift.",
-            "Engaging parallel memory channels with adaptive sync.",
-            "Spooling deep memory resonance patterns.",
-            "Establishing vector phase for signal propagation."
+            "Launching quantum sweep of address space ...",
+            "Calibrating neural lanes for low-latency tracking ...",
+            "Activating dimensional scan of memory substrata ...",
+            "Deploying spectral probes into RAM topology ...",
+            "Scanning volatile structures for temporal drift ...",
+            "Engaging parallel memory channels with adaptive sync ...",
+            "Spooling deep memory resonance patterns ...",
+            "Establishing vector phase for signal propagation ..."
         ]
 
         close_banner = [
-            "Memory scan complete. No anomalies detected.",
-            "Has successfully charted volatile domains.",
-            "Pulse mapping concluded. All nodes synchronized.",
-            "Core resonance stabilized. Exiting scan mode.",
-            "Signal integrity confirmed across memory grid.",
-            "Temporal coherence locked. Diagnostic idle.",
-            "Dynamic memory matrix resolved successfully.",
-            "All probes disengaged. Standby mode initiated."
+            "✔ Memory scan complete. No anomalies detected.",
+            "✔ Has successfully charted volatile domains.",
+            "✔ Pulse mapping concluded. All nodes synchronized.",
+            "✔ Core resonance stabilized. Exiting scan mode.",
+            "✔ Signal integrity confirmed across memory grid.",
+            "✔ Temporal coherence locked. Diagnostic idle.",
+            "✔ Dynamic memory matrix resolved successfully.",
+            "✔ All probes disengaged. Standby mode initiated."
         ]
 
         self.console.print(
@@ -831,6 +831,187 @@ class Design(object):
 
         self.console.print(
             f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
+        )
+
+    async def cell_division(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+
+        if self.design_level != const.SHOW_LEVEL:
+            return None
+
+        start_banners = [
+            "Initializing cellular matrix ...",
+            "Deploying division sequence ...",
+            "Activating morphogen protocol ...",
+            "Establishing biological symmetry ...",
+            "Warming up cytoplasmic network ...",
+            "Synchronizing mitosis scheduler ...",
+            "Booting structural lattice ...",
+            "Charging molecular pathways ...",
+            "Firing membrane oscillators ...",
+            "Commencing genetic expansion ..."
+        ]
+
+        close_banners = [
+            "Division complete. Cellular structure stabilized.",
+            "All sequences aligned. Integrity confirmed.",
+            "Expansion phase concluded. Awaiting next command.",
+            "Operation finalized. System is synchronized.",
+            "Core stabilized. No anomalies detected.",
+            "Process complete. Awaiting further directives.",
+            "Transmission received. Task fully executed.",
+            "Engine has formed. Core temperature nominal.",
+            "Signal integrity verified. Standby initiated.",
+            "Cellular network completed. Stability optimal."
+        ]
+
+        self.console.print(
+            f"\n[bold #00D7FF]🧬{const.APP_DESC} :: {random.choice(start_banners)}\n"
+        )
+
+        rows, cols, fps = 7, 16, 30
+        center_r, center_c = rows // 2, cols // 2
+        padding = 6
+
+        themes = [
+            {
+                "gradient": [
+                    "#E0FFFF", "#B2FFFF", "#99F6FF", "#66E6FF", "#33D1FF",
+                    "#00BFFF", "#0099FF", "#0066CC", "#0033AA", "#001F70"
+                ],
+                "center_color": "#FFD700",
+                "logo_color": "#FFD700 on #2E3440",  # 金色字 + 深灰蓝背景（高对比）
+                "symbols": ["◉", "◎", "◍", "◌", "⊚", "◓", "◒", "◑"]
+            },
+            {
+                "gradient": [
+                    "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350",
+                    "#F44336", "#E53935", "#D32F2F", "#C62828", "#B71C1C"
+                ],
+                "center_color": "#FFEE58",
+                "logo_color": "#FFC107 on #3B1E1E",  # 金橙字 + 暗红棕背景
+                "symbols": ["❤", "✿", "❀", "❁", "✺", "✾", "❃"]
+            },
+            {
+                "gradient": [
+                    "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC",
+                    "#9C27B0", "#8E24AA", "#7B1FA2", "#6A1B9A", "#4A148C"
+                ],
+                "center_color": "#FF5722",
+                "logo_color": "#FFAB00 on #331B3B",  # 橙金字 + 深紫背景
+                "symbols": ["★", "✶", "✸", "✷", "✹", "✺"]
+            },
+            {
+                "gradient": [
+                    "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A",
+                    "#4CAF50", "#43A047", "#388E3C", "#2E7D32", "#1B5E20"
+                ],
+                "center_color": "#FFFFFF",
+                "logo_color": "#FAFF00 on #1E4025",  # 荧光黄字 + 深绿背景
+                "symbols": ["⊙", "⊛", "◉", "◎", "●", "◈"]
+            },
+            {
+                "gradient": [
+                    "#EFEBE9", "#D7CCC8", "#BCAAA4", "#A1887F", "#8D6E63",
+                    "#795548", "#6D4C41", "#5D4037", "#4E342E", "#3E2723"
+                ],
+                "center_color": "#FF9800",
+                "logo_color": "#FFB74D on #32241B",  # 橘金字 + 深棕背景
+                "symbols": ["≈", "≡", "≒", "~", "≜"]
+            }
+        ]
+
+        theme = random.choice(themes)
+
+        gradient_colors = theme["gradient"]
+        cell_chars = theme["symbols"]
+        logo_color = theme["logo_color"]
+        center_color = theme["center_color"]
+        dt, dc = "*", "#EEEEEE"
+
+        def insert_letters(seq: list[list[tuple[int, int]]]) -> dict:
+            flat = [pt for group in seq for pt in group]
+            random.shuffle(flat)
+            mapping = {}
+            for s in random.sample(list(const.APP_DESC), 6):
+                while flat:
+                    if (pos := flat.pop()) not in mapping:
+                        mapping[pos] = s
+                        break
+            return mapping
+
+        def generate_phase_sequence(cur_rows: int, cur_cols: int) -> list[list[tuple[int, int]]]:
+            coordinates = [(r, c) for r in range(cur_rows) for c in range(cur_cols)]
+            random.shuffle(coordinates)
+
+            idx, phase_seq = 0, []
+            while idx < len(coordinates):
+                count = random.randint(1, 8)
+                chunk = coordinates[idx:idx + count]
+                phase_seq.append(chunk)
+                idx += count
+
+            return phase_seq
+
+        def render_frame(phase_idx: int, phase_seq: list[list[tuple[int, int]]], letter_overlay: dict) -> Text:
+            grid = [["[dim #222222]·[/]" for _ in range(cols)] for _ in range(rows)]
+            for seg in range(phase_idx + 1):
+                color = gradient_colors[seg % len(gradient_colors)]
+                for r, c in phase_seq[seg]:
+                    if 0 <= r < rows and 0 <= c < cols:
+                        if (r, c) in letter_overlay:
+                            char = letter_overlay[(r, c)]
+                            grid[r][c] = f"[bold {logo_color}]{char}[/]"
+                        else:
+                            cell = random.choice(cell_chars)
+                            grid[r][c] = f"[bold {color}]{cell}[/]"
+
+            head = f"[bold {dc}][{const.APP_DESC}::"
+            grid_lines = "\n".join(" " * padding + " ".join(row) for row in grid)
+            info_lines = "\n".join(
+                " " * padding + f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
+                for k, v in memories.items()
+            ) + "\n\n" if memories else ""
+
+            return Text.from_markup(textwrap.dedent(info_lines) + grid_lines)
+
+        def render_burst_fill(step: int) -> "Text":
+            grid = [["[dim #222222]·[/]" for _ in range(cols)] for _ in range(rows)]
+
+            for r in range(rows):
+                for c in range(cols):
+                    distance = abs(r - center_r) + abs(c - center_c)
+                    if distance <= step:
+                        grid[r][c] = f"[bold {center_color}]■[/]"
+
+            head = f"[bold {dc}][{const.APP_DESC}::"
+            grid_lines = "\n".join(" " * padding + " ".join(row) for row in grid)
+            info_lines = "\n".join(
+                " " * padding + f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
+                for k, v in memories.items()
+            ) + "\n\n" if memories else ""
+
+            return Text.from_markup(textwrap.dedent(info_lines) + grid_lines)
+
+        index, phase_sequence = 0, generate_phase_sequence(rows, cols)
+        letter = insert_letters(phase_sequence)
+
+        with Live(console=self.console, refresh_per_second=fps) as live:
+            while not task_close_event.is_set():
+                live.update(render_frame(index, phase_sequence, letter))
+                index += 1
+                if index >= len(phase_sequence):
+                    index, phase_sequence = 0, generate_phase_sequence(rows, cols)
+                    letter = insert_letters(phase_sequence)
+                await asyncio.sleep(1)
+
+            # 收束动画：清空 → 中心扩散铺满
+            for i in range(rows + cols):
+                live.update(render_burst_fill(i))
+                await asyncio.sleep(1 / fps)
+
+        await asyncio.sleep(0.5)
+        self.console.print(
+            f"\n[bold #00FF5F]>>> 🧬{const.APP_DESC} :: {random.choice(close_banners)} <<<\n"
         )
 
 

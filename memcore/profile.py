@@ -25,10 +25,10 @@ class Align(object):
 
     aligns = {
         "common": {
-            "speed": 0.5,
             "label": "应用名称"
         },
         "mem": {
+            "speed": 0.5,
             "fg_max": 0.0,
             "fg_avg": 0.0,
             "bg_max": 0.0,
@@ -39,6 +39,7 @@ class Align(object):
             "leak_criteria": "准出标准"
         },
         "gfx": {
+            "speed": 30.0,
             "headline": "标题",
             "criteria": "准出标准"
         }
@@ -54,18 +55,18 @@ class Align(object):
         self.aligns = state
 
     @property
-    def speed(self):
-        """
-        采样间隔时间（秒）。
-        """
-        return self.aligns["common"]["speed"]
-
-    @property
     def label(self):
         """
         当前测试任务的标签或名称，用于日志与报告标注。
         """
         return self.aligns["common"]["label"]
+
+    @property
+    def mem_speed(self):
+        """
+        采样间隔时间（秒）。
+        """
+        return self.aligns["mem"]["speed"]
 
     @property
     def fg_max(self):
@@ -124,6 +125,13 @@ class Align(object):
         return self.aligns["mem"]["leak_criteria"]
 
     @property
+    def gfx_speed(self):
+        """
+        采样间隔时间（秒）。
+        """
+        return self.aligns["gfx"]["speed"]
+
+    @property
     def gfx_headline(self):
         """
         报告页标题。
@@ -137,13 +145,14 @@ class Align(object):
         """
         return self.aligns["gfx"]["criteria"]
 
-    @speed.setter
-    def speed(self, value: typing.Any):
-        self.aligns["common"]["speed"] = Parser.parse_decimal(value)
-
     @label.setter
     def label(self, value: typing.Any):
         self.aligns["common"]["label"] = value
+
+    @mem_speed.setter
+    def mem_speed(self, value: typing.Any):
+        limit = min(10.0, max(Parser.parse_decimal(value), 0.1))
+        self.aligns["mem"]["speed"] = limit
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
@@ -180,6 +189,11 @@ class Align(object):
     def leak_criteria(self, value: typing.Any):
         if Parser.is_valid(value):
             self.aligns["mem"]["leak_criteria"] = value
+
+    @gfx_speed.setter
+    def gfx_speed(self, value: typing.Any):
+        limit = min(60.0, max(Parser.parse_decimal(value), 5.0))
+        self.aligns["gfx"]["speed"] = limit
 
     @gfx_headline.setter
     def gfx_headline(self, value: typing.Any):

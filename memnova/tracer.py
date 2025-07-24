@@ -22,7 +22,8 @@ class _Tracer(object):
 
     # Notes: ======================== MEM ========================
 
-    async def extract_rss(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
+    @staticmethod
+    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
                SELECT
                    c.ts / 1e6 AS time_sec,
@@ -39,7 +40,8 @@ class _Tracer(object):
 
     # Notes: ======================== GFX ========================
 
-    async def extract_raw_frames(self, tp: "TraceProcessor", app_name: str) -> list[dict]:
+    @staticmethod
+    async def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -81,7 +83,8 @@ class _Tracer(object):
             } for row in tp.query(sql)
         ]
 
-    async def extract_roll_ranges(self, tp: "TraceProcessor") -> list[dict]:
+    @staticmethod
+    async def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -96,7 +99,8 @@ class _Tracer(object):
             } for row in tp.query(sql)
         ]
 
-    async def extract_drag_ranges(self, tp: "TraceProcessor") -> list[dict]:
+    @staticmethod
+    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -111,7 +115,8 @@ class _Tracer(object):
             } for row in tp.query(sql)
         ]
 
-    async def extract_vsync_sys_points(self, tp: "TraceProcessor") -> list[dict]:
+    @staticmethod
+    async def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -142,7 +147,8 @@ class _Tracer(object):
 
         return fps_points
 
-    async def extract_vsync_app_points(self, tp: "TraceProcessor") -> list[dict]:
+    @staticmethod
+    async def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -173,7 +179,8 @@ class _Tracer(object):
 
         return fps_points
 
-    async def extract_sf_fps(self, tp: "TraceProcessor") -> list[dict]:
+    @staticmethod
+    async def extract_sf_fps(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts/1e6 AS ts, value AS fps
             FROM counter
@@ -181,7 +188,7 @@ class _Tracer(object):
             ORDER BY ts
         """
         df = tp.query(sql).as_pandas_dataframe()
-        # df["ts"] -‎= self.normalize_start_ts
+        # df["ts"] -= self.normalize_start_ts
         return df.to_dict("records")
 
     @staticmethod

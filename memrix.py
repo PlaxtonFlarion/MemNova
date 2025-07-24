@@ -89,14 +89,8 @@ class Memrix(object):
         self.ft_file: str = kwargs["ft_file"]
 
         self.padding: str = "-" * 8
-        self.memories: dict[str, typing.Union[str, int]] = {
-            "msg": "*",
-            "mod": "*",
-            "act": "*",
-            "pss": "*",
-            "foreground": 0,
-            "background": 0
-        }
+        self.memories: dict[str, typing.Any] = {}
+
         self.design: "Design" = Design(self.level)
 
         self.animation_task: typing.Optional["asyncio.Task"] = None
@@ -148,15 +142,16 @@ class Memrix(object):
         format_before_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(reporter.before_time)
         )
+        sample_speed = self.align.mem_speed if self.storm else self.align.gfx_speed
 
         logger.info(f"时间 -> {format_before_time}")
         logger.info(f"应用 -> {package}")
-        logger.info(f"频率 -> {self.align.speed}")
+        logger.info(f"频率 -> {sample_speed}")
         logger.info(f"标签 -> {self.align.label}")
         logger.info(f"文件 -> {self.file_folder}\n")
 
         await self.design.summaries(
-            format_before_time, package, self.align.speed, self.align.label, self.file_folder
+            format_before_time, package, sample_speed, self.align.label, self.file_folder
         )
 
         if Path(reporter.team_file).is_file():
@@ -209,20 +204,27 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    async def mem_consumer(self, db: "aiosqlite.Connection") -> None:
+    async def matter_stop(self, *args, **__) -> None:
+        await self.data_queue.join()
+
+        for arg in args:
+            if isinstance(arg, asyncio.Task):
+                arg.cancel()
+
+    async def mem_alignment(self, db: "aiosqlite.Connection") -> None:
         while True:
             data = await self.data_queue.get()
             final_map = data.get("final_map")
-                
+
             try:
                 await Cubicle.insert_mem_data(
                     db, self.file_folder, self.align.label, final_map
                 )
-                
+
             finally:
                 self.data_queue.task_done()
-                
-    async def sample_analyze(
+
+    async def gfx_alignment(
             self,
             track_enabled: bool,
             db: "aiosqlite.Connection",
@@ -236,7 +238,10 @@ class Memrix(object):
             data = await self.data_queue.get()
             trace_file = data.get("trace_file")
 
-            try:            
+            try:
+                self.memories.update({
+                    "ANA": {"text": "Sample analyzing ...", "color": "#00FF5F"}
+                })
                 with TraceProcessor(trace_file, config=TraceProcessorConfig(self.tp_shell)) as tp:
                     gfx_analyzer = GfxAnalyzer()
                     gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
@@ -245,9 +250,15 @@ class Memrix(object):
                         db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
                     )
 
-                self.file_insert += len(gfx_fmt_data)
-                logger.info(f"Article {self.file_insert} data insert success")
-            
+                self.file_insert += 1
+                self.memories.update({
+                    "MSG": {"text": (msg := f"Article {self.file_insert} data insert success"), "color": "#00FF5F"},
+                    "ANA": {"text": "Analyze engine ready!", "color": "#AFFF5F"}
+                })
+                logger.info(msg)
+
+            except Exception as e:
+                self.memories["ERR"] = {"text": f"{time.strftime('%H%M%S')} {e}", "color": "#FF5F5F"}
             finally:
                 self.data_queue.task_done()
 
@@ -402,14 +413,14 @@ class Memrix(object):
         if not track_enabled:
             return None
 
-        mem_consumer_task = asyncio.create_task(self.mem_consumer(db))
+        mem_alignment_task = asyncio.create_task(self.mem_alignment(db))
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
             await track_launch()
-            await asyncio.sleep(self.align.speed)
+            await asyncio.sleep(self.align.mem_speed)
 
-        return mem_consumer_task
+        return mem_alignment_task
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
     async def track_core_task(self, device: "Device") -> None:
@@ -438,9 +449,15 @@ class Memrix(object):
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
         perfetto = Perfetto(
-            self.sleek, self.task_close_event, self.data_queue, 
+            self.sleek, self.task_close_event, self.data_queue, self.align.gfx_speed,
             device, self.ft_file, traces, trace_loc, self.trace_conv
         )
+
+        self.memories = {
+            "msg": "*", "mod": "*", "act": "*", "pss": "*", "foreground": 0, "background": 0
+        } if self.storm else {
+            "MSG": {}, "ERR": {}, "ANA": {}
+        }
 
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
@@ -449,25 +466,27 @@ class Memrix(object):
             )
             self.animation_task = asyncio.create_task(
                 self.design.memory_wave(self.memories, animation_event := asyncio.Event())
+                if self.storm else
+                self.design.cell_division(self.memories, animation_event := asyncio.Event())
             )
 
-            sample_analyze_task = asyncio.create_task(
-                self.sample_analyze(self.sleek, db, now_time)
+            gfx_alignment_task = asyncio.create_task(
+                self.gfx_alignment(self.sleek, db, now_time)
             )
             auto_pilot_task = asyncio.create_task(perfetto.auto_pilot())
 
             watcher = asyncio.create_task(self.watcher())
-            mem_consumer_task = await self.track_collector(self.storm, device, db)
+            mem_alignment_task = await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
             animation_event.set()
 
-        await self.data_queue.join()
-        sample_analyze_task.cancel()
-        auto_pilot_task.cancel()
-        _ = mct.cancel() if (mct := mem_consumer_task) else None
-        await asyncio.gather(watcher, self.sample_stop(reporter))
+        await asyncio.gather(
+            self.matter_stop(gfx_alignment_task, auto_pilot_task, mem_alignment_task),
+            watcher,
+            self.sample_stop(reporter)
+        )
 
     # """真相快照"""
     async def observation(self) -> None:
@@ -525,6 +544,7 @@ class Perfetto(object):
             track_enabled: bool,
             track_event: "asyncio.Event",
             data_queue: "asyncio.Queue",
+            gfx_speed: float,
             device: "Device",
             ft_file: str,
             traces_dir: "Path",
@@ -535,6 +555,7 @@ class Perfetto(object):
         self.__track_enabled = track_enabled
         self.__track_event = track_event
         self.__data_queue = data_queue
+        self.__gfx_speed = gfx_speed
         self.__device = device
         self.__ft_file = ft_file
         self.__traces_dir = traces_dir
@@ -553,11 +574,8 @@ class Perfetto(object):
         async for line in transports.stderr:
             logger.info(line.decode(const.CHARSET).strip())
 
-    async def start(self) -> typing.Optional[str]:
-        if not self.__track_enabled:
-            return None
-
-        unique_id = uuid.uuid4().hex[:8]
+    async def __start(self) -> typing.Optional[str]:
+        unique_id = uuid.uuid4().hex[:6] + "_" +time.strftime("%Y%m%d%H%M%S")
         device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
@@ -572,30 +590,24 @@ class Perfetto(object):
 
         return target_folder
 
-    async def close(self, target_folder: str) -> typing.Optional[str]:
-        if not self.__track_enabled:
-            return None
-
+    async def __close(self, target_folder: str) -> None:
         trace_file = str(self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace")
-        
+
         await self.__device.pull(target_folder, trace_file)
         await self.__device.remove(target_folder)
-
         await self.__data_queue.put({"trace_file": trace_file})
-
-        return trace_file
 
     async def auto_pilot(self) -> typing.Any:
         if not self.__track_enabled:
             return None
 
+        await self.__device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
+
         while not self.__track_event.is_set():
-            target_folder = await self.start()
-            await asyncio.sleep(5)
+            target_folder = await self.__start()
+            await asyncio.sleep(self.__gfx_speed)
             await self.__device.perfetto_close()
-            self.__backs.append(
-                asyncio.create_task(self.close(target_folder))
-            )
+            self.__backs.append(asyncio.create_task(self.__close(target_folder)))
 
         return await asyncio.gather(*self.__backs)
 

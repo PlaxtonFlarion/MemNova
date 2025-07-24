@@ -83,7 +83,7 @@ class Reporter(object):
 
         Design.build_file_tree(html_file)
 
-    # Workflow: 🟡 ======================== MEM & I/O ========================
+    # Workflow: ======================== MEM & I/O ========================
 
     @staticmethod
     def __mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
@@ -281,7 +281,7 @@ class Reporter(object):
             "minor_summary_items": minor_summary,
         }
 
-    # Workflow: 🟢 ======================== GFX ========================
+    # Workflow: ======================== GFX ========================
 
     @staticmethod
     def __split_frames_with_ranges(
@@ -318,41 +318,26 @@ class Reporter(object):
             cur_start = cur_end
         return segment_list
 
-    async def __gfx_rendering(
-            self,
-            executor: "ProcessPoolExecutor",
-            db: "aiosqlite.Connection",
-            templater: "Templater",
-            data_dir: str,
-            *_,
-    ) -> dict:
-
-        os.makedirs(
-            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
-        )
-
-        gfx_data, (joint, *_) = await asyncio.gather(
-            Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
-        )
-
+    @staticmethod
+    def __merge_alignment_frames(frames: list[dict],) -> dict:
         # ==== 先提取所有 start_ts ====
         normalize_list = [
-            record.get("metadata", {}).get("normalize", 0) for record in gfx_data
+            record.get("metadata", {}).get("normalize", 0) for record in frames
         ]
 
         # ==== 以最早的 start_ts 作为基准 ====
         normalize_start_ts = min(normalize_list)
 
         # ==== 初始化合并结构 ====
-        merged = {key: [] for key in gfx_data[0]}
+        merged = {key: [] for key in frames[0]}
 
-        for record in gfx_data:
-            logger.info(f"Meta: {record.get('metadata')}")
-            # ==== raw_frames: timestamp_ms 毫秒 ====
+        for record in frames:
+            logger.info(f"Meta: {record.get('metadata', 'Unknown')}")
+            # ==== raw_frames ====
             for frame in record["raw_frames"]:
                 frame["timestamp_ms"] -= normalize_start_ts
 
-            # ==== vsync_sys / vsync_app: ts 毫秒 ====
+            # ==== vsync_sys / vsync_app ====
             for point in record["vsync_sys"]:
                 point["ts"] -= normalize_start_ts
             for point in record["vsync_app"]:
@@ -373,9 +358,30 @@ class Reporter(object):
                 if isinstance(value, list):
                     merged[key].extend(value)
                 else:
-                    merged[key].append(value)   
-            
-        _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = merged.values()
+                    merged[key].append(value)
+
+        return merged
+
+    async def __gfx_rendering(
+            self,
+            executor: "ProcessPoolExecutor",
+            db: "aiosqlite.Connection",
+            templater: "Templater",
+            data_dir: str,
+            *_,
+    ) -> dict:
+
+        os.makedirs(
+            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
+        )
+
+        gfx_data, (joint, *_) = await asyncio.gather(
+            Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+        )
+
+        frame_merged = self.__merge_alignment_frames(gfx_data)
+
+        _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
         title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
@@ -407,6 +413,11 @@ class Reporter(object):
         # ==== 95分位帧率 ====
         p95_fps = round(float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2)
 
+        logger.info(f"min_fps: {min_fps}")
+        logger.info(f"avg_fps: {avg_fps}")
+        logger.info(f"jnk_fps: {jnk_fps}")
+        logger.info(f"p95_fps: {p95_fps}")
+
         # ==== 分段切割 ====
         segments = self.__split_frames_with_ranges(
             raw_frames, roll_ranges, drag_ranges, jank_ranges
@@ -421,6 +432,7 @@ class Reporter(object):
         evaluate = Scores.analyze_gfx_score(
             raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
         )
+        logger.info(f"evaluate: {evaluate}")
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
