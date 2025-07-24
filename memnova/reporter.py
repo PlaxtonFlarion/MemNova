@@ -30,7 +30,9 @@ from jinja2 import (
     Environment, FileSystemLoader
 )
 from concurrent.futures import ProcessPoolExecutor
-from engine.tinker import Period
+from engine.tinker import (
+    Active, Period
+)
 from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.profile import Align
@@ -131,6 +133,7 @@ class Reporter(object):
             union_data_list, columns=[
                 "timestamp", "pss", "rss", "uss", "activity", "adj", "mode",
                 "native_heap", "dalvik_heap", "java_heap", "graphics",
+                "rchar", "wchar", "syscr", "syscw", "read_bytes", "write_bytes"
             ]
         )
 
