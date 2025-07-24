@@ -585,7 +585,7 @@ class Perfetto(object):
 
         return trace_file
 
-    async def auto_pilot(self) -> typing.Optional[str]:
+    async def auto_pilot(self) -> typing.Any:
         if not self.__track_enabled:
             return None
 
@@ -596,7 +596,8 @@ class Perfetto(object):
             self.__backs.append(
                 asyncio.create_task(self.close(target_folder))
             )
-            # trace_file = await self.close(target_folder)
+
+        return await asyncio.gather(*self.__backs)
 
 
 # """Main"""
