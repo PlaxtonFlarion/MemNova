@@ -240,7 +240,8 @@ class Memrix(object):
 
             try:
                 self.memories.update({
-                    "ANA": {"text": "Sample analyzing ...", "color": "#00FF5F"}
+                    "MSG": {"text": f"Queue received {Path(trace_file).name}", "color": "#87FFD7"},
+                    "ANA": {"text": f"Sample analyzing ...", "color": "#00FF5F"}
                 })
                 with TraceProcessor(trace_file, config=TraceProcessorConfig(self.tp_shell)) as tp:
                     gfx_analyzer = GfxAnalyzer()
@@ -253,12 +254,16 @@ class Memrix(object):
                 self.file_insert += 1
                 self.memories.update({
                     "MSG": {"text": (msg := f"Article {self.file_insert} data insert success"), "color": "#00FF5F"},
-                    "ANA": {"text": "Analyze engine ready!", "color": "#AFFF5F"}
+                    "ANA": {"text": "Analyze engine ready !", "color": "#AFFF5F"}
                 })
                 logger.info(msg)
 
             except Exception as e:
-                self.memories["ERR"] = {"text": f"{time.strftime('%H%M%S')} {e}", "color": "#FF5F5F"}
+                self.memories.update({
+                    "MSG": {},
+                    "ERR": {"text": f"{time.strftime('%H%M%S')} {e}", "color": "#FF5F5F"},
+                    "ANA": {},
+                })
             finally:
                 self.data_queue.task_done()
 
