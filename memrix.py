@@ -31,9 +31,6 @@ from collections import defaultdict
 
 # ====[ from: 第三方库 ]====
 from loguru import logger
-from perfetto.trace_processor import (
-    TraceProcessor, TraceProcessorConfig
-)
 
 # ====[ from: 本地模块 ]====
 from engine.device import Device
@@ -108,11 +105,19 @@ class Memrix(object):
     def remote(self, value: dict) -> None:
         self.__remote = value
 
-    def task_clean_up(self, *_, **__) -> None:
+    def task_clean_up(self, *_, **__) -> None: 
+        if self.storm:
+            msg = f"Memory Data {self.file_insert}"
+        else:
+            msg = f"// EXECUTED // — Shutting down background operations."
+        
         self.memories.update({
-            "MSG": {"text": (msg := "// EXECUTED // — Shutting down background operations.")}
+            "MSG": {"text": msg}, "MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {}, "BACKGROUND": {},
+        } if self.storm else {
+            "MSG": {"text": msg}, "ANA": {"text": "Analyze engine offline"},
         })
         logger.info(msg)
+        
         self.task_close_event.set()
 
     async def watcher(self) -> None:
@@ -250,13 +255,15 @@ class Memrix(object):
                     "MSG": {"text": f"Queue received {Path(trace_file).name}", "color": "#87FFD7"},
                     "ANA": {"text": f"Sample analyzing ...", "color": "#00FF5F"}
                 })
-                with TraceProcessor(trace_file, config=TraceProcessorConfig(self.tp_shell)) as tp:
-                    gfx_analyzer = GfxAnalyzer()
-                    gfx_data = await gfx_analyzer.extract_metrics(tp, self.focus)
-                    gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
-                    await Cubicle.insert_gfx_data(
-                        db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
-                    )
+
+                gfx_analyzer = GfxAnalyzer()
+                gfx_fmt_data = await asyncio.shield(asyncio.to_thread(
+                    gfx_analyzer.extract_metrics, trace_file, self.tp_shell, self.focus
+                ))
+                
+                await Cubicle.insert_gfx_data(
+                    db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
+                )
 
                 self.file_insert += 1
                 self.memories.update({
@@ -268,8 +275,8 @@ class Memrix(object):
             except Exception as e:
                 self.memories.update({
                     "MSG": {},
-                    "ERR": {"text": f"{time.strftime('%H%M%S')} {e}", "color": "#FF5F5F"},
                     "ANA": {},
+                    "ERR": {"text": str(e), "color": "#FF5F5F"},
                 })
             finally:
                 self.data_queue.task_done()
@@ -480,7 +487,7 @@ class Memrix(object):
         self.memories = {
             "MSG": {}, "MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {"text": 0}, "BACKGROUND": {"text": 0}
         } if self.storm else {
-            "MSG": {}, "ERR": {}, "ANA": {}
+            "MSG": {}, "ANA": {}, "ERR": {}
         }
 
         # Workflow: ========== 开始采样 ==========
