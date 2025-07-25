@@ -730,7 +730,7 @@ class Design(object):
         )
 
         def get_theme_by_mod() -> dict:
-            mod = memories.get("MOD", "")
+            mod = memories.get("MOD", "").get("text", "")
             if mod.startswith("F") or mod.startswith("B"):
                 return random.choice(color_themes)
             return default_theme
@@ -801,7 +801,7 @@ class Design(object):
                         grid[r][c] = f"[bold {color}]{cell}[/]"
 
             # 中心呼吸灯
-            grid[center_r][center_c] = f"[bold {center_color}]{symbols[0]}[/]"
+            grid[center_r][center_c] = f"[bold {center_color}]{center_symbol}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
             return Text.from_markup(make_header() + "\n".join(lines))
@@ -835,10 +835,11 @@ class Design(object):
         # === 随机主题 ===
         theme = get_theme_by_mod()
         gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
+        center_symbol = random.choice(symbols)
 
         # 初始化状态
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
-        previous_state = memories.get("MOD", "")
+        previous_state = memories.get("MOD", "").get("text", "")
 
         # === 分层（曼哈顿距离） ===
         layers = [[] for _ in range(center_r + center_c + 1)]
@@ -862,9 +863,9 @@ class Design(object):
                 gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
         
                 # LOGO动态切换
-                if memories.get("MOD", "") != previous_state:
+                if (cur := memories.get("MOD", "").get("text", "")) != previous_state:
                     logo_transition = max_transition
-                    previous_state = memories.get("MOD", "")
+                    previous_state = cur
 
                 if logo_transition > 0:
                     logo_transition -= 1
