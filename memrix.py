@@ -335,14 +335,17 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Process -> {app_pid}"), "mod": "*", "act": "*", "pss": "*"
+                    "MSG": {"text": (msg := f"Process -> {app_pid}")}, 
+                    "MOD": {}, 
+                    "ACT": {}, 
+                    "PSS": {},
                 })
                 return logger.info(f"{msg}\n")
 
             logger.info(device)
-            self.memories.update(
-                {"msg": (msg := f"Process -> {app_pid.member}")}
-            )
+            self.memories.update({
+                "MSG": {"text": (msg := f"Process -> {app_pid.member}")}
+            )}
             logger.info(msg)
 
             try:
@@ -350,7 +353,10 @@ class Memrix(object):
             except (KeyError, IndexError) as e:
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Pid -> {e}"), "mod": "*", "act": "*", "pss": "*"
+                    "MSG": {"text": (msg := f"Pid -> {e}")}, 
+                    "MOD": {}, 
+                    "ACT": {}, 
+                    "PSS": {},
                 })
                 return logger.info(f"{msg}\n")
 
@@ -367,8 +373,11 @@ class Memrix(object):
 
             mark_map["mark"]["mode"], mark_map["mark"]["adj"] = mode, adj
 
-            state = "foreground" if mark_map["mark"]["mode"] == "FG" else "background"
-            self.memories.update({"mod": state, "act": activity})
+            state = "FOREGROUND" if mark_map["mark"]["mode"] == "FG" else "BACKGROUND"
+            self.memories.update({
+                "MOD": {"text": state}, 
+                "ACT": {"text": activity}
+            })
 
             logger.info(f"TMS: {mark_map['mark']['tms']}")
             logger.info(f"ADJ: {mark_map['mark']['adj']}")
@@ -388,7 +397,10 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "msg": (msg := f"Resp -> {result}"), "mod": "*", "act": "*", "pss": "*"
+                    "MSG": {"text": (msg := f"Resp -> {result}")}, 
+                    "MOD": {}, 
+                    "ACT": {}, 
+                    "PSS": {},
                 })
                 return logger.info(f"{msg}\n")
 
@@ -402,18 +414,18 @@ class Memrix(object):
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
-                self.memories[state] += 1
+                self.memories[state]["text"] += 1
                 self.memories.update({
-                    "pss": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
+                    "PSS": {"text": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"}
                 })
 
             else:
                 msg = f"Data insert skipped"
                 self.memories.update({
-                    "mod": "*", "act": "*", "pss": "*"
+                    "MOD": {}, "ACT": {}, "PSS": {}
                 })
 
-            self.memories.update({"msg": msg})
+            self.memories.update({"MSG": {"text": msg}})
             logger.info(msg)
 
             self.dumped.set()
@@ -465,7 +477,7 @@ class Memrix(object):
         )
 
         self.memories = {
-            "msg": "*", "mod": "*", "act": "*", "pss": "*", "foreground": 0, "background": 0
+            "MSG": {}, "MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {"text": 0}, "BACKGROUND": {"text": 0}
         } if self.storm else {
             "MSG": {}, "ERR": {}, "ANA": {}
         }
