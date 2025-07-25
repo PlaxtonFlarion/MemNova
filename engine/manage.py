@@ -22,7 +22,7 @@ class Manage(object):
     def __init__(self, adb: str):
         self.adb = adb
 
-    async def operate_device(self, serial: str) -> typing.Optional["Device"]:
+    async def operate_device(self, imply: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
 
         while True:
@@ -42,13 +42,13 @@ class Manage(object):
                 continue
 
             if (loc := len(device_dict)) == 1:
-                Design.Doc.log(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}")
+                Design.Doc.log(f"[#00FA9A]Connect ->[/] [{loc}] {device_dict[f'{loc}']}\n")
                 return device_dict[f"{loc}"]
 
             device: typing.Optional["Device"] = None
             for k, v in device_dict.items():
                 Design.Doc.log(f"[#00FA9A]Connect ->[/] [{k}] {v}")
-                if serial == v.serial:
+                if imply == v.serial:
                     device = v
 
             try:
@@ -56,9 +56,10 @@ class Manage(object):
                     device_dict
                 )[Prompt.ask(f"请选择", console=Design.console)]
             except KeyError:
-                Design.Doc.log(f"[#FF005F]没有该设备，请重新选择 ...\n")
+                Design.Doc.log(f"[#FF005F]没有该设备，请重新选择 ...")
             finally:
                 try_again = 0
+                Design.console.print()
 
 
 if __name__ == '__main__':
