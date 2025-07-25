@@ -222,7 +222,7 @@ class Design(object):
         ext = (file := Path(parts[-1])).suffix.lower()
         current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
-        Design.console.print("\n", tree, "\n")
+        Design.console.print(tree)
         return file_color
 
     @staticmethod
