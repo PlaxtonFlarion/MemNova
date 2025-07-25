@@ -737,8 +737,7 @@ class Design(object):
             head = f"[bold {dc}][{const.APP_DESC}::"
             
             info_lines = "\n".join(
-                f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
-                for k, v in memories.items()
+                f"{head}{k}] {v}[/]" for k, v in memories.items()
             ) + "\n\n" if memories else ""
 
             return textwrap.dedent(info_lines)
@@ -832,7 +831,7 @@ class Design(object):
 
         # ==== 初始状态 ====
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
-        prev = memories.get("MOD", {}).get("text", "")
+        prev = memories.get("MOD", "")
 
         # ==== 随机主题 ==== 
         gradient, center_color, logo_color, symbols = get_theme_by_mod()
@@ -857,7 +856,7 @@ class Design(object):
                 depth += direction
         
                 # ==== 主题动态切换 ====
-                if (cur := memories.get("MOD", {}).get("text", "")) != prev:
+                if (cur := memories.get("MOD", "")) != prev:
                     # ==== 当前状态 ====
                     prev, logo_transition = cur, max_transition
                     # ==== 随机主题 ==== 
@@ -1015,8 +1014,7 @@ class Design(object):
             head = f"[bold {dc}][{const.APP_DESC}::"
             grid_lines = "\n".join(" " * padding + " ".join(row) for row in grid)
             info_lines = "\n".join(
-                " " * padding + f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
-                for k, v in memories.items()
+                f"{head}{k}] {v}[/]" for k, v in memories.items()
             ) + "\n\n" if memories else ""
 
             return Text.from_markup(textwrap.dedent(info_lines) + grid_lines)
@@ -1033,8 +1031,7 @@ class Design(object):
             head = f"[bold {dc}][{const.APP_DESC}::"
             grid_lines = "\n".join(" " * padding + " ".join(row) for row in grid)
             info_lines = "\n".join(
-                " " * padding + f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
-                for k, v in memories.items()
+                f"{head}{k}] {v}[/]" for k, v in memories.items()
             ) + "\n\n" if memories else ""
 
             return Text.from_markup(textwrap.dedent(info_lines) + grid_lines)
@@ -1049,7 +1046,7 @@ class Design(object):
                 if index >= len(phase_sequence):
                     index, phase_sequence = 0, generate_phase_sequence(rows, cols)
                     letter = insert_letters(phase_sequence)
-                await asyncio.sleep(2.5)
+                await asyncio.sleep(0.08)
 
             # 收束动画：清空 → 中心扩散铺满
             for i in range(rows + cols):
