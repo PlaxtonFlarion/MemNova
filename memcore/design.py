@@ -708,14 +708,22 @@ class Design(object):
             },
             {
                 "gradient": [
-                     "#FFFDE7", "#FFF9C4", "#FFF59D", "#FFF176", "#FFEE58",
+                    "#FFFDE7", "#FFF9C4", "#FFF59D", "#FFF176", "#FFEE58",
                     "#FFEB3B", "#FDD835", "#FBC02D", "#F9A825", "#F57F17"
                 ],
                 "center_color": "#FF1744",
                 "logo_color": "#FFEA00 on #2B2321",  # 荧光黄 + 棕黑
                 "symbols": ["☀", "✹", "✦", "★", "✸", "✷"]
             },
+            {
+                "gradient": ["#E0E0E0", "#C8C8C8", "#B0B0B0", "#A0A0A0", "#888888", "#666666", "#444444"],
+                "center_color": "#B0B0B0",
+                "logo_color": "#B0B0B0",
+                "symbols": ["·", "◌", "●", "○", "◎"]
+            },
         ]
+        default_theme = themes[-1]
+        color_themes = themes[:-1]
 
         self.console.print(
             f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
@@ -728,11 +736,8 @@ class Design(object):
         brand, dc, dt = const.APP_DESC, "#EEEEEE", "*"
 
         # === 随机主题 ===
-        theme = random.choice(themes)
-        gradient = theme["gradient"]
-        # logo_color = theme["logo_color"]
-        center_color = theme["center_color"]
-        symbols = theme["symbols"]
+        theme = get_theme_by_mode()
+        gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
 
         # 初始化状态
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
@@ -744,6 +749,11 @@ class Design(object):
             for c_ in range(cols):
                 d_ = abs(r_ - center_r) + abs(c_ - center_c)
                 layers[d_].append((r_, c_))
+
+        def get_theme_by_mod() -> dict:
+            if memories.get("MOD", "").startswith("F") or mod.startswith("B"):
+                return random.choice(color_themes)
+            return default_theme
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
@@ -847,6 +857,9 @@ class Design(object):
                 frame_count += 1
                 depth += direction
 
+                theme = get_theme_by_mode()
+                gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
+        
                 # LOGO动态切换
                 if memories.get("MOD", "") != previous_state:
                     logo_transition = max_transition
