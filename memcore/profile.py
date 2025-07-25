@@ -28,7 +28,7 @@ class Align(object):
             "label": "应用名称"
         },
         "mem": {
-            "speed": 0.5,
+            "mem_speed": 0.5,
             "fg_max": 0.0,
             "fg_avg": 0.0,
             "bg_max": 0.0,
@@ -39,7 +39,7 @@ class Align(object):
             "leak_criteria": "准出标准"
         },
         "gfx": {
-            "speed": 30.0,
+            "gfx_speed": 30.0,
             "headline": "标题",
             "criteria": "准出标准"
         }
@@ -66,7 +66,7 @@ class Align(object):
         """
         采样间隔时间（秒）。
         """
-        return self.aligns["mem"]["speed"]
+        return self.aligns["mem"]["mem_speed"]
 
     @property
     def fg_max(self):
@@ -129,7 +129,7 @@ class Align(object):
         """
         采样间隔时间（秒）。
         """
-        return self.aligns["gfx"]["speed"]
+        return self.aligns["gfx"]["gfx_speed"]
 
     @property
     def gfx_headline(self):
@@ -152,7 +152,7 @@ class Align(object):
     @mem_speed.setter
     def mem_speed(self, value: typing.Any):
         limit = min(10.0, max(Parser.parse_decimal(value), 0.1))
-        self.aligns["mem"]["speed"] = limit
+        self.aligns["mem"]["mem_speed"] = limit
 
     @fg_max.setter
     def fg_max(self, value: typing.Any):
@@ -193,7 +193,7 @@ class Align(object):
     @gfx_speed.setter
     def gfx_speed(self, value: typing.Any):
         limit = min(60.0, max(Parser.parse_decimal(value), 5.0))
-        self.aligns["gfx"]["speed"] = limit
+        self.aligns["gfx"]["gfx_speed"] = limit
 
     @gfx_headline.setter
     def gfx_headline(self, value: typing.Any):
