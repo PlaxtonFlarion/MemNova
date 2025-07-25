@@ -8,8 +8,11 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import json
 from bisect import bisect_left
-from perfetto.trace_processor import TraceProcessor
+from perfetto.trace_processor import (
+    TraceProcessor, TraceProcessorConfig
+)
 
 
 class _Tracer(object):
@@ -251,49 +254,55 @@ class _Tracer(object):
             f["fps_app"] = find_nearest(timestamp_ms, vsync_app)
 
     @staticmethod
-    def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+    def extract_metrics(trace_file: str, tp_shell: str, app_name: str) -> dict:
         raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
 
 
 class MemAnalyzer(_Tracer):
     """MEM"""
-
-    @staticmethod
-    def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+    
+    def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:
         pass
 
 
 class GfxAnalyzer(_Tracer):
     """GFX"""
 
-    def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        self.set_trace_start_ts(tp)
+    def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:
 
-        raw_frames = self.extract_raw_frames(tp, app_name)
+        with TraceProcessor(trace_file, config=TraceProcessorConfig(tp_shell)) as tp:
+            self.set_trace_start_ts(tp)
 
-        vsync_sys = self.extract_vsync_sys_points(tp)  # 系统FPS
-        vsync_app = self.extract_vsync_app_points(tp)  # 应用FPS
+            raw_frames = self.extract_raw_frames(tp, app_name)
 
-        roll_ranges = self.extract_roll_ranges(tp)  # 滑动区间
-        drag_ranges = self.extract_drag_ranges(tp)  # 拖拽区间
+            vsync_sys = self.extract_vsync_sys_points(tp)  # 系统FPS
+            vsync_app = self.extract_vsync_app_points(tp)  # 应用FPS
 
-        jank_ranges = self.mark_consecutive_jank(raw_frames)  # 连续丢帧
+            roll_ranges = self.extract_roll_ranges(tp)  # 滑动区间
+            drag_ranges = self.extract_drag_ranges(tp)  # 拖拽区间
 
-        self.annotate_frames(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
-        )
+            jank_ranges = self.mark_consecutive_jank(raw_frames)  # 连续丢帧
 
-        return {
-            "metadata": {
-                "source": "perfetto", "app": app_name, "normalize": self.normalize_start_ts
-            },
-            "raw_frames": raw_frames,
-            "vsync_sys": vsync_sys,
-            "vsync_app": vsync_app,
-            "roll_ranges": roll_ranges,
-            "drag_ranges": drag_ranges,
-            "jank_ranges": jank_ranges
-        }
+            self.annotate_frames(
+                raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
+            )
+
+            gfx_data = {
+                "metadata": {
+                    "source": "perfetto", "app": app_name, "normalize": self.normalize_start_ts
+                },
+                "raw_frames": raw_frames,
+                "vsync_sys": vsync_sys,
+                "vsync_app": vsync_app,
+                "roll_ranges": roll_ranges,
+                "drag_ranges": drag_ranges,
+                "jank_ranges": jank_ranges
+            }
+
+            gfx_fmt_data = {k: json.dumps(v) for k, v in gfx_data.items()}
+
+            return gfx_fmt_data
+
 
 
 if __name__ == '__main__':
