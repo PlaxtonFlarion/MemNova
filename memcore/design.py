@@ -729,29 +729,9 @@ class Design(object):
             f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
         )
 
-        # === 动画参数 ===
-        rows, cols = 5, 17
-        center_r, center_c = rows // 2, cols // 2
-        padding = " " * 4
-        brand, dc, dt = const.APP_DESC, "#EEEEEE", "*"
-
-        # === 随机主题 ===
-        theme = get_theme_by_mode()
-        gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
-
-        # 初始化状态
-        pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
-        previous_state = memories.get("MOD", "")
-
-        # === 分层（曼哈顿距离） ===
-        layers = [[] for _ in range(center_r + center_c + 1)]
-        for r_ in range(rows):
-            for c_ in range(cols):
-                d_ = abs(r_ - center_r) + abs(c_ - center_c)
-                layers[d_].append((r_, c_))
-
         def get_theme_by_mod() -> dict:
-            if memories.get("MOD", "").startswith("F") or mod.startswith("B"):
+            mod = memories.get("MOD", "")
+            if mod.startswith("F") or mod.startswith("B"):
                 return random.choice(color_themes)
             return default_theme
 
@@ -846,6 +826,27 @@ class Design(object):
                 yield Text.from_markup(loc + f"{pad}[bold #00D7FF]{final_text}[/][dim #00D7FF]▓[/]")
                 await asyncio.sleep(0.1)
 
+        # === 动画参数 ===
+        rows, cols = 5, 17
+        center_r, center_c = rows // 2, cols // 2
+        padding = " " * 4
+        brand, dc, dt = const.APP_DESC, "#EEEEEE", "*"
+
+        # === 随机主题 ===
+        theme = get_theme_by_mod()
+        gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
+
+        # 初始化状态
+        pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
+        previous_state = memories.get("MOD", "")
+
+        # === 分层（曼哈顿距离） ===
+        layers = [[] for _ in range(center_r + center_c + 1)]
+        for r_ in range(rows):
+            for c_ in range(cols):
+                d_ = abs(r_ - center_r) + abs(c_ - center_c)
+                layers[d_].append((r_, c_))
+        
         with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
             while not task_close_event.is_set():
@@ -857,7 +858,7 @@ class Design(object):
                 frame_count += 1
                 depth += direction
 
-                theme = get_theme_by_mode()
+                theme = get_theme_by_mod()
                 gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
         
                 # LOGO动态切换
