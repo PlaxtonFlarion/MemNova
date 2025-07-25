@@ -17,13 +17,13 @@ class _Tracer(object):
 
     normalize_start_ts: float = 0.0
 
-    async def set_trace_start_ts(self, tp: "TraceProcessor") -> None:
+    def set_trace_start_ts(self, tp: "TraceProcessor") -> None:
         self.normalize_start_ts = float(list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts) / 1e6
 
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
                SELECT
                    c.ts / 1e6 AS time_sec,
@@ -41,7 +41,7 @@ class _Tracer(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
+    def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -84,7 +84,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
+    def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -100,7 +100,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+    def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts, dur
             FROM slice
@@ -116,7 +116,7 @@ class _Tracer(object):
         ]
 
     @staticmethod
-    async def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
+    def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -148,7 +148,7 @@ class _Tracer(object):
         return fps_points
 
     @staticmethod
-    async def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
+    def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -180,7 +180,7 @@ class _Tracer(object):
         return fps_points
 
     @staticmethod
-    async def extract_sf_fps(tp: "TraceProcessor") -> list[dict]:
+    def extract_sf_fps(tp: "TraceProcessor") -> list[dict]:
         sql = """
             SELECT ts/1e6 AS ts, value AS fps
             FROM counter
@@ -192,7 +192,7 @@ class _Tracer(object):
         return df.to_dict("records")
 
     @staticmethod
-    async def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
+    def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
         jank_ranges = []
         count = 0
         start_ts = None
@@ -215,7 +215,7 @@ class _Tracer(object):
         return jank_ranges
 
     @staticmethod
-    async def annotate_frames(
+    def annotate_frames(
             frames: list[dict],
             roll_ranges: list[dict],
             drag_ranges: list[dict],
@@ -251,7 +251,7 @@ class _Tracer(object):
             f["fps_app"] = find_nearest(timestamp_ms, vsync_app)
 
     @staticmethod
-    async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+    def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
         raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
 
 
@@ -259,27 +259,27 @@ class MemAnalyzer(_Tracer):
     """MEM"""
 
     @staticmethod
-    async def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
+    def extract_metrics(tp: "TraceProcessor", app_name: str) -> dict:
         pass
 
 
 class GfxAnalyzer(_Tracer):
     """GFX"""
 
-    async def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
-        await self.set_trace_start_ts(tp)
+    def extract_metrics(self, tp: "TraceProcessor", app_name: str) -> dict:
+        self.set_trace_start_ts(tp)
 
-        raw_frames = await self.extract_raw_frames(tp, app_name)
+        raw_frames = self.extract_raw_frames(tp, app_name)
 
-        vsync_sys = await self.extract_vsync_sys_points(tp)  # 系统FPS
-        vsync_app = await self.extract_vsync_app_points(tp)  # 应用FPS
+        vsync_sys = self.extract_vsync_sys_points(tp)  # 系统FPS
+        vsync_app = self.extract_vsync_app_points(tp)  # 应用FPS
 
-        roll_ranges = await self.extract_roll_ranges(tp)  # 滑动区间
-        drag_ranges = await self.extract_drag_ranges(tp)  # 拖拽区间
+        roll_ranges = self.extract_roll_ranges(tp)  # 滑动区间
+        drag_ranges = self.extract_drag_ranges(tp)  # 拖拽区间
 
-        jank_ranges = await self.mark_consecutive_jank(raw_frames)  # 连续丢帧
+        jank_ranges = self.mark_consecutive_jank(raw_frames)  # 连续丢帧
 
-        await self.annotate_frames(
+        self.annotate_frames(
             raw_frames, roll_ranges, drag_ranges, jank_ranges, vsync_sys, vsync_app
         )
 
