@@ -214,14 +214,6 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    async def matter_stop(self, *args, **__) -> None:
-        await self.data_queue.join()
-
-        for arg in args:
-            if isinstance(arg, asyncio.Task):
-                arg.cancel()
-                await arg  # TODO
-
     async def mem_alignment(self, db: "aiosqlite.Connection") -> None:
         while True:
             data = await self.data_queue.get()
