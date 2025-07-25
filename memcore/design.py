@@ -730,7 +730,7 @@ class Design(object):
         # === 随机主题 ===
         theme = random.choice(themes)
         gradient = theme["gradient"]
-        logo_color = theme["logo_color"]
+        # logo_color = theme["logo_color"]
         center_color = theme["center_color"]
         symbols = theme["symbols"]
 
@@ -807,7 +807,7 @@ class Design(object):
                         ch = logo_overlay[(r, c)]
                         grid[r][c] = f"[bold {faded_fg_color}]{ch}[/]"
                     else:
-                        cell = random.choice(symbols)
+                        cell = "·" if fade else random.choice(symbols)
                         grid[r][c] = f"[bold {color}]{cell}[/]"
 
             # 中心呼吸灯
