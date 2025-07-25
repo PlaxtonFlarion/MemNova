@@ -486,7 +486,7 @@ class Memrix(object):
         )
 
         self.memories = {
-            "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"
+            "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": 0, "BACKGROUND": 0
         } if self.storm else {
             "MSG": "*", "ANA": "*", "ERR": "*"
         }
