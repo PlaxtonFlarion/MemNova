@@ -203,6 +203,7 @@ class Memrix(object):
 
         if self.file_insert:
             fc = Design.build_file_tree(reporter.group_dir)
+            Design.console.print()
             Design.Doc.log(
                 f"Usage: [#00D787]{const.APP_NAME} --forge [{fc}]{Path(reporter.group_dir).name}[/]"
             )
