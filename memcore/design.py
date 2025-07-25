@@ -735,13 +735,13 @@ class Design(object):
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
-            
+
             info_lines = "\n".join(
                 f"{head}{k}] {v}[/]" for k, v in memories.items()
             ) + "\n\n" if memories else ""
 
             return textwrap.dedent(info_lines)
-            
+
         def smoothstep(t: float) -> float:
             """
             平滑过渡函数：0 -> 1 的余弦曲线。
@@ -759,7 +759,7 @@ class Design(object):
 
         def render_grid() -> "Text":
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
-            
+
             # 涟漪范围
             active_positions = []
             for d in range(depth + 1):
@@ -802,7 +802,7 @@ class Design(object):
 
             lines = [padding + " ".join(row) for row in grid]
             return Text.from_markup(make_header() + "\n".join(lines))
-            
+
         async def render_exit_sequence() -> typing.AsyncGenerator["Text", None]:
             final_text = f"{brand} Engine"
             visual_center = (cols * 2 - 1) // 2
@@ -833,7 +833,7 @@ class Design(object):
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
         prev = memories.get("MOD", "")
 
-        # ==== 随机主题 ==== 
+        # ==== 随机主题 ====
         gradient, center_color, logo_color, symbols = get_theme_by_mod()
         center_symbol = random.choice(symbols)
 
@@ -843,7 +843,7 @@ class Design(object):
             for c_ in range(cols):
                 d_ = abs(r_ - center_r) + abs(c_ - center_c)
                 layers[d_].append((r_, c_))
-        
+
         with Live(console=self.console, refresh_per_second=30) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
             while not task_close_event.is_set():
@@ -854,12 +854,12 @@ class Design(object):
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
-        
+
                 # ==== 主题动态切换 ====
                 if (cur := memories.get("MOD", "")) != prev:
                     # ==== 当前状态 ====
                     prev, logo_transition = cur, max_transition
-                    # ==== 随机主题 ==== 
+                    # ==== 随机主题 ====
                     gradient, center_color, logo_color, symbols = get_theme_by_mod()
                     center_symbol = random.choice(symbols)
 
@@ -998,7 +998,7 @@ class Design(object):
 
             return phase_seq
 
-        def render_frame(phase_idx: int, phase_seq: list[list[tuple[int, int]]], letter_overlay: dict) -> Text:
+        def render_frame(phase_idx: int, phase_seq: list[list[tuple[int, int]]], letter_overlay: dict) -> "Text":
             grid = [["[dim #222222]·[/]" for _ in range(cols)] for _ in range(rows)]
             for seg in range(phase_idx + 1):
                 color = gradient_colors[seg % len(gradient_colors)]

@@ -30,9 +30,7 @@ from jinja2 import (
     Environment, FileSystemLoader
 )
 from concurrent.futures import ProcessPoolExecutor
-from engine.tinker import (
-    Active, Period
-)
+from engine.tinker import Period
 from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.profile import Align
@@ -101,8 +99,9 @@ class Reporter(object):
 
     async def __classify_rendering(
             self,
-            executor: "ProcessPoolExecutor",
             db: "aiosqlite.Connection",
+            loop: "asyncio.AbstractEventLoop",
+            executor: "ProcessPoolExecutor",
             templater: "Templater",
             data_dir: str,
             baseline: bool,
@@ -119,9 +118,6 @@ class Reporter(object):
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
-
-        # ==== running loop ====
-        loop = asyncio.get_running_loop()
 
         # 🔵 ==== I/O Painter ====
         draw_io_future = loop.run_in_executor(
@@ -217,6 +213,8 @@ class Reporter(object):
     async def mem_rendition(
             self,
             db: "aiosqlite.Connection",
+            loop: "asyncio.events.AbstractEventLoop",
+            executor: "ProcessPoolExecutor",
             templater: "Templater",
             team_data: dict,
             baseline: bool,
@@ -225,10 +223,9 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
 
-        with ProcessPoolExecutor(initializer=Active.active, initargs=("WARNING",)) as executor:
-            compilation = await asyncio.gather(
-                *(self.__classify_rendering(executor, db, templater, d, baseline) for d in cur_data)
-            )
+        compilation = await asyncio.gather(
+            *(self.__classify_rendering(db, loop, executor, templater, d, baseline) for d in cur_data)
+        )
 
         major_summary = [
             {"label": "测试时间", "value": [{"text": cur_time, "class": "time"}]}
@@ -319,13 +316,13 @@ class Reporter(object):
         return segment_list
 
     @staticmethod
-    def __merge_alignment_frames(frames: list[dict],) -> dict:
-        # ==== 先提取所有 start_ts ====
+    def __merge_alignment_frames(frames: list[dict]) -> dict:
+        # ==== 先提取所有 normalize ====
         normalize_list = [
             record.get("metadata", {}).get("normalize", 0) for record in frames
         ]
 
-        # ==== 以最早的 start_ts 作为基准 ====
+        # ==== 以最早的 normalize 作为基准 ====
         normalize_start_ts = min(normalize_list)
 
         # ==== 初始化合并结构 ====
@@ -333,17 +330,17 @@ class Reporter(object):
 
         for record in frames:
             logger.info(f"Meta: {record.get('metadata', 'Unknown')}")
-            # ==== raw_frames ====
+            # ==== 原始帧数据 [ms] ====
             for frame in record["raw_frames"]:
                 frame["timestamp_ms"] -= normalize_start_ts
 
-            # ==== vsync_sys / vsync_app ====
+            # ==== 系统FPS / 应用FPS [ms] ====
             for point in record["vsync_sys"]:
                 point["ts"] -= normalize_start_ts
             for point in record["vsync_app"]:
                 point["ts"] = normalize_start_ts
 
-            # ==== roll / drag / jank ====
+            # ==== 滑动区域 / 拖拽区域 / 掉帧区域 [ms] ====
             for r in record["roll_ranges"]:
                 r["start_ts"] -= normalize_start_ts
                 r["end_ts"] -= normalize_start_ts
@@ -354,6 +351,7 @@ class Reporter(object):
                 j["start_ts"] -= normalize_start_ts
                 j["end_ts"] -= normalize_start_ts
 
+            # ==== 合并数据 ====
             for key, value in record.items():
                 if isinstance(value, list):
                     merged[key].extend(value)
@@ -364,8 +362,9 @@ class Reporter(object):
 
     async def __gfx_rendering(
             self,
-            executor: "ProcessPoolExecutor",
             db: "aiosqlite.Connection",
+            loop: "asyncio.AbstractEventLoop",
+            executor: "ProcessPoolExecutor",
             templater: "Templater",
             data_dir: str,
             *_,
@@ -389,9 +388,6 @@ class Reporter(object):
         leak_loc = None
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
-
-        # ==== running loop ====
-        loop = asyncio.get_running_loop()
 
         # 🟢 ==== GFX Painter ====
         draw_future = loop.run_in_executor(
@@ -470,6 +466,8 @@ class Reporter(object):
     async def gfx_rendition(
             self,
             db: "aiosqlite.Connection",
+            loop: "asyncio.events.AbstractEventLoop",
+            executor: "ProcessPoolExecutor",
             templater: "Templater",
             team_data: dict,
             *_
@@ -477,10 +475,9 @@ class Reporter(object):
 
         cur_time, cur_data = team_data.get("time"), team_data["file"]
 
-        with ProcessPoolExecutor(initializer=Active.active, initargs=("WARNING",)) as executor:
-            compilation = await asyncio.gather(
-                *(self.__gfx_rendering(executor, db, templater, d) for d in cur_data)
-            )
+        compilation = await asyncio.gather(
+            *(self.__gfx_rendering(db, loop, executor, templater, d) for d in cur_data)
+        )
 
         major_summary_items = [
             {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},

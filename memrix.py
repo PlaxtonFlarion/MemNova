@@ -28,6 +28,7 @@ import aiosqlite
 # ====[ from: 内置模块 ]====
 from pathlib import Path
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 
 # ====[ from: 第三方库 ]====
 from loguru import logger
@@ -105,19 +106,19 @@ class Memrix(object):
     def remote(self, value: dict) -> None:
         self.__remote = value
 
-    def task_clean_up(self, *_, **__) -> None: 
+    def task_clean_up(self, *_, **__) -> None:
         if self.storm:
-            msg = f"Memory Data {self.file_insert}"
+            msg = f"Extract Data {self.file_insert}"
         else:
-            msg = f"// EXECUTED // — Shutting down background operations."
-        
-        self.memories.update({
-            "MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*",
-        } if self.storm else {
-            "MSG": msg, "ANA": "Analyze engine offline",
-        })
+            msg = f"Shutting down background operations"
+
+        self.memories.update(
+            {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
+            if self.storm else
+            {"MSG": msg, "ANA": "*"}
+        )
         logger.info(msg)
-        
+
         self.task_close_event.set()
 
     async def watcher(self) -> None:
@@ -261,7 +262,7 @@ class Memrix(object):
                 gfx_fmt_data = await asyncio.shield(asyncio.to_thread(
                     gfx_analyzer.extract_metrics, trace_file, self.tp_shell, self.focus
                 ))
-                
+
                 await Cubicle.insert_gfx_data(
                     db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
                 )
@@ -276,6 +277,7 @@ class Memrix(object):
             except Exception as e:
                 self.memories.update({
                     "MSG": "*",
+                    "PCK": "*",
                     "ANA": "*",
                     "ERR": f"[bold #FF5F5F]{e}",
                 })
@@ -336,7 +338,7 @@ class Memrix(object):
             mem_map, io_map = await asyncio.gather(*(mem_analyze(), io_analyze(pid)))
             return mem_map | io_map if all((mem_map, io_map)) else {}
 
-        async def track_launch() -> None:
+        async def track_launcher() -> None:
             self.dumped.clear()
 
             dump_start_time = time.time()
@@ -344,9 +346,9 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Process -> {app_pid}"), 
-                    "MOD": "*", 
-                    "ACT": "*", 
+                    "MSG": (msg := f"Process -> {app_pid}"),
+                    "MOD": "*",
+                    "ACT": "*",
                     "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
@@ -362,9 +364,9 @@ class Memrix(object):
             except (KeyError, IndexError) as e:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Pid -> {e}"), 
-                    "MOD": "*", 
-                    "ACT": "*", 
+                    "MSG": (msg := f"Pid -> {e}"),
+                    "MOD": "*",
+                    "ACT": "*",
                     "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
@@ -384,7 +386,7 @@ class Memrix(object):
 
             state = "FOREGROUND" if mark_map["mark"]["mode"] == "FG" else "BACKGROUND"
             self.memories.update({
-                "MOD": state, 
+                "MOD": state,
                 "ACT": activity
             })
 
@@ -406,9 +408,9 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Resp -> {result}"), 
-                    "MOD": "*",  
-                    "ACT": "*", 
+                    "MSG": (msg := f"Resp -> {result}"),
+                    "MOD": "*",
+                    "ACT": "*",
                     "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
@@ -449,7 +451,7 @@ class Memrix(object):
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
-            await track_launch()
+            await track_launcher()
             await asyncio.sleep(self.align.mem_speed)
 
         return mem_alignment_task
@@ -485,10 +487,11 @@ class Memrix(object):
             device, self.ft_file, traces, trace_loc, self.trace_conv
         )
 
+        # Workflow: ========== 显示面板 ==========
         self.memories = {
             "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": 0, "BACKGROUND": 0
         } if self.storm else {
-            "MSG": "*", "ANA": "*", "ERR": "*"
+            "MSG": "*", "PCK": "*", "ANA": "*", "ERR": "*"
         }
 
         # Workflow: ========== 开始采样 ==========
@@ -519,6 +522,7 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self) -> None:
+
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
         if not (target_dir := original / self.forge).exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
@@ -554,13 +558,11 @@ class Memrix(object):
             os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
         )
 
+        loop = asyncio.get_running_loop()
         async with aiosqlite.connect(reporter.db_file) as db:
-            rendition = await getattr(reporter, render)(
-                db, templater, team_data, self.front
-            )
-            await reporter.make_report(
-                self.unity_template, templater.download, **rendition
-            )
+            with ProcessPoolExecutor(initializer=Active.active, initargs=(const.SHOW_LEVEL,)) as executor:
+                rendition = await getattr(reporter, render)(db, loop, executor, templater, team_data, self.front)
+                await reporter.make_report(self.unity_template, templater.download, **rendition)
 
         await asyncio.gather(*reporter.background_tasks)
 
