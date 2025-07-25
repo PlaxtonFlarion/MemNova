@@ -1009,7 +1009,6 @@ class Design(object):
                 live.update(render_burst_fill(i))
                 await asyncio.sleep(1 / fps)
 
-        await asyncio.sleep(0.5)
         self.console.print(
             f"\n[bold #00FF5F]>>> 🧬{const.APP_DESC} :: {random.choice(close_banners)} <<<\n"
         )
