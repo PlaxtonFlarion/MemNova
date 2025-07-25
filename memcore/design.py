@@ -746,10 +746,13 @@ class Design(object):
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
-            return "\n".join(
+            
+            info_lines = "\n".join(
                 f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
                 for k, v in memories.items()
             ) + "\n\n" if memories else ""
+
+            return textwrap.dedent(info_lines)
             
         def smoothstep(t: float) -> float:
             """
@@ -799,7 +802,7 @@ class Design(object):
             grid[center_r][center_c] = f"[bold {center_color}]{symbols[0]}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
-            return Text.from_markup(make_header() + "\n" + "\n".join(lines))
+            return Text.from_markup(make_header() + "\n".join(lines))
             
         async def render_exit_sequence() -> typing.AsyncGenerator["Text", None]:
             final_text = f"{brand} Engine"
