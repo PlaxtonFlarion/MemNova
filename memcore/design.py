@@ -736,6 +736,7 @@ class Design(object):
 
         # 初始化状态
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
+        previous_state = memories.get("MOD", "")
 
         # === 分层（曼哈顿距离） ===
         layers = [[] for _ in range(center_r + center_c + 1)]
@@ -834,6 +835,11 @@ class Design(object):
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
+
+                # LOGO动态切换
+                if memories.get("MOD", "") != previous_state:
+                    logo_transition = max_transition
+                    previous_state = memories.get("MOD", "")
 
                 if logo_transition > 0:
                     logo_transition -= 1
