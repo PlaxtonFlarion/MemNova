@@ -735,7 +735,6 @@ class Design(object):
         symbols = theme["symbols"]
 
         # 初始化状态
-        previous_state = memories["mod"]
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
 
         # === 分层（曼哈顿距离） ===
@@ -746,7 +745,7 @@ class Design(object):
                 layers[d_].append((r_, c_))
 
         def make_header() -> str:
-            head = f"[{const.APP_DESC}::"
+            head = f"[bold {dc}][{const.APP_DESC}::"
             return "\n".join(
                 f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
                 for k, v in memories.items()
@@ -832,11 +831,6 @@ class Design(object):
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
-
-                # 检测切换 → 启动 LOGO 渐隐/渐显
-                if memories["mod"] != previous_state:
-                    logo_transition = max_transition
-                    previous_state = memories["mod"]
 
                 if logo_transition > 0:
                     logo_transition -= 1
