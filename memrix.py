@@ -171,13 +171,23 @@ class Memrix(object):
 
         return traces
 
-    async def sample_stop(self, reporter: "Reporter") -> None:
+    async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待采样任务结束 ...")
             try:
                 await asyncio.wait_for(self.dumped.wait(), timeout=3)
             except asyncio.TimeoutError:
                 logger.info("采样任务超时结束 ...")
+
+        await self.data_queue.join()
+
+        for arg in args:
+            if isinstance(arg, asyncio.Task):
+                arg.cancel()
+                try:
+                    await arg
+                except asyncio.CancelledError:
+                    logger.info(f"Task cancelled: {arg.get_name()}")
 
         if self.animation_task:
             try:
@@ -419,7 +429,9 @@ class Memrix(object):
         if not track_enabled:
             return None
 
-        mem_alignment_task = asyncio.create_task(self.mem_alignment(db))
+        mem_alignment_task = asyncio.create_task(
+            self.mem_alignment(db), name="mem alignment task"
+        )
 
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
@@ -471,27 +483,24 @@ class Memrix(object):
                 db, self.file_folder, self.title, Period.convert_time(now_time)
             )
             self.animation_task = asyncio.create_task(
-                self.design.memory_wave(self.memories, animation_event := asyncio.Event())
+                self.design.memory_wave(self.memories, self.task_close_event)
                 if self.storm else
-                self.design.cell_division(self.memories, animation_event := asyncio.Event())
+                self.design.cell_division(self.memories, self.task_close_event)
             )
 
             gfx_alignment_task = asyncio.create_task(
-                self.gfx_alignment(self.sleek, db, now_time)
+                self.gfx_alignment(self.sleek, db, now_time), name="gfx alignment task"
             )
-            auto_pilot_task = asyncio.create_task(perfetto.auto_pilot())
+            auto_pilot_task = asyncio.create_task(perfetto.auto_pilot(), name="auto pilot task")
 
             watcher = asyncio.create_task(self.watcher())
             mem_alignment_task = await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
-            animation_event.set()
-
         await asyncio.gather(
-            self.matter_stop(gfx_alignment_task, auto_pilot_task, mem_alignment_task),
             watcher,
-            self.sample_stop(reporter)
+            self.sample_stop(reporter, gfx_alignment_task, auto_pilot_task, mem_alignment_task)
         )
 
     # """真相快照"""
