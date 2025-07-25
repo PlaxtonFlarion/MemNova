@@ -769,32 +769,21 @@ class Design(object):
 
         def render_grid() -> "Text":
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
-
-            # 当前活跃区域（除中心）
+            
+            # 涟漪范围
             active_positions = []
             for d in range(depth + 1):
                 active_positions.extend(layers[d])
             active_positions = [p for p in active_positions if p != (center_r, center_c)]
 
-            embed_map = {}
-            if len(active_positions) >= len(brand) * 4:
+            # LOGO字母随机嵌入
+            logo_overlay = {}
+            if len(active_positions) >= len(brand):
                 letters = list(brand)
-                brand_colors = palette["brand"].get(memories["mod"], "*")
-
-                if logo_transition > 0 and max_transition > 0:
-                    t = logo_transition / max_transition
-                    alpha = smoothstep(t)
-                    embed_colors = [fade_color(c, alpha) for c in brand_colors[:len(letters)]]
-                else:
-                    embed_colors = brand_colors[:len(letters)]
-
                 random.shuffle(active_positions)
                 embed_targets = active_positions[:len(letters)]
-                embed_map = {
-                    pos: (ch, col) for pos, ch, col in zip(embed_targets, letters, embed_colors)
-                }
+                logo_overlay = {pos: ch for pos, ch in zip(embed_targets, letters)}
 
-            # 多层涟漪扩散
             for d in range(depth + 1):
                 color = gradient[min(d, len(gradient) - 1)]
                 for r, c in layers[d]:
@@ -808,8 +797,7 @@ class Design(object):
                         grid[r][c] = f"[bold {color}]{cell}[/]"
 
             # 中心呼吸灯
-            pulse_color = theme["center_color"]
-            grid[center_r][center_c] = f"[bold {pulse_color}]{symbols[0]}[/]"
+            grid[center_r][center_c] = f"[bold {center_color}]{symbols[0]}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
             return Text.from_markup(make_header() + "\n" + "\n".join(lines))
