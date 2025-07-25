@@ -729,11 +729,10 @@ class Design(object):
             f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
         )
 
-        def get_theme_by_mod() -> dict:
-            mod = memories.get("MOD", {}).get("text", "")
-            if mod.startswith("F") or mod.startswith("B"):
-                return random.choice(color_themes)
-            return default_theme
+        def get_theme_by_mod() -> tuple:
+            if prev.startswith("F") or prev.startswith("B"):
+                return random.choice(color_themes).values()
+            return default_theme.vaules()
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
@@ -832,16 +831,15 @@ class Design(object):
         padding = " " * 4
         brand, dc, dt = const.APP_DESC, "#EEEEEE", "*"
 
-        # === 随机主题 ===
-        theme = get_theme_by_mod()
-        gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
+        # ==== 初始状态 ====
+        pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
+        prev = memories.get("MOD", {}).get("text", "")
+
+        # ==== 随机主题 ==== 
+        gradient, center_color, _, symbols = get_theme_by_mod()
         center_symbol = random.choice(symbols)
 
-        # 初始化状态
-        pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
-        previous_state = memories.get("MOD", {}).get("text", "")
-
-        # === 分层（曼哈顿距离） ===
+        # ==== 分层（曼哈顿距离） ====
         layers = [[] for _ in range(center_r + center_c + 1)]
         for r_ in range(rows):
             for c_ in range(cols):
@@ -858,14 +856,15 @@ class Design(object):
                 pulse_frame += 1
                 frame_count += 1
                 depth += direction
-
-                theme = get_theme_by_mod()
-                gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
         
-                # LOGO动态切换
-                if (cur := memories.get("MOD", {}).get("text", "")) != previous_state:
-                    logo_transition = max_transition
-                    previous_state = cur
+                # ==== 主题动态切换 ====
+                if (cur := memories.get("MOD", {}).get("text", "")) != prev:
+                    # ==== 当前状态 ====
+                    prev, logo_transition = cur, max_transition
+                    # ==== 随机主题 ==== 
+                    gradient, center_color, _, symbols = get_theme_by_mod()
+                    center_symbol = random.choice(symbols)
+
 
                 if logo_transition > 0:
                     logo_transition -= 1
