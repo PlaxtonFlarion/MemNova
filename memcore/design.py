@@ -730,7 +730,7 @@ class Design(object):
         )
 
         def get_theme_by_mod() -> dict:
-            mod = memories.get("MOD", "").get("text", "")
+            mod = memories.get("MOD", {}).get("text", "")
             if mod.startswith("F") or mod.startswith("B"):
                 return random.choice(color_themes)
             return default_theme
@@ -839,7 +839,7 @@ class Design(object):
 
         # 初始化状态
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
-        previous_state = memories.get("MOD", "").get("text", "")
+        previous_state = memories.get("MOD", {}).get("text", "")
 
         # === 分层（曼哈顿距离） ===
         layers = [[] for _ in range(center_r + center_c + 1)]
@@ -863,7 +863,7 @@ class Design(object):
                 gradient, center_color, symbols = theme["gradient"], theme["center_color"], theme["symbols"]
         
                 # LOGO动态切换
-                if (cur := memories.get("MOD", "").get("text", "")) != previous_state:
+                if (cur := memories.get("MOD", {}).get("text", "")) != previous_state:
                     logo_transition = max_transition
                     previous_state = cur
 
