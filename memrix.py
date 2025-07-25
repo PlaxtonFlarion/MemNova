@@ -109,7 +109,15 @@ class Memrix(object):
         self.__remote = value
 
     def task_clean_up(self, *_, **__) -> None:
-        logger.info("Cleanup command: // EXECUTED // — Shutting down background operations.")
+        self.memories.update(
+            {
+                "MSG": {"text": (msg := "// EXECUTED // — Shutting down background operations.")},
+                {**({"MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {}, "BACKGROUND": {})} 
+                if self .storm else 
+                {**({"ANA": {"text": "Engine offline"}})}
+            }
+        )
+        logger.info(msg)
         self.task_close_event.set()
 
     async def watcher(self) -> None:
@@ -322,10 +330,8 @@ class Memrix(object):
             return {"io": io_map}
 
         async def union_analyze(pid: str) -> dict:
-            mem_map, io_map = await asyncio.gather(
-                *(mem_analyze(), io_analyze(pid))
-            )
-            return mem_map | io_map
+            mem_map, io_map = await asyncio.gather(*(mem_analyze(), io_analyze(pid)))
+            return mem_map | io_map if all((mem_map, io_map)) else {}
 
         async def track_launch() -> None:
             self.dumped.clear()
