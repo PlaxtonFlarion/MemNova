@@ -794,18 +794,18 @@ class Design(object):
                     pos: (ch, col) for pos, ch, col in zip(embed_targets, letters, embed_colors)
                 }
 
-            # 渲染图层
+            # 多层涟漪扩散
             for d in range(depth + 1):
-                color = colors[min(d, len(colors) - 1)]
-                for r, c in layers[d]:
-                    if (r, c) == (center_r, center_c):
-                        continue
-                    if (r, c) in embed_map:
-                        ch, col = embed_map[(r, c)]
-                        grid[r][c] = f"[bold {col}]{ch}[/]"
-                    else:
-                        ch = symbol if not fade else "·"
-                        grid[r][c] = f"[bold {color}]{ch}[/]"
+                color = gradient[min(d, len(gradient) - 1)]
+            for r, c in layers[d]:
+                if (r, c) == (center_r, center_c):
+                    continue
+                if (r, c) in logo_overlay:
+                    ch = logo_overlay[(r, c)]
+                    grid[r][c] = f"[bold {logo_color}]{ch}[/]"
+                else:
+                    cell = random.choice(symbols)
+                    grid[r][c] = f"[bold {color}]{cell}[/]"
 
             # 中心呼吸灯
             pulse_color = theme["center_color"]
