@@ -725,10 +725,10 @@ class Design(object):
         rows, cols = 5, 17
         center_r, center_c = rows // 2, cols // 2
         padding = " " * 4
-        brand = const.APP_DESC
+        brand, dc, dt = const.APP_DESC, "#EEEEEE", "*"
 
         # === 随机主题 ===
-        theme = random.choice(THEMES)
+        theme = random.choice(themes)
         gradient = theme["gradient"]
         logo_color = theme["logo_color"]
         center_color = theme["center_color"]
@@ -808,13 +808,12 @@ class Design(object):
                         grid[r][c] = f"[bold {color}]{ch}[/]"
 
             # 中心呼吸灯
-            pulse_colors = palette["pulse"].get(memories["mod"], "*")
-            pulse_color = pulse_colors[pulse_frame % len(pulse_colors)]
-            grid[center_r][center_c] = f"[bold {pulse_color}]{highlight}[/]"
+            pulse_color = theme["center_color"]
+            grid[center_r][center_c] = f"[bold {pulse_color}]{symbols[0]}[/]"
 
             lines = [padding + " ".join(row) for row in grid]
             return Text.from_markup(make_header() + "\n" + "\n".join(lines))
-
+            
         async def render_exit_sequence() -> typing.AsyncGenerator["Text", None]:
             final_text = f"{brand} Engine"
             visual_center = (cols * 2 - 1) // 2
