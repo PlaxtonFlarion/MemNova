@@ -642,53 +642,103 @@ class Design(object):
             "✔ All probes disengaged. Standby mode initiated."
         ]
 
+        themes = [
+            {
+                "gradient": [
+                    "#E0FFFF", "#B2FFFF", "#99F6FF", "#66E6FF", "#33D1FF",
+                    "#00BFFF", "#0099FF", "#0066CC", "#0033AA", "#001F70"
+                ],
+                "center_color": "#FFD700",
+                "logo_color": "#FFD700 on #2E3440",  # 金色字 + 深灰蓝背景
+                "symbols": ["◉", "◎", "◍", "◌", "⊚", "◓", "◒", "◑"]
+           },
+           {
+                "gradient": [
+                    "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350",
+                    "#F44336", "#E53935", "#D32F2F", "#C62828", "#B71C1C"
+                ],
+                "center_color": "#FFEE58",
+                "logo_color": "#FFC107 on #3B1E1E",  # 金橙字 + 暗红棕背景
+                "symbols": ["❤", "✿", "❀", "❁", "✺", "✾", "❃"]
+            },
+            {
+                "gradient": [
+                    "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC",
+                    "#9C27B0", "#8E24AA", "#7B1FA2", "#6A1B9A", "#4A148C"
+                ],
+                "center_color": "#FF5722",
+                "logo_color": "#FFAB00 on #331B3B",  # 橙金字 + 深紫背景
+                "symbols": ["★", "✶", "✸", "✷", "✹", "✺"]
+            },
+            {
+                "gradient": [
+                    "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A",
+                    "#4CAF50", "#43A047", "#388E3C", "#2E7D32", "#1B5E20"
+                ],
+                "center_color": "#FFFFFF",
+                "logo_color": "#FAFF00 on #1E4025",  # 荧光黄字 + 深绿背景
+                "symbols": ["⊙", "⊛", "◉", "◎", "●", "◈"]
+            },
+            {
+                "gradient": [
+                    "#EFEBE9", "#D7CCC8", "#BCAAA4", "#A1887F", "#8D6E63",
+                    "#795548", "#6D4C41", "#5D4037", "#4E342E", "#3E2723"
+                ],
+                "center_color": "#FF9800",
+                "logo_color": "#FFB74D on #32241B",  # 橘金字 + 深棕背景
+                "symbols": ["≈", "≡", "≒", "~", "≜"]
+            },
+            {
+                "gradient": [
+                    "#F0F4C3", "#DCE775", "#FFD54F", "#FFA726", "#FF7043",
+                    "#FF8A65", "#A1887F", "#D7CCC8", "#90A4AE", "#B0BEC5"
+                ],
+                "center_color": "#64FFDA",
+                "logo_color": "#00BFAE on #202023",  # 亮蓝绿+深炭灰
+                "symbols": ["⚛", "✸", "⊕", "◉", "⊙", "★"]
+            },
+            {
+                "gradient": [
+                    "#FFFFFF", "#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7",
+                    "#29B6F6", "#03A9F4", "#039BE5", "#0288D1", "#0277BD"
+                ],
+                "center_color": "#E1BEE7",
+                "logo_color": "#7C4DFF on #23263A",  # 紫色字 + 深蓝背景
+                "symbols": ["✶", "✧", "✦", "✹", "❉", "❈"]
+            },
+            {
+                "gradient": [
+                     "#FFFDE7", "#FFF9C4", "#FFF59D", "#FFF176", "#FFEE58",
+                    "#FFEB3B", "#FDD835", "#FBC02D", "#F9A825", "#F57F17"
+                ],
+                "center_color": "#FF1744",
+                "logo_color": "#FFEA00 on #2B2321",  # 荧光黄 + 棕黑
+                "symbols": ["☀", "✹", "✦", "★", "✸", "✷"]
+            },
+        ]
+
         self.console.print(
             f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
         )
 
-        center_r, center_c = (rows := 5) // 2, (cols := 17) // 2
-        symbol, highlight, padding, brand = "◌", "▣", " " * 4, const.APP_DESC
+        # === 动画参数 ===
+        rows, cols = 5, 17
+        center_r, center_c = rows // 2, cols // 2
+        padding = " " * 4
+        brand = const.APP_DESC
 
-        # 配色方案
-        palette = {
-            "foreground": [
-                "#00FFD1", "#00E6B8", "#00CCAA", "#00B299", "#009988", "#007F77", "#005F66"
-            ],
-            "background": [
-                "#FF69B4", "#FF4DA6", "#FF3399", "#FF1A8C", "#FF007F", "#D4006A", "#AA0055"
-            ],
-            "*": [
-                "#A0AEC0", "#94A3B8", "#7B8CA0", "#6C7A89", "#5B6773", "#4E5966", "#3C4755"
-            ],
-            "brand": {
-                "foreground": [
-                    "#00FFAA", "#33FFDD", "#00FFFF", "#87F9A7", "#5FFFE0", "#33FFA5"
-                ],
-                "background": [
-                    "#FF6EC7", "#FF66B2", "#FF99CC", "#FFB6C1", "#FF88AA", "#FFAACD"
-                ],
-                "*": [
-                    "#B0BEC5", "#D3D3D3", "#C0C0C0", "#A8B0B8", "#999999", "#AAAAAA"
-                ]
-            },
-            "pulse": {
-                "foreground": [
-                    "#FFD700", "#FFE066", "#FFF799", "#FFE066"
-                ],
-                "background": [
-                    "#FF1493", "#FF3399", "#FF66CC", "#FF3399"
-                ],
-                "*": [
-                    "#888888", "#AAAAAA", "#CCCCCC", "#AAAAAA"
-                ]
-            }
-        }
+        # === 随机主题 ===
+        theme = random.choice(THEMES)
+        gradient = theme["gradient"]
+        logo_color = theme["logo_color"]
+        center_color = theme["center_color"]
+        symbols = theme["symbols"]
 
         # 初始化状态
         previous_state = memories["mod"]
         pulse_frame, frame_count, logo_transition, max_transition = 0, 0, 0, 6
 
-        # 分层（曼哈顿距离）
+        # === 分层（曼哈顿距离） ===
         layers = [[] for _ in range(center_r + center_c + 1)]
         for r_ in range(rows):
             for c_ in range(cols):
@@ -696,22 +746,12 @@ class Design(object):
                 layers[d_].append((r_, c_))
 
         def make_header() -> str:
-            if memories["mod"].lower().startswith("foreground"):
-                sc = "#00FFAA"
-            elif memories["mod"].lower().startswith("background"):
-                sc = "#FF99CC"
-            else:
-                sc = "#AF87FF"
-
-            return textwrap.dedent(f"""\
-                [bold #EEEEEE][{brand}::MSG] [bold #FFD75F]{memories['msg']}[/]
-                [{brand}::MOD] [bold {sc}]{memories['mod'].upper()}[/]
-                [{brand}::ACT] [bold #FFAFAF]{memories['act']}[/]
-                [{brand}::PSS] [bold #00FFD7]{memories['pss']}[/]
-                [Foreground::Pulled] [#00FFAA]{memories['foreground']}[/]
-                [Background::Pulled] [#FF99CC]{memories['background']}[/]
-            """)
-
+            head = f"[{const.APP_DESC}::"
+            return "\n".join(
+                f"{head}{k}] [{v.get('color', dc)}]{v.get('text', dt)}[/]"
+                for k, v in memories.items()
+            ) + "\n\n" if memories else ""
+            
         def smoothstep(t: float) -> float:
             """
             平滑过渡函数：0 -> 1 的余弦曲线。
@@ -728,7 +768,6 @@ class Design(object):
             return f"#{r:02X}{g:02X}{b:02X}"
 
         def render_grid() -> "Text":
-            colors = palette.get(memories["mod"], "*")
             grid = [["[dim #003333]·[/]" for _ in range(cols)] for _ in range(rows)]
 
             # 当前活跃区域（除中心）
@@ -780,12 +819,6 @@ class Design(object):
             final_text = f"{brand} Engine"
             visual_center = (cols * 2 - 1) // 2
             pad = " " * (visual_center - (len(final_text) // 2))
-            memories.update({
-                "msg": f"Memory Data {(memories['foreground'] + memories['background'])}",
-                "mod": "*",
-                "act": "*",
-                "pss": "*"
-            })
             loc = make_header() + "\n" + padding
 
             cursor_frames = ["▍", "|", "▌", "▎"]
