@@ -743,7 +743,7 @@ async def main() -> typing.Any:
     if apply_code := cmd_lines.apply:
         return await authorize.receive_license(apply_code, lic_file)
 
-    await authorize.verify_license(lic_file)
+    # await authorize.verify_license(lic_file)
 
     # Notes: ========== 工具路径设置 ==========
     if platform == "win32":
@@ -790,7 +790,7 @@ async def main() -> typing.Any:
     # 远程全局配置
     global_config_task = asyncio.create_task(Api.remote_config())
     # 启动仪式
-    await Design.flame_manifest()
+    # await Design.flame_manifest()
 
     logger.info(f"{'=' * 15} 系统调试 {'=' * 15}")
     logger.info(f"操作系统: {platform}")
