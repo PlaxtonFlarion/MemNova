@@ -787,6 +787,17 @@ class Design(object):
                 embed_targets = active_positions[:len(letters)]
                 logo_overlay = {pos: ch for pos, ch in zip(embed_targets, letters)}
 
+            # LOGO前景色
+            fg_color = theme["logo_color"].split(" ")[0]
+
+            # LOGO淡入淡出
+            if logo_transition > 0 and max_transition > 0:
+                t = 1.0 - logo_transition / max_transition
+                alpha = smoothstep(t)
+                faded_fg_color = fade_color(fg_color, alpha)
+            else:
+                faded_fg_color = fg_color
+
             for d in range(depth + 1):
                 color = gradient[min(d, len(gradient) - 1)]
                 for r, c in layers[d]:
@@ -794,7 +805,7 @@ class Design(object):
                         continue
                     if (r, c) in logo_overlay:
                         ch = logo_overlay[(r, c)]
-                        grid[r][c] = f"[bold {logo_color}]{ch}[/]"
+                        grid[r][c] = f"[bold {faded_fg_color}]{ch}[/]"
                     else:
                         cell = random.choice(symbols)
                         grid[r][c] = f"[bold {color}]{cell}[/]"
