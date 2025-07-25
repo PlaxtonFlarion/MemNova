@@ -109,14 +109,9 @@ class Memrix(object):
         self.__remote = value
 
     def task_clean_up(self, *_, **__) -> None:
-        self.memories.update(
-            {
-                "MSG": {"text": (msg := "// EXECUTED // — Shutting down background operations.")},
-                {**({"MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {}, "BACKGROUND": {})} 
-                if self .storm else 
-                {**({"ANA": {"text": "Engine offline"}})}
-            }
-        )
+        self.memories.update({
+            "MSG": {"text": (msg := "// EXECUTED // — Shutting down background operations.")}
+        })
         logger.info(msg)
         self.task_close_event.set()
 
