@@ -345,7 +345,7 @@ class Memrix(object):
             logger.info(device)
             self.memories.update({
                 "MSG": {"text": (msg := f"Process -> {app_pid.member}")}
-            )}
+            })
             logger.info(msg)
 
             try:
