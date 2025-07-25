@@ -722,17 +722,16 @@ class Design(object):
                 "symbols": ["·", "◌", "●", "○", "◎"]
             },
         ]
-        default_theme = themes[-1]
-        color_themes = themes[:-1]
+        default_theme, color_themes = themes[-1], themes[:-1]
 
         self.console.print(
             f"\n[bold #00D7FF]{const.APP_DESC} :: {random.choice(start_banner)}\n"
         )
 
-        def get_theme_by_mod() -> tuple:
+        def get_theme_by_mod() -> list:
             if prev.startswith("F") or prev.startswith("B"):
-                return random.choice(color_themes).values()
-            return default_theme.vaules()
+                return list(random.choice(color_themes).values())
+            return list(default_theme.vaules())
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
@@ -777,7 +776,7 @@ class Design(object):
                 logo_overlay = {pos: ch for pos, ch in zip(embed_targets, letters)}
 
             # LOGO前景色
-            fg_color = theme["logo_color"].split(" ")[0]
+            fg_color = logo_color.split(" ")[0]
 
             # LOGO淡入淡出
             if logo_transition > 0 and max_transition > 0:
@@ -836,7 +835,7 @@ class Design(object):
         prev = memories.get("MOD", {}).get("text", "")
 
         # ==== 随机主题 ==== 
-        gradient, center_color, _, symbols = get_theme_by_mod()
+        gradient, center_color, logo_color, symbols = get_theme_by_mod()
         center_symbol = random.choice(symbols)
 
         # ==== 分层（曼哈顿距离） ====
@@ -862,7 +861,7 @@ class Design(object):
                     # ==== 当前状态 ====
                     prev, logo_transition = cur, max_transition
                     # ==== 随机主题 ==== 
-                    gradient, center_color, _, symbols = get_theme_by_mod()
+                    gradient, center_color, logo_color, symbols = get_theme_by_mod()
                     center_symbol = random.choice(symbols)
 
 
