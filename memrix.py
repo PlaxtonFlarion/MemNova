@@ -112,9 +112,9 @@ class Memrix(object):
             msg = f"// EXECUTED // — Shutting down background operations."
         
         self.memories.update({
-            "MSG": {"text": msg}, "MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {}, "BACKGROUND": {},
+            "MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*",
         } if self.storm else {
-            "MSG": {"text": msg}, "ANA": {"text": "Analyze engine offline"},
+            "MSG": msg, "ANA": "Analyze engine offline",
         })
         logger.info(msg)
         
@@ -252,9 +252,10 @@ class Memrix(object):
 
             try:
                 self.memories.update({
-                    "MSG": {"text": f"Queue received {Path(trace_file).name}", "color": "#87FFD7"},
-                    "ANA": {"text": f"Sample analyzing ...", "color": "#00FF5F"}
+                    "MSG": (msg := f"[bold #87FFD7]Queue received {Path(trace_file).name}"),
+                    "ANA": f"[bold #00FF5F]Sample analyzing ...",
                 })
+                logger.info(msg)
 
                 gfx_analyzer = GfxAnalyzer()
                 gfx_fmt_data = await asyncio.shield(asyncio.to_thread(
@@ -267,16 +268,16 @@ class Memrix(object):
 
                 self.file_insert += 1
                 self.memories.update({
-                    "MSG": {"text": (msg := f"Article {self.file_insert} data insert success"), "color": "#00FF5F"},
-                    "ANA": {"text": "Analyze engine ready !", "color": "#AFFF5F"}
+                    "MSG": (msg := f"[bold #00FF5F]Article {self.file_insert} data insert success"),
+                    "ANA": f"[bold #AFFF5F]Analyze engine ready !",
                 })
                 logger.info(msg)
 
             except Exception as e:
                 self.memories.update({
-                    "MSG": {},
-                    "ANA": {},
-                    "ERR": {"text": str(e), "color": "#FF5F5F"},
+                    "MSG": "*",
+                    "ANA": "*",
+                    "ERR": f"[bold #FF5F5F]{e}",
                 })
             finally:
                 self.data_queue.task_done()
@@ -343,16 +344,16 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": {"text": (msg := f"Process -> {app_pid}")}, 
-                    "MOD": {}, 
-                    "ACT": {}, 
-                    "PSS": {},
+                    "MSG": (msg := f"Process -> {app_pid}"), 
+                    "MOD": "*", 
+                    "ACT": "*", 
+                    "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
 
             logger.info(device)
             self.memories.update({
-                "MSG": {"text": (msg := f"Process -> {app_pid.member}")}
+                "MSG": (msg := f"Process -> {app_pid.member}")
             })
             logger.info(msg)
 
@@ -361,10 +362,10 @@ class Memrix(object):
             except (KeyError, IndexError) as e:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": {"text": (msg := f"Pid -> {e}")}, 
-                    "MOD": {}, 
-                    "ACT": {}, 
-                    "PSS": {},
+                    "MSG": (msg := f"Pid -> {e}"), 
+                    "MOD": "*", 
+                    "ACT": "*", 
+                    "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
 
@@ -383,8 +384,8 @@ class Memrix(object):
 
             state = "FOREGROUND" if mark_map["mark"]["mode"] == "FG" else "BACKGROUND"
             self.memories.update({
-                "MOD": {"text": state}, 
-                "ACT": {"text": activity}
+                "MOD": state, 
+                "ACT": activity
             })
 
             logger.info(f"TMS: {mark_map['mark']['tms']}")
@@ -405,10 +406,10 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": {"text": (msg := f"Resp -> {result}")}, 
-                    "MOD": {}, 
-                    "ACT": {}, 
-                    "PSS": {},
+                    "MSG": (msg := f"Resp -> {result}"), 
+                    "MOD": "*",  
+                    "ACT": "*", 
+                    "PSS": "*",
                 })
                 return logger.info(f"{msg}\n")
 
@@ -422,18 +423,18 @@ class Memrix(object):
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
-                self.memories[state]["text"] += 1
+                self.memories[state] += 1
                 self.memories.update({
-                    "PSS": {"text": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"}
+                    "PSS": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
 
             else:
                 msg = f"Data insert skipped"
                 self.memories.update({
-                    "MOD": {}, "ACT": {}, "PSS": {}
+                    "MOD": "*", "ACT": "*", "PSS": "*"
                 })
 
-            self.memories.update({"MSG": {"text": msg}})
+            self.memories.update({"MSG": msg})
             logger.info(msg)
 
             self.dumped.set()
@@ -485,9 +486,9 @@ class Memrix(object):
         )
 
         self.memories = {
-            "MSG": {}, "MOD": {}, "ACT": {}, "PSS": {}, "FOREGROUND": {"text": 0}, "BACKGROUND": {"text": 0}
+            "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"
         } if self.storm else {
-            "MSG": {}, "ANA": {}, "ERR": {}
+            "MSG": "*", "ANA": "*", "ERR": "*"
         }
 
         # Workflow: ========== 开始采样 ==========
