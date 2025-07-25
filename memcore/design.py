@@ -731,7 +731,7 @@ class Design(object):
         def get_theme_by_mod() -> list:
             if prev.startswith("F") or prev.startswith("B"):
                 return list(random.choice(color_themes).values())
-            return list(default_theme.vaules())
+            return list(default_theme.values())
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
