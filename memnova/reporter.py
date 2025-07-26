@@ -239,7 +239,12 @@ class Reporter(object):
         )
 
         major_summary = [
-            {"label": "测试时间", "value": [{"text": cur_time, "class": "time"}]}
+            {
+                "label": "测试时间",
+                "value": [
+                    {"text": cur_time, "class": "time"}
+                ]
+            }
         ]
         minor_summary = []
 
@@ -259,14 +264,25 @@ class Reporter(object):
             }
 
             major_summary += [
-                {"label": "测试结论", "value": [expiry] + [{"text": c, "class": "highlight"} for c in high]},
-                {"label": "参考标准", "value": [
-                    {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
-                    {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
-                    {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
-                    {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
-                ]},
-                {"label": "准出标准", "value": [{"text": self.align.base_criteria, "class": "criteria"}]}
+                {
+                    "label": "测试结论",
+                    "value": [expiry] + [{"text": c, "class": "highlight"} for c in high]
+                },
+                {
+                    "label": "参考标准",
+                    "value": [
+                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
+                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
+                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
+                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
+                    ]
+                },
+                {
+                    "label": "准出标准",
+                    "value": [
+                        {"text": self.align.base_criteria, "class": "criteria"}
+                    ]
+                }
             ]
             minor_summary += [
                 {"value": [f"{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
@@ -277,9 +293,16 @@ class Reporter(object):
             headline = self.align.leak_headline
             union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
             major_summary += [
-                {"label": "准出标准", "value": [{"text": self.align.leak_criteria, "class": "criteria"}]}
+                {
+                    "label": "准出标准",
+                    "value": [
+                        {"text": self.align.leak_criteria, "class": "criteria"}
+                    ]
+                }
             ]
-            minor_summary += [{"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}]
+            minor_summary += [
+                {"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}
+            ]
 
         return {
             "report_list": compilation,
@@ -503,8 +526,18 @@ class Reporter(object):
         )
 
         major_summary_items = [
-            {"label": "测试时间", "value": [{"text": cur_time or "Unknown", "class": "time"}]},
-            {"label": "准出标准", "value": [{"text": self.align.gfx_criteria, "class": "criteria"}]}
+            {
+                "label": "测试时间",
+                "value": [
+                    {"text": cur_time or "Unknown", "class": "time"}
+                ]
+            },
+            {
+                "label": "准出标准",
+                "value": [
+                    {"text": self.align.gfx_criteria, "class": "criteria"}
+                ]
+            }
         ]
 
         return {
