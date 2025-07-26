@@ -98,39 +98,40 @@ class Reporter(object):
         return None
 
     async def __classify_rendering(
-            self,
-            db: "aiosqlite.Connection",
-            loop: "asyncio.AbstractEventLoop",
-            executor: "ProcessPoolExecutor",
-            templater: "Templater",
-            memories: dict,
-            start_time: float,
-            data_dir: str,
-            baseline: bool,
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        data_dir: str,
+        baseline: bool,
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        union_data_list, (joint, *_) = await asyncio.gather(
+        mem_data, (title, timestamp, *_) = await asyncio.gather(
             Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-        title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
 
         # 🔵 ==== I/O Painter ====
         draw_io_future = loop.run_in_executor(
-            executor, Painter.draw_io_metrics, union_data_list, str(io_loc)
+            executor, Painter.draw_io_metrics, mem_data, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
 
-        df = pd.DataFrame(union_data_list)
+        df = pd.DataFrame(mem_data)
 
+        # 🟡 ==== 内存基线 ====
         if baseline:
             trace_loc = leak_loc = gfx_loc = None
+
             group_stats = (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
@@ -161,43 +162,45 @@ class Reporter(object):
                 } for _, row in group_stats.iterrows()
             ]
 
+        # 🟡 ==== 内存泄漏 ====
         else:
             trace_loc, leak_loc, gfx_loc = None, Path(group) / f"{head}_leak.png", None
-            leak = Scores.analyze_mem_score(df["pss"])
+
+            # 🟨 ==== MEM 评分 ====
+            score = Scores.analyze_mem_score(df, column="pss")
             evaluate = [
                 {
                     "fields": [
-                        {"text": f"Trend: {leak['trend']}", "class": "refer"},
-                        {"text": f"Score: {leak['trend_score']}", "class": "refer"}
+                        {"text": f"Trend: {score['trend']}", "class": "refer"},
+                        {"text": f"Score: {score['trend_score']}", "class": "refer"}
                     ]
                 },
                 {
                     "fields": [
-                        {"text": f"Shake: {leak['jitter_index']}", "class": "refer"},
-                        {"text": f"Slope: {leak['slope']}", "class": "refer"}
+                        {"text": f"Shake: {score['jitter_index']}", "class": "refer"},
+                        {"text": f"Slope: {score['slope']}", "class": "refer"}
                     ]
                 }
             ]
+            logger.info(f"Score: {score}")
 
             # 🟡 ==== MEM Painter ====
-            func = partial(Painter.draw_mem_metrics, **leak)
+            paint_func = partial(Painter.draw_mem_metrics, **score)
             draw_leak_future = loop.run_in_executor(
-                executor, func, union_data_list, str(leak_loc)
+                executor, paint_func, mem_data, str(leak_loc)
             )
             self.background_tasks.append(draw_leak_future)
-
-            mem_max_pss, mem_avg_pss = df["pss"].max(), df["pss"].mean()
 
             tag_lines = [
                 {
                     "fields": [
-                        {"label": f"MEM-MAX: ", "value": f"{mem_max_pss:.2f}", "unit": "MB"},
-                        {"label": f"MEM-AVG: ", "value": f"{mem_avg_pss:.2f}", "unit": "MB"}
+                        {"label": f"MEM-MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
+                        {"label": f"MEM-AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
                     ]
                 }
             ]
 
-        # 📄 ==== Html Create ====
+        # 🟡 ==== MEM Templater ====
         plot = await templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
@@ -218,19 +221,20 @@ class Reporter(object):
         }
 
     async def mem_rendition(
-            self,
-            db: "aiosqlite.Connection",
-            loop: "asyncio.events.AbstractEventLoop",
-            executor: "ProcessPoolExecutor",
-            templater: "Templater",
-            memories: dict,
-            start_time: float,
-            team_data: dict,
-            baseline: bool,
-            *_
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.events.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        team_data: dict,
+        baseline: bool,
+        *_
     ) -> dict:
 
-        cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
+        cur_time = team_data.get("time", time.strftime("%Y-%m-%d %H:%M:%S"))
+        cur_data = team_data["file"]
 
         compilation = await asyncio.gather(
             *(self.__classify_rendering(
@@ -316,11 +320,11 @@ class Reporter(object):
 
     @staticmethod
     def __split_frames_with_ranges(
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            segment_ms: int = 60000
+        frames: list[dict],
+        roll_ranges: list[dict],
+        drag_ranges: list[dict],
+        jank_ranges: list[dict],
+        segment_ms: int = 60000
     ) -> list[tuple]:
 
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
@@ -395,29 +399,27 @@ class Reporter(object):
         return merged
 
     async def __gfx_rendering(
-            self,
-            db: "aiosqlite.Connection",
-            loop: "asyncio.AbstractEventLoop",
-            executor: "ProcessPoolExecutor",
-            templater: "Templater",
-            memories: dict,
-            start_time: float,
-            data_dir: str,
-            *_,
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        data_dir: str,
+        *_,
     ) -> dict:
 
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        gfx_data, (joint, *_) = await asyncio.gather(
+        gfx_data, (title, timestamp, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
 
         frame_merged = self.__merge_alignment_frames(gfx_data)
-
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
-        title, timestamp = joint
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = Path(templater.download).parent / const.TRACES_DIR / data_dir
@@ -433,39 +435,43 @@ class Reporter(object):
         )
         self.background_tasks.append(draw_future)
 
-        # ==== 最低帧率 ====
-        min_fps = round(min(fps for f in raw_frames if (fps := f["fps_app"])), 2)
+        # 🟩 ==== GFX 评分 ====
+        score = Scores.analyze_gfx_score(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+        )
+        evaluate = [
+            {
+                "fields": [
+                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "refer"},
+                    {"text": f"Level: {score['level']}", "class": "refer"}
+                ]
+            },
+            {
+                "fields": [
+                    {"text": f"P95: {score['p95_fps']} FPS", "class": "refer"},
+                    {"text": f"JNK: {score['jnk_fps']} %", "class": "refer"}
+                ]
+            }
+        ]
+        logger.info(f"Score: {score}")
 
-        # ==== 平均帧 ====
-        avg_fps = round(sum(fps for f in raw_frames if (fps := f["fps_app"])) / (total_frames := len(raw_frames)), 2)
-
-        # ==== 掉帧率 ====
-        jnk_fps = round(sum(1 for f in raw_frames if f.get("is_jank")) / total_frames * 100, 2)
-
-        # ==== 95分位帧率 ====
-        p95_fps = round(float(np.percentile([fps for f in raw_frames if (fps := f["fps_app"])], 95)), 2)
-
-        logger.info(f"min_fps: {min_fps}")
-        logger.info(f"avg_fps: {avg_fps}")
-        logger.info(f"jnk_fps: {jnk_fps}")
-        logger.info(f"p95_fps: {p95_fps}")
+        tag_lines = [
+            {
+                "fields": [
+                    {"label": "MIN: ", "value": score['min_fps'], "unit": "FPS"},
+                    {"label": "AVG: ", "value": score['avg_fps'], "unit": "FPS"}
+                ]
+            }
+        ]
 
         # ==== 分段切割 ====
-        segments = self.__split_frames_with_ranges(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges
-        )
+        segments = self.__split_frames_with_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
 
-        # 📄 ==== Html Create ====
+        # 🟢 ==== GFX Templater ====
         plots = await asyncio.gather(
             *(templater.plot_gfx_analysis(segment, roll, drag, jank)
               for segment, roll, drag, jank, *_ in segments)
         )
-
-        evaluate = Scores.analyze_gfx_score(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-        )
-        logger.info(f"evaluate: {evaluate}")
-
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
 
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
@@ -481,43 +487,24 @@ class Reporter(object):
         return {
             "subtitle": title or data_dir,
             "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
-            "evaluate": [
-                {
-                    "fields": [
-                        {"text": f"Score: {evaluate['score'] * 100:.2f}", "class": "refer"},
-                        {"text": f"Level: {evaluate['level']}", "class": "refer"}
-                    ]
-                },
-                {
-                    "fields": [
-                        {"text": f"P95: {p95_fps} FPS", "class": "refer"},
-                        {"text": f"JNK: {jnk_fps} %", "class": "refer"}
-                    ]
-                }
-            ],
-            "tags": [
-                {
-                    "fields": [
-                        {"label": "MIN: ", "value": min_fps, "unit": "FPS"},
-                        {"label": "AVG: ", "value": avg_fps, "unit": "FPS"}
-                    ]
-                }
-            ]
+            "evaluate": evaluate,
+            "tags": tag_lines
         }
 
     async def gfx_rendition(
-            self,
-            db: "aiosqlite.Connection",
-            loop: "asyncio.events.AbstractEventLoop",
-            executor: "ProcessPoolExecutor",
-            templater: "Templater",
-            memories: dict,
-            start_time: float,
-            team_data: dict,
-            *_
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.events.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        team_data: dict,
+        *_
     ) -> typing.Optional[dict]:
 
-        cur_time, cur_data = team_data.get("time"), team_data["file"]
+        cur_time = team_data.get("time", time.strftime("%Y-%m-%d %H:%M:%S"))
+        cur_data = team_data["file"]
 
         compilation = await asyncio.gather(
             *(self.__gfx_rendering(

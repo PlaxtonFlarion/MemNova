@@ -137,12 +137,12 @@ class Memrix(object):
             await server.wait_closed()
 
     async def refresh(
-            self,
-            device: "Device",
-            reporter: "Reporter",
-            package: str,
-            team_name: str,
-            prefix: str,
+        self,
+        device: "Device",
+        reporter: "Reporter",
+        package: str,
+        team_name: str,
+        prefix: str,
     ) -> "Path":
 
         self.file_insert = 0
@@ -181,10 +181,10 @@ class Memrix(object):
         return traces
 
     async def sample_stop(
-            self,
-            reporter: "Reporter",
-            *args,
-            **__
+        self,
+        reporter: "Reporter",
+        *args,
+        **__
     ) -> None:
 
         if self.dumped and not self.dumped.is_set():
@@ -232,8 +232,8 @@ class Memrix(object):
         await self.design.system_disintegrate()
 
     async def mem_alignment(
-            self,
-            db: "aiosqlite.Connection"
+        self,
+        db: "aiosqlite.Connection"
     ) -> None:
         while True:
             data = await self.data_queue.get()
@@ -244,10 +244,10 @@ class Memrix(object):
                 self.data_queue.task_done()
 
     async def gfx_alignment(
-            self,
-            track_enabled: bool,
-            db: "aiosqlite.Connection",
-            now_time: str,
+        self,
+        track_enabled: bool,
+        db: "aiosqlite.Connection",
+        now_time: str,
     ) -> None:
 
         if not track_enabled:
@@ -290,10 +290,10 @@ class Memrix(object):
                 self.data_queue.task_done()
 
     async def track_collector(
-            self,
-            track_enabled: bool,
-            device: "Device",
-            db: "aiosqlite.Connection",
+        self,
+        track_enabled: bool,
+        device: "Device",
+        db: "aiosqlite.Connection",
     ) -> typing.Optional["asyncio.Task"]:
 
         async def mem_analyze() -> dict:
@@ -597,17 +597,17 @@ class Perfetto(object):
     """Perfetto"""
 
     def __init__(
-            self,
-            track_enabled: bool,
-            track_event: "asyncio.Event",
-            data_queue: "asyncio.Queue",
-            gfx_speed: float,
-            device: "Device",
-            memories: dict,
-            ft_file: str,
-            traces_dir: "Path",
-            trace_loc: "Path",
-            trace_conv: str
+        self,
+        track_enabled: bool,
+        track_event: "asyncio.Event",
+        data_queue: "asyncio.Queue",
+        gfx_speed: float,
+        device: "Device",
+        memories: dict,
+        ft_file: str,
+        traces_dir: "Path",
+        trace_loc: "Path",
+        trace_conv: str
     ) -> None:
 
         self.__track_enabled = track_enabled

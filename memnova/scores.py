@@ -20,21 +20,29 @@ class Scores(object):
     # Workflow: ======================== MEM ========================
 
     @staticmethod
-    def analyze_mem_score(values: tuple[typing.Any]) -> dict:
+    def analyze_mem_score(
+        df: "pd.DataFrame",
+        column: str,
+        r2_threshold: float = 0.5,
+        slope_threshold: float = 0.01
+    ) -> dict:
 
-        if len(values) < 10:
-            return {
-                "trend": "Insufficient Data",
-                "trend_score": 0.0,
-                "jitter_index": 0.0,
-                "r_squared": 0.0,
-                "slope": 0.0,
-                "color": "#BBBBBB"
-            }
+        result = {
+            "trend_score": 0.0,
+            "jitter_index": 0.0,
+            "r_squared": 0.0,
+            "slope": 0.0,
+            "avg": 0.0,
+            "max": 0.0,
+            "min": 0.0,
+            "color": "#BBBBBB"
+        }
 
-        # 🟨 ==== 阈值定义 ====
-        r2_threshold = 0.5
-        slope_threshold = 0.01
+        if column not in df or column.lower() not in ("pss", "rss", "uss") or df[column].isnull().any():
+            return {"trend": "Invalid Data"} | result
+
+        if len(values := df[column].to_numpy()) < 10:
+            return {"trend": "Insufficient Data"} | result
 
         # 🟨 ==== 抖动指数 ====
         diffs = np.diff(values)
@@ -64,12 +72,16 @@ class Scores(object):
             color = "#FFA500"
             score = 0.3
 
+        # 🟨 ==== Score/Level ====
         return {
             "trend": trend,
             "trend_score": score,
             "jitter_index": jitter_index,
             "r_squared": r_squared,
             "slope": slope,
+            "avg": values.mean(),
+            "max": values.max(),
+            "min": values.min(),
             "color": color
         }
 
@@ -77,18 +89,37 @@ class Scores(object):
 
     @staticmethod
     def analyze_gfx_score(
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            fps_key: str
+        frames: list[dict],
+        roll_ranges: list[dict],
+        drag_ranges: list[dict],
+        jank_ranges: list[dict],
+        fps_key: str
     ) -> typing.Optional[dict]:
 
-        if len(frames) < 5:
+        if (total_frames := len(frames)) < 5:
+            return None
+
+        if not (fps_values := [f.get(fps_key) for f in frames if f.get(fps_key)]):
             return None
 
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
             return None
+
+        # 🟩 ==== 最低帧 ====
+        min_fps = round(min(fps_values), 2)
+
+        # 🟩 ==== 平均帧 ====
+        avg_fps = round(sum(fps_values) / len(fps_values), 2)
+
+        # 🟩 ==== 掉帧率 ====
+        jnk_fps = round(sum(1 for f in frames if f.get("is_jank")) / total_frames * 100, 2)
+
+        # 🟩 ==== 95分位帧率 ====
+        p95_fps = round(float(np.percentile(fps_values, 95)), 2)
+
+        statistical = {
+            "min_fps": min_fps, "avg_fps": avg_fps, "jnk_fps": jnk_fps, "p95_fps": p95_fps,
+        }
 
         # 🟩 ==== Jank 比例 ====
         jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
@@ -100,14 +131,8 @@ class Scores(object):
         latency_score = 1.0 - over_threshold / len(frames)
 
         # 🟩 ==== FPS 波动与平均值 ====
-        if fps_values := [f.get(fps_key) for f in frames if f.get(fps_key)]:
-            fps_avg = sum(fps_values) / len(fps_values)
-            fps_std = statistics.stdev(fps_values) if len(fps_values) >= 2 else 0
-            fps_stability = max(1.0 - min(fps_std / 10, 1.0), 0.0)
-            fps_penalty = min(fps_avg / 60, 1.0)
-            fps_score = fps_stability * fps_penalty
-        else:
-            fps_score = 1.0
+        fps_std = statistics.stdev(fps_values) if len(fps_values) >= 2 else 0
+        fps_score = max(1.0 - min(fps_std / 10, 1.0), 0.0) * min(avg_fps / 60, 1.0)
 
         # 🟩 ==== 滑动/拖拽区域中抖动占比 ====
         if (motion_total := sum(r["end_ts"] - r["start_ts"] for r in roll_ranges + drag_ranges)) == 0:
@@ -131,52 +156,58 @@ class Scores(object):
                 "score": final_score,
                 "level": "S",
                 "color": "#005822",
-                "label": "极致流畅，近乎完美"
+                "label": "极致流畅，近乎完美",
+                **statistical
             }
         elif final_score >= 0.80:
             return {
                 "score": final_score,
                 "level": "A",
                 "color": "#1B5E20",
-                "label": "稳定流畅，表现优秀"
+                "label": "稳定流畅，表现优秀",
+                **statistical
             }
         elif final_score >= 0.68:
             return {
                 "score": final_score,
                 "level": "B",
                 "color": "#D39E00",
-                "label": "基本流畅，偶有波动"
+                "label": "基本流畅，偶有波动",
+                **statistical
             }
         elif final_score >= 0.50:
             return {
                 "score": final_score,
                 "level": "C",
                 "color": "#E65100",
-                "label": "有明显卡顿，影响体验"
+                "label": "有明显卡顿，影响体验",
+                **statistical
             }
         elif final_score >= 0.35:
             return {
                 "score": final_score,
                 "level": "D",
                 "color": "#C62828",
-                "label": "严重卡顿，需要优化"
+                "label": "严重卡顿，需要优化",
+                **statistical
             }
         else:
             return {
                 "score": final_score,
                 "level": "E",
                 "color": "#7B1FA2",
-                "label": "极差体验，建议排查"
+                "label": "极差体验，建议排查",
+                **statistical
             }
 
     # Workflow: ======================== I/O ========================
 
     @staticmethod
     def analyze_io_score(
-            df: "pd.DataFrame",
-            swap_threshold: int = 10240,
-            rw_peak_threshold: int = 102400,
-            idle_threshold=10
+        df: "pd.DataFrame",
+        swap_threshold: int = 10240,
+        rw_peak_threshold: int = 102400,
+        idle_threshold=10
     ) -> dict:
 
         result = {

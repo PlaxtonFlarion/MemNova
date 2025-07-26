@@ -219,12 +219,12 @@ class _Tracer(object):
 
     @staticmethod
     def annotate_frames(
-            frames: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            vsync_sys: list[dict],
-            vsync_app: list[dict]
+        frames: list[dict],
+        roll_ranges: list[dict],
+        drag_ranges: list[dict],
+        jank_ranges: list[dict],
+        vsync_sys: list[dict],
+        vsync_app: list[dict]
     ) -> None:
 
         max_delta_ms = 50.0
@@ -260,7 +260,7 @@ class _Tracer(object):
 
 class MemAnalyzer(_Tracer):
     """MEM"""
-    
+
     def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:
         pass
 

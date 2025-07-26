@@ -25,13 +25,13 @@ class Painter(object):
 
     @staticmethod
     def draw_mem_metrics(
-            union_data_list: list[dict],
-            output_path: str,
-            *_,
-            **kwargs
+        mem_data: list[dict],
+        output_path: str,
+        *_,
+        **kwargs
     ) -> str:
 
-        df = pd.DataFrame(union_data_list)
+        df = pd.DataFrame(mem_data)
 
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
@@ -47,7 +47,9 @@ class Painter(object):
         df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
 
         # 🟡 ==== 全局统计 ====
-        max_val, min_val, avg_val = df["pss"].max(), df["pss"].min(), df["pss"].mean()
+        avg_val = kwargs.get("avg", df["pss"].mean())
+        max_val = kwargs.get("max", df["pss"].max())
+        min_val = kwargs.get("min", df["pss"].min())
         y_range = max_val - min_val if max_val > min_val else 1
         offset = 0.1
         y_min = max(0, min_val - offset * y_range)
@@ -64,19 +66,19 @@ class Painter(object):
         ).reset_index()
 
         # 🟡 ==== 判断内存趋势 ====
-        trend, trend_score, jitter, r_squared, slope, pss_color = kwargs.values()
         summary_text = (
-            f"Trend: {trend}\n"
-            f"Score: {trend_score:.2f}\n"
-            f"Shake: {jitter:.4f}\n"
-            f"Slope: {slope:.4f}"
+            f"Trend: {kwargs['trend']}\n"
+            f"Score: {kwargs['trend_score']:.2f}\n"
+            f"Shake: {kwargs['jitter_index']:.4f}\n"
+            f"Slope: {kwargs['slope']:.4f}"
         )
 
         # 🟡 ==== 配色与视觉分区 ====
+        pss_color = kwargs.get("color", "#3564B0")
         avg_color = "#BD93F9"   # 均值
         max_color = "#FF1D58"   # 峰值
         min_color = "#009FFD"   # 谷值
-        
+
         # 🟡 ==== 前后台区块配色 ====
         fg_color = "#3386E6"
         bg_color = "#757575"
@@ -116,7 +118,7 @@ class Painter(object):
         ax.plot(df["num_x"], df["rss"], color="#FEB96B", linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
         # 🟡 ==== USS折线 ====
         ax.plot(df["num_x"], df["uss"], color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
-        
+
         # 🟡 ==== 滑动平均 ====
         ax.plot(
             df["num_x"], df["pss_sliding_avg"],
@@ -198,13 +200,13 @@ class Painter(object):
 
     @staticmethod
     def draw_gfx_metrics(
-            raw_frames: list[dict],
-            vsync_sys: list[dict],
-            vsync_app: list[dict],
-            roll_ranges: list[dict],
-            drag_ranges: list[dict],
-            jank_ranges: list[dict],
-            output_path: str
+        raw_frames: list[dict],
+        vsync_sys: list[dict],
+        vsync_app: list[dict],
+        roll_ranges: list[dict],
+        drag_ranges: list[dict],
+        jank_ranges: list[dict],
+        output_path: str
     ) -> str:
 
         timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
@@ -321,28 +323,28 @@ class Painter(object):
 
     @staticmethod
     def draw_io_metrics(
-            union_data_list: list[dict],
-            output_path: str
+        mem_data: list[dict],
+        output_path: str
     ) -> str:
 
-        df = pd.DataFrame(union_data_list)
+        df = pd.DataFrame(mem_data)
 
         # 🔵 ==== 获取评分 ====
-        evaluate = Scores.analyze_io_score(df)
+        score = Scores.analyze_io_score(df)
 
         io_summary = (
-            f"Grade: {evaluate['grade']}\n"
-            f"Score: {evaluate['score']}\n"
-            f"Peak RW: {evaluate['rw_peak_kb']} KB\n"
-            f"RW Std: {evaluate['rw_std_kb']} KB\n"
-            f"RW Burst Ratio: {evaluate['rw_burst_ratio']:.2%}\n"
-            f"Idle Ratio: {evaluate['rw_idle_ratio']:.2%}\n"
-            f"Swap Max: {evaluate.get('swap_max_kb', 0)} KB\n"
-            f"Swap Burst: {evaluate.get('swap_burst_count', 0)} / {evaluate.get('swap_burst_ratio', 0):.2%}\n"
-            f"Sys Burst Events: {evaluate['sys_burst']}\n"
+            f"Grade: {score['grade']}\n"
+            f"Score: {score['score']}\n"
+            f"Peak RW: {score['rw_peak_kb']} KB\n"
+            f"RW Std: {score['rw_std_kb']} KB\n"
+            f"RW Burst Ratio: {score['rw_burst_ratio']:.2%}\n"
+            f"Idle Ratio: {score['rw_idle_ratio']:.2%}\n"
+            f"Swap Max: {score.get('swap_max_kb', 0)} KB\n"
+            f"Swap Burst: {score.get('swap_burst_count', 0)} / {score.get('swap_burst_ratio', 0):.2%}\n"
+            f"Sys Burst Events: {score['sys_burst']}\n"
         )
-        if evaluate["tags"]:
-            io_summary += f"Tags: {', '.join(evaluate['tags'])}"
+        if score["tags"]:
+            io_summary += f"Tags: {', '.join(score['tags'])}"
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()

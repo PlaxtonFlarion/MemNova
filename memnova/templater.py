@@ -29,11 +29,11 @@ class Templater(object):
         self.download = download
 
     def generate_viewers(
-            self,
-            trace_path: typing.Optional["Path"] = None,
-            leak_path: typing.Optional["Path"] = None,
-            gfx_path: typing.Optional["Path"] = None,
-            io_path: typing.Optional["Path"] = None
+        self,
+        trace_path: typing.Optional["Path"] = None,
+        leak_path: typing.Optional["Path"] = None,
+        gfx_path: typing.Optional["Path"] = None,
+        io_path: typing.Optional["Path"] = None
     ) -> "Div":
 
         log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
@@ -293,10 +293,10 @@ class Templater(object):
 
     @staticmethod
     async def plot_gfx_analysis(
-            frames: list[dict],
-            roll_ranges: typing.Optional[list[dict]],
-            drag_ranges: typing.Optional[list[dict]],
-            jank_ranges: typing.Optional[list[dict]]
+        frames: list[dict],
+        roll_ranges: typing.Optional[list[dict]],
+        drag_ranges: typing.Optional[list[dict]],
+        jank_ranges: typing.Optional[list[dict]]
     ) -> "figure":
 
         # 🟢 ==== 计算得分 ====
