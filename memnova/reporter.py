@@ -103,6 +103,8 @@ class Reporter(object):
             loop: "asyncio.AbstractEventLoop",
             executor: "ProcessPoolExecutor",
             templater: "Templater",
+            memories: dict,
+            start_time: float,
             data_dir: str,
             baseline: bool,
     ) -> dict:
@@ -201,7 +203,12 @@ class Reporter(object):
 
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
-        logger.info(f"{data_dir} Handler Done ...")
+        memories.update({
+            "MSG": (msg := f"{data_dir} Handler Done ..."),
+            "CUR": memories.get("CUR", 0) + 1,
+            "TMS": f"{time.time() - start_time:.1f} s",
+        })
+        logger.info(msg)
 
         return {
             "subtitle": title or data_dir,
@@ -216,6 +223,8 @@ class Reporter(object):
             loop: "asyncio.events.AbstractEventLoop",
             executor: "ProcessPoolExecutor",
             templater: "Templater",
+            memories: dict,
+            start_time: float,
             team_data: dict,
             baseline: bool,
             *_
@@ -224,7 +233,9 @@ class Reporter(object):
         cur_time, cur_data = team_data.get("time", "Unknown"), team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__classify_rendering(db, loop, executor, templater, d, baseline) for d in cur_data)
+            *(self.__classify_rendering(
+                db, loop, executor, templater, memories, start_time, d, baseline
+            ) for d in cur_data)
         )
 
         major_summary = [
@@ -366,6 +377,8 @@ class Reporter(object):
             loop: "asyncio.AbstractEventLoop",
             executor: "ProcessPoolExecutor",
             templater: "Templater",
+            memories: dict,
+            start_time: float,
             data_dir: str,
             *_,
     ) -> dict:
@@ -434,7 +447,13 @@ class Reporter(object):
 
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, *plots, Spacer(height=10), sizing_mode="stretch_width"))
-        logger.info(f"{data_dir} Handler Done ...")
+
+        memories.update({
+            "MSG": (msg := f"{data_dir} Handler Done ..."),
+            "CUR": memories.get("CUR", 0) + 1,
+            "TMS": f"{time.time() - start_time:.1f} s",
+        })
+        logger.info(msg)
 
         return {
             "subtitle": title or data_dir,
@@ -469,6 +488,8 @@ class Reporter(object):
             loop: "asyncio.events.AbstractEventLoop",
             executor: "ProcessPoolExecutor",
             templater: "Templater",
+            memories: dict,
+            start_time: float,
             team_data: dict,
             *_
     ) -> typing.Optional[dict]:
@@ -476,7 +497,9 @@ class Reporter(object):
         cur_time, cur_data = team_data.get("time"), team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__gfx_rendering(db, loop, executor, templater, d) for d in cur_data)
+            *(self.__gfx_rendering(
+                db, loop, executor, templater, memories, start_time, d
+            ) for d in cur_data)
         )
 
         major_summary_items = [

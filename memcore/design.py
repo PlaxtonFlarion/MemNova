@@ -30,7 +30,7 @@ class Design(object):
     """
     console: typing.Optional["Console"] = Console()
 
-    def __init__(self, design_level: str = "WARNING"):
+    def __init__(self, design_level: str = const.SHOW_LEVEL):
         self.design_level = design_level
 
     class Doc(object):
@@ -224,68 +224,6 @@ class Design(object):
 
         Design.console.print(tree)
         return file_color
-
-    @staticmethod
-    async def doll_animation() -> None:
-        """
-        播放项目加载启动动画。
-        """
-        loading_frames = [
-            f"""\
-
-     ~~~         ~~~        ~~~        ~~~
-   /     \\     /     \\    /     \\    /     \\
-  | (• •) |---| (• •) |--| (• •) |--| (• •) |
-   \\_v__/_     \\__v__/    \\__v__/    \\__v__/
-     |||         |||        |||        |||
-     ===         ===        ===        ===    """,
-            f"""\
-
-     ~~~        ~~~         ~~~        ~~~
-  /     \\    /     \\     /     \\    /     \\
- | (• •) |--| (• •) |---| (• •) |--| (• •) |
-  \\__v__/    \\_v__/_     \\__v__/    \\__v__/
-     |||         |||        |||        |||
-     ===         ===        ===        ===    """,
-            f"""\
-
-     ~~~        ~~~        ~~~         ~~~
-  /     \\    /     \\    /     \\     /     \\
- | (• •) |--| (• •) |--| (• •) |---| (• •) |
-  \\__v__/    \\__v__/    \\_v__/_     \\__v__/
-     |||         |||        |||        |||
-     ===         ===        ===        ===    """]
-
-        color_palettes = [
-            ["#00F5FF", "#7CFC00", "#FFD700"],  # 赛博霓虹
-            ["#FF69B4", "#FF1493", "#8A2BE2"],  # 梦幻脉冲
-            ["#ADFF2F", "#00FA9A", "#20B2AA"],  # 量子绿链
-            ["#FFA500", "#FF6347", "#DC143C"],  # 熔岩能核
-            ["#00BFFF", "#1E90FF", "#4169E1"],  # 深海引擎
-            ["#DDA0DD", "#BA55D3", "#9400D3"],  # 紫色波段
-            ["#FFE4B5", "#FFFACD", "#FAFAD2"],  # 柔光黄波
-            ["#B0E0E6", "#ADD8E6", "#E0FFFF"],  # 冰晶流
-            ["#66CDAA", "#8FBC8F", "#2E8B57"],  # 冷系脉络
-            ["#FFB6C1", "#FFC0CB", "#F08080"],  # 粉调超导
-        ]
-
-        palette = random.choice(color_palettes)
-
-        with Live(console=Design.console, refresh_per_second=30) as live:
-            for _ in range(5):
-                for index, i in enumerate(loading_frames):
-                    live.update(
-                        f"[bold {palette[index]}]{Text.from_markup(i)}"
-                    )
-                    time.sleep(0.2)
-
-        color = random.choice(palette)
-        Design.console.print(
-            f"[bold {color}]{{ {const.APP_DESC} Wave Linking... Aligning... Done. }}"
-        )
-        Design.console.print(
-            f"[bold {color}]{{ {const.APP_DESC} Core Initialized. }}\n"
-        )
 
     @staticmethod
     async def compile_animation() -> None:
@@ -613,7 +551,7 @@ class Design(object):
                 live.update(Text(ghost_line, style=f"bold dim {color}"))
                 await asyncio.sleep(0.01)
 
-    async def memory_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+    async def mem_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
         """
@@ -879,7 +817,7 @@ class Design(object):
             f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
         )
 
-    async def cell_division(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+    async def gfx_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
 
         if self.design_level != const.SHOW_LEVEL:
             return None
@@ -1056,6 +994,149 @@ class Design(object):
         self.console.print(
             f"\n[bold #00FF5F]>>> 🧬{const.APP_DESC} :: {random.choice(close_banners)} <<<\n"
         )
+
+    async def lab_detonation(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+        if self.design_level != const.SHOW_LEVEL:
+            return None
+
+        rows, cols = 7, 19
+        center_r, center_c = rows // 2, cols // 2
+        padding, fps = 5, 30
+        total_frames = 24
+
+        start_titles = [
+            "Initializing Graph Matrix ...",
+            "Parsing Cognitive Layers ...",
+            "Composing Visual Topology ...",
+            "Synthesizing Render Elements ...",
+            "Booting HTML Render Pipeline ...",
+            "Indexing Frame Dimensions ...",
+            "Activating Data Genome ...",
+            "Aligning DOM Coordinates ...",
+            "Preparing Component Mosaic ...",
+            "Structuring Summary Schema ..."
+        ]
+        close_titles = [
+            "Graphical Rendition Complete.",
+            "All Charts Mapped and Plotted.",
+            "Report Structure Finalized.",
+            "Rendering Pipeline Terminated.",
+            "Visual Synopsis Deployed.",
+            "Summary Composition Sealed.",
+            "Mosaic Assembled with Precision.",
+            "Export Path Stabilized.",
+            "Diagram Synthesis Accomplished.",
+            "Report Ready for Dispatch."
+        ]
+        start_title, close_title = random.choice(start_titles), random.choice(close_titles)
+
+        symbols = ["✹", "✸", "✳", "✺", "✻", "*", "+", "•", "·", "⨉", "⎈", "⚡", "☢"]
+        themes = [
+            {
+                "trail_colors": ["#FFFFAA", "#FFEE88", "#FFCC66", "#FF9966", "#FF6644", "#FF3300", "#AA1100"],
+                "info_color": "#FFCC66",
+                "fill_color": "#FF6644"
+            },
+            {
+                "trail_colors": ["#BBF7FF", "#88EEFF", "#66DDFF", "#44CCFF", "#2299FF", "#1166FF", "#0033AA"],
+                "info_color": "#66DDFF",
+                "fill_color": "#2299FF"
+            },
+            {
+                "trail_colors": ["#D1FFD1", "#AAFFAA", "#88FF88", "#55DD55", "#22BB22", "#119911", "#006600"],
+                "info_color": "#88FF88",
+                "fill_color": "#22BB22"
+            },
+            {
+                "trail_colors": ["#FFF0F5", "#FFCCE5", "#FF99CC", "#FF66B2", "#FF3388", "#FF0066", "#AA0044"],
+                "info_color": "#FF99CC",
+                "fill_color": "#FF3388"
+            },
+            {
+                "trail_colors": ["#FFE4B5", "#FFD699", "#FFC870", "#FFB347", "#FF9933", "#FF8000", "#CC6600"],
+                "info_color": "#FFC870",
+                "fill_color": "#FF8000"
+            },
+            {
+                "trail_colors": ["#E5E5FF", "#CCCCFF", "#AAAADD", "#8888CC", "#6666AA", "#444488", "#222266"],
+                "info_color": "#AAAADD",
+                "fill_color": "#6666AA"
+            },
+            {
+                "trail_colors": ["#FFFACD", "#FFF68F", "#FFE87C", "#FFD700", "#FFB700", "#FFA000", "#CC7700"],
+                "info_color": "#FFE87C",
+                "fill_color": "#FFB700"
+            },
+            {
+                "trail_colors": ["#E0FFFF", "#B0E0E6", "#87CEFA", "#00BFFF", "#1E90FF", "#4169E1", "#0000CD"],
+                "info_color": "#87CEFA",
+                "fill_color": "#1E90FF"
+            }
+        ]
+
+        center_point = random.choice(symbols)
+        theme = random.choice(themes)
+        trail_colors = theme["trail_colors"]
+        info_color = theme["info_color"]
+        fill_color = theme["fill_color"]
+
+        def get_title(frame_id: int) -> str:
+            color = trail_colors[1] if (frame_id // 3) % 2 == 0 else trail_colors[-2]
+            return "\n" + " " * padding + f"[bold {color}]🧪 {start_title}"
+
+        def compose_frame(title: str, grid: list[list[str]]) -> "Text":
+            grid_lines = "\n".join(" " * padding + " ".join(row) for row in grid)
+            info_lines = "\n\n" + "\n".join(
+                " " * padding + f"[bold #EEEEEE]{k}: [{info_color}]{v}[/]" for k, v in memories.items()
+            ) if memories else ""
+            progress_line = "\n\n" + pg if (pg := render_progress()) else ""
+            return Text.from_markup(title + "\n\n" + grid_lines + info_lines + progress_line)
+
+        def render_progress() -> str:
+            if (total := memories.get("MAX", 0)) == 0:
+                return ""
+            cur, bar_width = memories.get("CUR", 0), cols * 2 - 1
+            unfilled = bar_width - (filled := int(cur / total * bar_width))
+            return " " * padding + f"[bold {fill_color}]" + "■" * filled + "[dim #444444]" + "·" * unfilled
+
+        def render_frame(frame_id: int) -> "Text":
+            grid = [["[dim #222222]·[/]" for _ in range(cols)] for _ in range(rows)]
+
+            center_color = trail_colors[frame_id % len(trail_colors)]
+            grid[center_r][center_c] = f"[bold {center_color}]{center_point}[/]"
+
+            radius = min(frame_id + 1, max(rows, cols) // 2)
+            for r in range(rows):
+                for c in range(cols):
+                    dist = abs(r - center_r) + abs(c - center_c)
+                    if 0 < dist <= radius:
+                        decay_index = min(dist, len(trail_colors) - 1)
+                        grid[r][c] = f"[{trail_colors[decay_index]}]{random.choice(symbols)}[/]"
+
+            return compose_frame(get_title(frame_id), grid)
+
+        async def render_banding() -> typing.AsyncGenerator["Text", None]:
+            for radius in range(rows + cols):
+                grid = [["[dim #222222]·[/]" for _ in range(cols)] for _ in range(rows)]
+                for r in range(rows):
+                    for c in range(cols):
+                        if abs(r - center_r) + abs(c - center_c) <= radius:
+                            grid[r][c] = f"[bold {fill_color}]{center_point}[/]"
+
+                title = "\n" + " " * padding + f"[bold {info_color}]💥 {close_title}"
+                yield compose_frame(title, grid)
+
+        idx = 0
+        with Live(console=self.console, refresh_per_second=fps) as live:
+            while not task_close_event.is_set():
+                live.update(render_frame(idx))
+                idx = (idx + 1) % total_frames
+                await asyncio.sleep(1 / fps)
+
+            # 完整爆炸填充
+            async for frame in render_banding():
+                live.update(frame)
+                await asyncio.sleep(1 / fps)
 
 
 if __name__ == "__main__":
