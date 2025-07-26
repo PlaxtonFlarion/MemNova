@@ -186,6 +186,7 @@ class Memrix(object):
             *args,
             **__
     ) -> None:
+
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待采样任务结束 ...")
             try:
@@ -220,7 +221,7 @@ class Memrix(object):
             fc = Design.build_file_tree(reporter.group_dir)
             Design.console.print()
             Design.Doc.log(
-                f"Usage: [#00D787]{const.APP_NAME} --forge [{fc}]{Path(reporter.group_dir).name}[/]"
+                f"Usage: [bold #00D787]{const.APP_NAME} --forge [{fc}]{Path(reporter.group_dir).name}[/]"
             )
 
         logger.info(
@@ -257,10 +258,10 @@ class Memrix(object):
             trace_file = data.get("trace_file")
             try:
                 self.memories.update({
-                    "MSG": (msg := f"[bold #87FFD7]Queue received {Path(trace_file).name}"),
+                    "MSG": f"[bold #87FFD7]Queue received {Path(trace_file).name}",
                     "ANA": f"[bold #00FF5F]Sample analyzing ...",
                 })
-                logger.info(msg)
+                logger.info(f"Queue received {Path(trace_file).name}")
 
                 gfx_analyzer = GfxAnalyzer()
                 gfx_fmt_data = await asyncio.shield(asyncio.to_thread(
@@ -273,10 +274,10 @@ class Memrix(object):
 
                 self.file_insert += 1
                 self.memories.update({
-                    "MSG": (msg := f"[bold #00FF5F]Article {self.file_insert} data insert success"),
-                    "ANA": f"[bold #AFFF5F]Analyze engine ready !",
+                    "MSG": f"[bold #00FF5F]Article {self.file_insert} data insert success",
+                    "ANA": f"[bold #AFFF5F]Analyze engine ready",
                 })
-                logger.info(msg)
+                logger.info(f"Article {self.file_insert} data insert success")
 
             except Exception as e:
                 self.memories.update({
@@ -350,30 +351,30 @@ class Memrix(object):
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Process -> {app_pid}"),
+                    "MSG": f"[bold #FF5F5F]Process -> {app_pid}",
                     "MOD": "*",
                     "ACT": "*",
                     "PSS": "*",
                 })
-                return logger.info(f"{msg}\n")
+                return logger.info(f"Process -> {app_pid}\n")
 
             logger.info(device)
             self.memories.update({
-                "MSG": (msg := f"Process -> {app_pid.member}")
+                "MSG": f"[bold #87D700]Process -> {app_pid.member}"
             })
-            logger.info(msg)
+            logger.info(f"Process -> {app_pid.member}")
 
             try:
                 main_pid = list(app_pid.member.keys())[0]
             except (KeyError, IndexError) as e:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Pid -> {e}"),
+                    "MSG": f"[bold #FF5F5F]Pid -> {e}",
                     "MOD": "*",
                     "ACT": "*",
                     "PSS": "*",
                 })
-                return logger.info(f"{msg}\n")
+                return logger.info(f"Pid -> {e}\n")
 
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
@@ -389,8 +390,9 @@ class Memrix(object):
             mark_map["mark"]["mode"], mark_map["mark"]["adj"] = mode, adj
 
             state = "FOREGROUND" if mark_map["mark"]["mode"] == "FG" else "BACKGROUND"
+            color = "#00B5D8" if state.startswith("F") else "#F29E4C"
             self.memories.update({
-                "MOD": state,
+                "MOD": f"[bold {color}]{state}",
                 "ACT": activity
             })
 
@@ -412,12 +414,12 @@ class Memrix(object):
             else:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": (msg := f"Resp -> {result}"),
+                    "MSG": f"[bold #FF5F5F]Resp -> {result}",
                     "MOD": "*",
                     "ACT": "*",
                     "PSS": "*",
                 })
-                return logger.info(f"{msg}\n")
+                return logger.info(f"Resp -> {result}\n")
 
             try:
                 logger.info(muster)
@@ -431,16 +433,19 @@ class Memrix(object):
 
                 self.memories[state] += 1
                 self.memories.update({
+                    "MSG": f"[bold #87D700]{msg}",
                     "PSS": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
 
             else:
                 msg = f"Data insert skipped"
                 self.memories.update({
-                    "MOD": "*", "ACT": "*", "PSS": "*"
+                    "MSG": f"[bold #FF5F5F]{msg}",
+                    "MOD": "*",
+                    "ACT": "*",
+                    "PSS": "*"
                 })
 
-            self.memories.update({"MSG": msg})
             logger.info(msg)
 
             self.dumped.set()
@@ -637,7 +642,7 @@ class Perfetto(object):
         await self.__device.change_mode(777, device_folder)
 
         self.__memories.update({
-            "PCK": f"Sampling {unique_id} ..."
+            "PCK": f"[bold #AFFF5F]Sampling {unique_id} ..."
         })
 
         transports = await self.__device.perfetto_start(
@@ -652,7 +657,7 @@ class Perfetto(object):
         trace_file = self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
 
         self.__memories.update({
-            "PCK": f"Push {str(trace_file)} ..."
+            "PCK": f"[bold #87FFD7]Push {str(trace_file)} ..."
         })
 
         await self.__device.pull(target_folder, str(trace_file))
