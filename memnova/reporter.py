@@ -114,10 +114,10 @@ class Reporter(object):
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        mem_data, (title, timestamp, *_) = await asyncio.gather(
+        mem_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
-
+        title, timestamp = joint
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
 
@@ -446,9 +446,10 @@ class Reporter(object):
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
-        gfx_data, (title, timestamp, *_) = await asyncio.gather(
+        gfx_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
+        title, timestamp = joint
 
         frame_merged = self.__merge_alignment_frames(gfx_data)
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
