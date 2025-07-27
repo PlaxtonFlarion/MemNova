@@ -147,8 +147,8 @@ class Reporter(object):
                 evaluate += [
                     {
                         "fields": [
-                            {"text": f"{mode}-Trend: {score['trend']}", "class": "general"},
-                            {"text": f"{mode}-Shake: {score['jitter_index']}", "class": "general"}
+                            {"text": f"{mode}-Trend: {score['trend']}", "class": "baseline"},
+                            {"text": f"{mode}-Shake: {score['jitter_index']:.2f}", "class": "baseline"}
                         ]
                     }
                 ]
@@ -182,14 +182,14 @@ class Reporter(object):
             evaluate = [
                 {
                     "fields": [
-                        {"text": f"Trend: {score['trend']}", "class": "general"},
-                        {"text": f"Score: {score['trend_score']}", "class": "general"}
+                        {"text": f"Trend: {score['trend']}", "class": "leak"},
+                        {"text": f"Score: {score['trend_score']}", "class": "leak"}
                     ]
                 },
                 {
                     "fields": [
-                        {"text": f"Shake: {score['jitter_index']}", "class": "general"},
-                        {"text": f"Slope: {score['slope']}", "class": "general"}
+                        {"text": f"Shake: {score['jitter_index']:.2f}", "class": "leak"},
+                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"}
                     ]
                 }
             ]
@@ -443,14 +443,14 @@ class Reporter(object):
         evaluate = [
             {
                 "fields": [
-                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "general"},
-                    {"text": f"Level: {score['level']}", "class": "general"}
+                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"},
+                    {"text": f"Level: {score['level']}", "class": "fluency"}
                 ]
             },
             {
                 "fields": [
-                    {"text": f"P95: {score['p95_fps']} FPS", "class": "general"},
-                    {"text": f"JNK: {score['jnk_fps']} %", "class": "general"}
+                    {"text": f"P95: {score['p95_fps']} FPS", "class": "fluency"},
+                    {"text": f"JNK: {score['jnk_fps']} %", "class": "fluency"}
                 ]
             }
         ]
