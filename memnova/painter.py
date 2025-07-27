@@ -75,9 +75,13 @@ class Painter(object):
 
         # 🟡 ==== 配色与视觉分区 ====
         pss_color = kwargs.get("color", "#3564B0")
+        rss_color = "#FEB96B"
+        uss_color = "#90B2C8"
         avg_color = "#BD93F9"   # 均值
         max_color = "#FF1D58"   # 峰值
         min_color = "#009FFD"   # 谷值
+        sld_color = "#A8BFFF"
+        avg_band_color = "#D0D0FF"
 
         # 🟡 ==== 前后台区块配色 ====
         fg_color = "#3386E6"
@@ -112,22 +116,20 @@ class Painter(object):
             labels=stack_labels
         )
 
-        # 🟡 ==== PSS主线 ====
+        # 🟡 ==== PSS主线 / RSS折线 / USS折线 ====
         ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
-        # 🟡 ==== RSS折线 ====
-        ax.plot(df["num_x"], df["rss"], color="#FEB96B", linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
-        # 🟡 ==== USS折线 ====
-        ax.plot(df["num_x"], df["uss"], color="#90B2C8", linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
+        ax.plot(df["num_x"], df["rss"], color=rss_color, linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
+        ax.plot(df["num_x"], df["uss"], color=uss_color, linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
 
         # 🟡 ==== 滑动平均 ====
         ax.plot(
             df["num_x"], df["pss_sliding_avg"],
-            color="#A8BFFF", linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
+            color=sld_color, linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
         )
 
         # 🟡 ==== 均值带 ====
         ax.axhspan(
-            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color="#D0D0FF", alpha=0.25, label="Average Range"
+            avg_val - 0.05 * y_range, avg_val + 0.05 * y_range, color=avg_band_color, alpha=0.25, label="Average Range"
         )
 
         # 🟡 ==== 均值线 ====
@@ -159,9 +161,9 @@ class Painter(object):
         # 🟡 ==== 构造伪图例项 ====
         line_handles = [
             Line2D([0], [0], color=pss_color, linewidth=1.2, label="PSS"),
-            Line2D([0], [0], color="#FEB96B", linewidth=1.1, linestyle="--", label="RSS"),
-            Line2D([0], [0], color="#90B2C8", linewidth=1.1, linestyle=":", label="USS"),
-            Line2D([0], [0], color="#A8BFFF", linestyle="--", label="Sliding Avg"),
+            Line2D([0], [0], color=rss_color, linewidth=1.1, linestyle="--", label="RSS"),
+            Line2D([0], [0], color=uss_color, linewidth=1.1, linestyle=":", label="USS"),
+            Line2D([0], [0], color=sld_color, linestyle="--", label="Sliding Avg"),
             Line2D([0], [0], color=avg_color, linestyle=":", label="PSS AVG"),
             Line2D([0], [0], marker="o", color=max_color, linestyle="None", markersize=7, label="Max"),
             Line2D([0], [0], marker="o", color=min_color, linestyle="None", markersize=7, label="Min"),
@@ -206,7 +208,9 @@ class Painter(object):
         roll_ranges: list[dict],
         drag_ranges: list[dict],
         jank_ranges: list[dict],
-        output_path: str
+        output_path: str,
+        *_,
+        **kwargs
     ) -> str:
 
         timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
@@ -228,7 +232,7 @@ class Painter(object):
         avg_color = "#448AFF"
         max_color = "#FF4081"
 
-        # 🟢 ==== 滑动区/拖拽区/掉帧区 背景区块绘制 ====
+        # 🟢 ==== 滑动区 / 拖拽区 / 掉帧区 背景区块绘制 ====
         for r in roll_ranges:
             ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=roll_color, alpha=0.10)
         for r in drag_ranges:
@@ -236,11 +240,9 @@ class Painter(object):
         for r in jank_ranges:
             ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=jank_color, alpha=0.35)
 
-        # 🟢 ==== 帧耗时主线 ====
+        # 🟢 ==== 主线 / 平均线 / 最高线 ====
         ax1.plot(timestamps, durations, label="Frame Duration", color=main_color, linewidth=1.2)
-        # 🟢 ==== 平均线 ====
         ax1.axhline(avg_dur, linestyle=":", linewidth=1.3, color=avg_color, alpha=0.88, label="Avg Duration")
-        # 🟢 ==== 最高线 ====
         ax1.axhline(max_dur, linestyle="--", linewidth=1.1, color=max_color, alpha=0.88, label="Max Duration")
 
         # 🟢 ==== 多帧率基准线 ====
@@ -263,7 +265,9 @@ class Painter(object):
 
         fps_summary = (
             f"SYS: Avg {avg_sys:.1f} / Max {max_sys:.1f}\n"
-            f"APP: Avg {avg_app:.1f} / Max {max_app:.1f}"
+            f"APP: Avg {avg_app:.1f} / Max {max_app:.1f}\n"
+            f"Score: {kwargs['score'] * 100:.2f}\n"
+            f"Level: {kwargs['level']}"
         )
 
         # 🟢 ==== 自定义图例（颜色区块 + 主线 + 60 FPS）====

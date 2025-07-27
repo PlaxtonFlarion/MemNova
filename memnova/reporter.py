@@ -109,6 +109,7 @@ class Reporter(object):
         baseline: bool,
     ) -> dict:
 
+        # 🟡 ==== 数据查询 ====
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
@@ -120,7 +121,7 @@ class Reporter(object):
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         io_loc = Path(group) / f"{head}_io.png"
 
-        # 🔵 ==== I/O Painter ====
+        # 🔵 ==== I/O 绘图 ====
         draw_io_future = loop.run_in_executor(
             executor, Painter.draw_io_metrics, mem_data, str(io_loc)
         )
@@ -132,35 +133,61 @@ class Reporter(object):
         if baseline:
             trace_loc = leak_loc = gfx_loc = None
 
-            group_stats = (
+            # 🟡 ==== 分组统计 ====
+            evaluate, tag_lines, group_stats = [], [], (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
             )
 
-            gs, all_ok = group_stats.set_index("mode"), True
-            if "FG" in gs.index:
-                all_ok &= gs.loc["FG", "max_pss"] < self.align.fg_max
-                all_ok &= gs.loc["FG", "avg_pss"] < self.align.fg_avg
-            if "BG" in gs.index:
-                all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
-                all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
+            for _, row in group_stats.iterrows():
+                part_df = df[df["mode"] == (mode := row["mode"])]
+                score = Scores.analyze_mem_score(part_df, column="pss")
+                logger.info(f"{mode}-Score: {score}")
 
-            evaluate = [
-                {
-                    "fields": [
-                        {"text": "Pass" if all_ok else "Fail", "class": "expiry-pass" if all_ok else "expiry-fail"}
-                    ]
-                }
-            ]
+                # 🟡 ==== 评价部分 ====
+                evaluate += [
+                    {
+                        "fields": [
+                            {"text": f"{mode}-Trend: {score['trend']}", "class": "refer"},
+                            {"text": f"{mode}-Shake: {score['jitter_index']}", "class": "refer"}
+                        ]
+                    }
+                ]
 
-            tag_lines = [
-                {
-                    "fields": [
-                        {"label": f"{row['mode']}-MAX: ", "value": f"{row['max_pss']:.2f}", "unit": "MB"},
-                        {"label": f"{row['mode']}-AVG: ", "value": f"{row['avg_pss']:.2f}", "unit": "MB"}
-                    ]
-                } for _, row in group_stats.iterrows()
-            ]
+                # 🟡 ==== 指标部分 ====
+                tag_lines += [
+                    {
+                        "fields": [
+                            {"label": f"{mode}-MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
+                            {"label": f"{mode}-AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
+                        ]
+                    }
+                ]
+
+            # gs, all_ok = group_stats.set_index("mode"), True
+            # if "FG" in gs.index:
+            #     all_ok &= gs.loc["FG", "max_pss"] < self.align.fg_max
+            #     all_ok &= gs.loc["FG", "avg_pss"] < self.align.fg_avg
+            # if "BG" in gs.index:
+            #     all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
+            #     all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
+            #
+            # evaluate = [
+            #     {
+            #         "fields": [
+            #             {"text": "Pass" if all_ok else "Fail", "class": "expiry-pass" if all_ok else "expiry-fail"}
+            #         ]
+            #     }
+            # ]
+            #
+            # tag_lines = [
+            #     {
+            #         "fields": [
+            #             {"label": f"{row['mode']}-MAX: ", "value": f"{row['max_pss']:.2f}", "unit": "MB"},
+            #             {"label": f"{row['mode']}-AVG: ", "value": f"{row['avg_pss']:.2f}", "unit": "MB"}
+            #         ]
+            #     } for _, row in group_stats.iterrows()
+            # ]
 
         # 🟡 ==== 内存泄漏 ====
         else:
@@ -168,6 +195,16 @@ class Reporter(object):
 
             # 🟨 ==== MEM 评分 ====
             score = Scores.analyze_mem_score(df, column="pss")
+            logger.info(f"Score: {score}")
+
+            # 🟡 ==== MEM 绘图 ====
+            paint_func = partial(Painter.draw_mem_metrics, **score)
+            draw_leak_future = loop.run_in_executor(
+                executor, paint_func, mem_data, str(leak_loc)
+            )
+            self.background_tasks.append(draw_leak_future)
+
+            # 🟡 ==== 评价部分 ====
             evaluate = [
                 {
                     "fields": [
@@ -182,15 +219,8 @@ class Reporter(object):
                     ]
                 }
             ]
-            logger.info(f"Score: {score}")
 
-            # 🟡 ==== MEM Painter ====
-            paint_func = partial(Painter.draw_mem_metrics, **score)
-            draw_leak_future = loop.run_in_executor(
-                executor, paint_func, mem_data, str(leak_loc)
-            )
-            self.background_tasks.append(draw_leak_future)
-
+            # 🟡 ==== 指标部分 ====
             tag_lines = [
                 {
                     "fields": [
@@ -200,12 +230,13 @@ class Reporter(object):
                 }
             ]
 
-        # 🟡 ==== MEM Templater ====
+        # 🟡 ==== MEM 渲染 ====
         plot = await templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
+
+        # 🟡 ==== MEM 进度 ====
         memories.update({
             "MSG": (msg := f"{data_dir} Handler Done ..."),
             "CUR": memories.get("CUR", 0) + 1,
@@ -410,6 +441,7 @@ class Reporter(object):
         *_,
     ) -> dict:
 
+        # 🟢 ==== 数据查询 ====
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
@@ -427,15 +459,19 @@ class Reporter(object):
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
 
-        # 🟢 ==== GFX Painter ====
+        # 🟩 ==== GFX 评分 ====
+        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        logger.info(f"Score: {score}")
+
+        # 🟢 ==== GFX 绘图 ====
+        paint_func = partial(Painter.draw_gfx_metrics, **score)
         draw_future = loop.run_in_executor(
-            executor, Painter.draw_gfx_metrics,
+            executor, paint_func,
             raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
         self.background_tasks.append(draw_future)
 
-        # 🟩 ==== GFX 评分 ====
-        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        # 🟢 ==== 评价部分 ====
         evaluate = [
             {
                 "fields": [
@@ -450,8 +486,8 @@ class Reporter(object):
                 ]
             }
         ]
-        logger.info(f"Score: {score}")
 
+        # 🟢 ==== 指标部分 ====
         tag_lines = [
             {
                 "fields": [
@@ -461,19 +497,19 @@ class Reporter(object):
             }
         ]
 
-        # ==== 分段切割 ====
+        # 🟢 ==== 分段切割 ====
         segments = self.__split_frames_with_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
 
-        # 🟢 ==== GFX Templater ====
+        # 🟢 ==== GFX 渲染 ====
         plots = await asyncio.gather(
             *(templater.plot_gfx_analysis(segment, roll, drag, jank)
               for segment, roll, drag, jank, *_ in segments)
         )
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-
         viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
         save(column(viewer_div, *plots, Spacer(height=10), sizing_mode="stretch_width"))
 
+        # 🟢 ==== GFX 进度 ====
         memories.update({
             "MSG": (msg := f"{data_dir} Handler Done ..."),
             "CUR": memories.get("CUR", 0) + 1,
