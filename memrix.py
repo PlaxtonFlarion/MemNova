@@ -585,10 +585,12 @@ class Memrix(object):
                 await asyncio.gather(*reporter.background_tasks)
 
         self.memories.update({"MSG": f"Polymerization"})
-        await reporter.make_report(self.unity_template, templater.download, **rendition)
+        html_file = await reporter.make_report(self.unity_template, templater.download, **rendition)
         self.memories.update({"MSG": f"Done"})
         self.task_close_event.set()
         await self.animation_task
+        Design.console.print()
+        Design.build_file_tree(html_file)
         Design.console.print()
         await self.design.system_disintegrate()
 
