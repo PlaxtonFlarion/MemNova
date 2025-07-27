@@ -176,7 +176,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         /* 摘要容器内标签全局通用样式 */
         .refer,
         .expiry-pass, .expiry-fail,
-        .max-threshold, .avg-threshold,
+        .baseline, .leak, .fluency,
         .general {
             font-weight: 600;
             padding: 4px 10px;
@@ -189,7 +189,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         /* 摘要容器内标签全局悬浮样式 */
         .refer:hover,
         .expiry-pass:hover, .expiry-fail:hover,
-        .max-threshold:hover, .avg-threshold:hover,
+        .baseline:hover, .leak:hover, .fluency:hover,
         .general:hover {
             transform: translateY(-1px);
             cursor: default;
@@ -248,40 +248,40 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             cursor: default;
         }
 
-        /* ✅ 内存基线：温润绿色系 */
+        /* 📘 内存基线：淡青灰蓝系 */
         .baseline {
-            color: #234e1e;
-            background: linear-gradient(135deg, #d9f8c6 0%, #a8eaa0 100%);
-            box-shadow: 0 2px 6px rgba(168, 234, 160, 0.25);
+            color: #1f3a48;
+            background: linear-gradient(135deg, #d8e7f3 0%, #c2dbe9 100%);
+            box-shadow: 0 2px 6px rgba(180, 210, 230, 0.25);
         }
         .baseline:hover {
-            background: linear-gradient(135deg, #b4eea3 0%, #89d792 100%);
-            color: #103915;
-            box-shadow: 0 4px 10px rgba(140, 220, 150, 0.25);
+            background: linear-gradient(135deg, #c2dbe9 0%, #b0cedf 100%);
+            box-shadow: 0 4px 10px rgba(150, 190, 220, 0.25);
+            color: #142a36;
         }
 
-        /* 🚨 内存泄漏：紧张红紫系 */
+        /* 🟣 内存泄漏：雾紫 + 暗灰蓝调 */
         .leak {
-            color: #5a0e0e;
-            background: linear-gradient(135deg, #fbdada 0%, #f4a2a2 100%);
-            box-shadow: 0 2px 6px rgba(244, 162, 162, 0.25);
+            color: #322c3b;
+            background: linear-gradient(135deg, #e2ddf2 0%, #cbc5e5 100%);
+            box-shadow: 0 2px 6px rgba(190, 180, 220, 0.25);
         }
         .leak:hover {
-            background: linear-gradient(135deg, #f39595 0%, #e76b6b 100%);
-            color: #3e0505;
-            box-shadow: 0 4px 10px rgba(210, 90, 90, 0.25);
+            background: linear-gradient(135deg, #d4cee8 0%, #b7b0d1 100%);
+            box-shadow: 0 4px 10px rgba(160, 150, 200, 0.2);
+            color: #1e1a25;
         }
 
-        /* 🚄 流畅度：深湖蓝调 */
+        /* 🌫 流畅度：深海雾蓝 */
         .fluency {
-            color: #0a2848;
-            background: linear-gradient(135deg, #c5e4ff 0%, #a0c7f0 100%);
-            box-shadow: 0 2px 6px rgba(155, 200, 255, 0.2);
+            color: #20303c;
+            background: linear-gradient(135deg, #d2e5ef 0%, #b6cfde 100%);
+            box-shadow: 0 2px 6px rgba(150, 180, 200, 0.25);
         }
         .fluency:hover {
-            background: linear-gradient(135deg, #a8d4f7 0%, #7fbde9 100%);
-            color: #06192f;
-            box-shadow: 0 4px 10px rgba(110, 160, 220, 0.25);
+            background: linear-gradient(135deg, #b6cfde 0%, #9fbccc 100%);
+            box-shadow: 0 4px 10px rgba(130, 160, 180, 0.25);
+            color: #101c24;
         }
 
         /* 通用 */
