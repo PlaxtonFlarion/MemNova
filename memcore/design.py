@@ -9,6 +9,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import re
 import math
 import time
 import typing
@@ -667,8 +668,9 @@ class Design(object):
         )
 
         def get_theme_by_mod() -> list:
-            if prev.startswith("F") or prev.startswith("B"):
+            if re.search(r"FORE", prev) or re.search(r"BACK", prev):
                 return list(random.choice(color_themes).values())
+
             return list(default_theme.values())
 
         def make_header() -> str:
@@ -1127,7 +1129,7 @@ class Design(object):
                 yield compose_frame(title, grid)
 
         idx = 0
-        with Live(console=self.console, refresh_per_second=fps) as live:
+        with Live(console=self.console, refresh_per_second=fps, transient=True) as live:
             while not task_close_event.is_set():
                 live.update(render_frame(idx))
                 idx = (idx + 1) % total_frames

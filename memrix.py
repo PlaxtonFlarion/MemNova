@@ -115,7 +115,7 @@ class Memrix(object):
         self.memories.update(
             {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
             if self.storm else
-            {"MSG": msg, "PCK": "*", "ERR": "*", "ANA": "*"}
+            {"MSG": msg, "ERR": "*", "ANA": "*"}
         )
         logger.info(msg)
 
@@ -180,13 +180,7 @@ class Memrix(object):
 
         return traces
 
-    async def sample_stop(
-        self,
-        reporter: "Reporter",
-        *args,
-        **__
-    ) -> None:
-
+    async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
         if self.dumped and not self.dumped.is_set():
             logger.info(f"等待采样任务结束 ...")
             try:
@@ -235,6 +229,7 @@ class Memrix(object):
         self,
         db: "aiosqlite.Connection"
     ) -> None:
+
         while True:
             data = await self.data_queue.get()
             final_map = data.get("final_map")
@@ -247,7 +242,7 @@ class Memrix(object):
         self,
         track_enabled: bool,
         db: "aiosqlite.Connection",
-        now_time: str,
+        now_time: str
     ) -> None:
 
         if not track_enabled:
@@ -282,7 +277,6 @@ class Memrix(object):
             except Exception as e:
                 self.memories.update({
                     "MSG": "*",
-                    "PCK": "*",
                     "ANA": "*",
                     "ERR": f"[bold #FF5F5F]{e}",
                 })
@@ -293,7 +287,7 @@ class Memrix(object):
         self,
         track_enabled: bool,
         device: "Device",
-        db: "aiosqlite.Connection",
+        db: "aiosqlite.Connection"
     ) -> typing.Optional["asyncio.Task"]:
 
         async def mem_analyze() -> dict:
@@ -493,14 +487,14 @@ class Memrix(object):
 
         perfetto = Perfetto(
             self.sleek, self.task_close_event, self.data_queue, self.align.gfx_speed,
-            device, self.memories, self.ft_file, traces, trace_loc, self.trace_conv
+            device, self.ft_file, traces, trace_loc, self.trace_conv
         )
 
         # Workflow: ========== 显示面板 ==========
         self.memories = {
             "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": 0, "BACKGROUND": 0
         } if self.storm else {
-            "MSG": "*", "PCK": "*", "ANA": "*", "ERR": "*"
+            "MSG": "*", "ANA": "*", "ERR": "*"
         }
 
         # Workflow: ========== 开始采样 ==========
@@ -578,15 +572,23 @@ class Memrix(object):
         async with aiosqlite.connect(reporter.db_file) as db:
             with ProcessPoolExecutor(initializer=Active.active, initargs=(const.SHOW_LEVEL,)) as executor:
                 self.memories.update({"MSG": f"Rendering {total} tasks"})
-                rendition = await getattr(reporter, render)(
+                if not (rendition := await getattr(reporter, render)(
                     db, loop, executor, templater, self.memories, start_time, team_data, self.front
-                )
+                )):
+                    self.task_close_event.set()
+                    await self.animation_task
+                    raise MemrixError(f"Rendering {total} tasks failed")
+
                 self.memories.update({"MSG": f"Wait background tasks"})
                 await asyncio.gather(*reporter.background_tasks)
+                self.memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
 
         self.memories.update({"MSG": f"Polymerization"})
         html_file = await reporter.make_report(self.unity_template, templater.download, **rendition)
-        self.memories.update({"MSG": f"Done"})
+        self.memories.update({
+            "MSG": f"Done",
+            "TMS": f"{time.time() - start_time:.1f} s"
+        })
         self.task_close_event.set()
         await self.animation_task
         Design.console.print()
@@ -605,7 +607,6 @@ class Perfetto(object):
         data_queue: "asyncio.Queue",
         gfx_speed: float,
         device: "Device",
-        memories: dict,
         ft_file: str,
         traces_dir: "Path",
         trace_loc: "Path",
@@ -617,7 +618,6 @@ class Perfetto(object):
         self.__data_queue = data_queue
         self.__gfx_speed = gfx_speed
         self.__device = device
-        self.__memories = memories
         self.__ft_file = ft_file
         self.__traces_dir = traces_dir
         self.__trace_loc = trace_loc
@@ -643,10 +643,6 @@ class Perfetto(object):
         await self.__device.push(self.__ft_file, device_folder)
         await self.__device.change_mode(777, device_folder)
 
-        self.__memories.update({
-            "PCK": f"[bold #AFFF5F]Sampling {unique_id} ..."
-        })
-
         transports = await self.__device.perfetto_start(
             device_folder, target_folder
         )
@@ -657,10 +653,6 @@ class Perfetto(object):
 
     async def __close(self, target_folder: str) -> None:
         trace_file = self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
-
-        self.__memories.update({
-            "PCK": f"[bold #87FFD7]Push {str(trace_file)} ..."
-        })
 
         await self.__device.pull(target_folder, str(trace_file))
         await self.__device.remove(target_folder)

@@ -106,7 +106,7 @@ class Reporter(object):
         start_time: float,
         data_dir: str,
         baseline: bool,
-    ) -> dict:
+    ) -> typing.Optional[dict]:
 
         # 🟡 ==== 数据查询 ====
         os.makedirs(
@@ -141,6 +141,8 @@ class Reporter(object):
             for _, row in group_stats.iterrows():
                 part_df = df[df["mode"] == (mode := row["mode"])]
                 score = Scores.analyze_mem_score(part_df, column="pss")
+                if score["trend"] in ["Invalid Data", "Insufficient Data"]:
+                    return logger.info(f"{mode}-Score: {score}")
                 logger.info(f"{mode}-Score: {score}")
 
                 # 🟡 ==== 评价部分 ====
@@ -169,6 +171,8 @@ class Reporter(object):
 
             # 🟨 ==== MEM 评分 ====
             score = Scores.analyze_mem_score(df, column="pss")
+            if score["trend"] in ["Invalid Data", "Insufficient Data"]:
+                return logger.info(f"Score: {score}")
             logger.info(f"Score: {score}")
 
             # 🟡 ==== MEM 绘图 ====
@@ -242,17 +246,20 @@ class Reporter(object):
         cur_data = team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__classify_rendering(
-                db, loop, executor, templater, memories, start_time, d, baseline
-            ) for d in cur_data)
+            *(self.__classify_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
+              for d in cur_data)
         )
+        if not (compilation := [c for c in compilation if c]):
+            return {}
 
         major_summary, minor_summary = [], []
 
+        # 🟡 ==== 内存基线 ====
         if baseline:
-            headline = self.align.base_headline
+            headline = self.align.get_headline("mem", "base")
             fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
             bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
+
             conclusion = [
                 ("FG-MAX HIGH", fg["FG-MAX"], self.align.fg_max),
                 ("FG-AVG HIGH", fg["FG-AVG"], self.align.fg_avg),
@@ -260,47 +267,40 @@ class Reporter(object):
                 ("BG-AVG HIGH", bg["BG-AVG"], self.align.bg_avg),
             ]
             high = [desc for desc, val, limit in conclusion if val and val > limit]
-            expiry = {
-                "text": "Fail" if high else "Pass", "class": "expiry-fail" if high else "expiry-pass"
-            }
 
+            # 🟡 ==== 主要容器 ====
             major_summary += [
                 {
-                    "label": "测试结论",
-                    "value": [expiry] + [{"text": c, "class": "highlight"} for c in high]
+                    "title": "测试结论",
+                    "class": "expiry-fail" if high else "expiry-pass",
+                    "value": ["Fail" if high else "Pass"]
                 },
                 {
-                    "label": "参考标准",
+                    "title": "参考标准",
+                    "class": "refer",
                     "value": [
-                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "refer"},
-                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "refer"},
-                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "refer"},
-                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "refer"},
-                    ]
-                },
-                {
-                    "label": "准出标准",
-                    "value": [
-                        {"text": self.align.base_criteria, "class": "criteria"}
+                        f"FG-MAX: {self.align.fg_max:.2f} MB", f"FG-AVG: {self.align.fg_avg:.2f} MB",
+                        f"BG-MAX: {self.align.bg_max:.2f} MB", f"BG-AVG: {self.align.bg_avg:.2f} MB"
                     ]
                 }
             ]
+            major_summary += self.align.get_sections("mem", "base")
+
+            # 🟡 ==== 次要容器 ====
             minor_summary += [
                 {"value": [f"{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
                 {"value": [f"{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
             ]
 
+        # 🟡 ==== 内存泄漏 ====
         else:
-            headline = self.align.leak_headline
+            headline = self.align.get_headline("mem", "leak")
             union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
-            major_summary += [
-                {
-                    "label": "准出标准",
-                    "value": [
-                        {"text": self.align.leak_criteria, "class": "criteria"}
-                    ]
-                }
-            ]
+
+            # 🟡 ==== 主要容器 ====
+            major_summary += self.align.get_sections("mem", "leak")
+
+            # 🟡 ==== 次要容器 ====
             minor_summary += [
                 {"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}
             ]
@@ -428,7 +428,10 @@ class Reporter(object):
         io_loc = None
 
         # 🟩 ==== GFX 评分 ====
-        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        if not (score := Scores.analyze_gfx_score(
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
+        )):
+            return {}
         logger.info(f"Score: {score}")
 
         # 🟢 ==== GFX 绘图 ====
@@ -508,26 +511,23 @@ class Reporter(object):
         cur_data = team_data["file"]
 
         compilation = await asyncio.gather(
-            *(self.__gfx_rendering(
-                db, loop, executor, templater, memories, start_time, d
-            ) for d in cur_data)
+            *(self.__gfx_rendering(db, loop, executor, templater, memories, start_time, d)
+              for d in cur_data)
         )
+        if not (compilation := [c for c in compilation if c]):
+            return {}
 
-        major_summary_items = [
-            {
-                "label": "准出标准",
-                "value": [
-                    {"text": self.align.gfx_criteria, "class": "criteria"}
-                ]
-            }
-        ]
+        headline = self.align.get_headline("gfx")
+        major_summary_items = self.align.get_sections("gfx")
+        minor_summary_items = []
 
         return {
             "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
             "time": cur_time,
-            "headline": self.align.gfx_headline,
+            "headline": headline,
             "major_summary_items": major_summary_items,
+            "minor_summary_items": minor_summary_items
         }
 
 

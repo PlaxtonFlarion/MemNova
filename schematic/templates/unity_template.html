@@ -138,9 +138,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             cursor: default;
         }
 
-        .message {
+        .message-main {
             display: flex;
             align-items: center;
+        }
+        .message-line {
+            display: flex;
+            flex-direction: column;
         }
 
         .schema {
@@ -166,11 +170,20 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .schema p {
             margin: 0;
         }
-        .schema-msg {
+        .schema-msg-main {
             display: flex;
         }
-        .schema-msg p {
+        .schema-msg-line {
+            display: flex;
+            flex-direction: column;
+            width: fit-content;
+            margin: 0 0 0 25px;
+        }
+        .schema-msg-main p {
             margin: 0 8px;
+        }
+        .schema-msg-line p {
+            margin: 5px;
         }
 
         /* 摘要容器内标签全局通用样式 */
@@ -568,17 +581,19 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     {% if major_summary_items %}
     <div class="summary-container">
         <div id="major-summary">
-            {% for item in major_summary_items %}
-            <div class="message">
-                {% if item.label %}
+            {% for section in major_summary_items %}
+            <div class="{{ 'message-line' if section.lines is defined else 'message-main' }}">
+                {% if section.title %}
                     <div class="schema">
-                        <p>{{ item.label }}</p>
+                        <p>{{ section.title }}</p>
                     </div>
                 {% endif %}
-                {% if item.value %}
-                    <div class="schema-msg">
-                        {% for i in item.value %}
-                            <p class="{{ i.class if i.class is defined else 'general' }}">{{ i.text }}</p>
+                {% if section.value %}
+                    <div class="{{ 'schema-msg-line' if section.lines is defined else 'schema-msg-main' }}">
+                        {% for i in section.value %}
+                            <p class="{{ section.class if section.class is defined else 'general' }}">
+                                {{ i }}
+                            </p>
                         {% endfor %}
                     </div>
                 {% endif %}

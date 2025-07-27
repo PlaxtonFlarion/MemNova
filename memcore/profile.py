@@ -16,32 +16,55 @@ from memcore.parser import Parser
 
 
 class Align(object):
-    """
-    配置管理类，用于加载、更新与访问 YAML 配置文件。
-
-    封装了默认配置结构，包括内存采样频率、测试标签、报告参数等，
-    并通过属性方式提供统一访问接口。同时支持类型容错转换与 YAML 写入。
-    """
+    """Align"""
 
     aligns = {
         "common": {
-            "label": "应用名称"
+            "label": "应用名称",
+            "mem_speed": 0.5,
+            "gfx_speed": 30.0,
         },
         "mem": {
-            "mem_speed": 0.5,
-            "fg_max": 0.0,
-            "fg_avg": 0.0,
-            "bg_max": 0.0,
-            "bg_avg": 0.0,
-            "base_headline": "标题",
-            "base_criteria": "准出标准",
-            "leak_headline": "标题",
-            "leak_criteria": "准出标准"
+            "base": {
+                "fg_max": 0.0,
+                "fg_avg": 0.0,
+                "bg_max": 0.0,
+                "bg_avg": 0.0,
+                "headline": "内存基线",
+                "sections": [
+                    {
+                        "title": "准出标准",
+                        "class": "criteria",
+                        "value": []
+                    }
+                ]
+            },
+            "leak": {
+                "headline": "内存泄露",
+                "sections": [
+                    {
+                        "title": "准出标准",
+                        "class": "criteria",
+                        "lines": True,
+                        "value": []
+                    }
+                ]
+            },
         },
         "gfx": {
-            "gfx_speed": 30.0,
-            "gfx_headline": "标题",
-            "gfx_criteria": "准出标准"
+            "headline": "流畅度",
+            "sections": [
+                {
+                    "title": "参考标准",
+                    "class": "refer",
+                    "value": []
+                },
+                {
+                    "title": "准出标准",
+                    "class": "criteria",
+                    "value": []
+                }
+            ]
         }
     }
 
@@ -56,94 +79,45 @@ class Align(object):
 
     @property
     def label(self):
-        """
-        当前测试任务的标签或名称，用于日志与报告标注。
-        """
         return self.aligns["common"]["label"]
 
     @property
     def mem_speed(self):
-        """
-        采样间隔时间（秒）。
-        """
-        return self.aligns["mem"]["mem_speed"]
-
-    @property
-    def fg_max(self):
-        """
-        报告中前台 PSS 峰值容忍阈。
-        """
-        return self.aligns["mem"]["fg_max"]
-
-    @property
-    def fg_avg(self):
-        """
-        报告中前台 PSS 平均值容忍阈。
-        """
-        return self.aligns["mem"]["fg_avg"]
-
-    @property
-    def bg_max(self):
-        """
-        报告中后台 PSS 峰值容忍阈。
-        """
-        return self.aligns["mem"]["bg_max"]
-
-    @property
-    def bg_avg(self):
-        """
-        报告中后台 PSS 平均值容忍阈。
-        """
-        return self.aligns["mem"]["bg_avg"]
-
-    @property
-    def base_headline(self):
-        """
-        报告页标题。
-        """
-        return self.aligns["mem"]["base_headline"]
-
-    @property
-    def base_criteria(self):
-        """
-        报告中的性能评估标准描述。
-        """
-        return self.aligns["mem"]["base_criteria"]
-
-    @property
-    def leak_headline(self):
-        """
-        报告页标题。
-        """
-        return self.aligns["mem"]["leak_headline"]
-
-    @property
-    def leak_criteria(self):
-        """
-        报告中的性能评估标准描述。
-        """
-        return self.aligns["mem"]["leak_criteria"]
+        return self.aligns["common"]["mem_speed"]
 
     @property
     def gfx_speed(self):
-        """
-        采样间隔时间（秒）。
-        """
-        return self.aligns["gfx"]["gfx_speed"]
+        return self.aligns["common"]["gfx_speed"]
 
     @property
-    def gfx_headline(self):
-        """
-        报告页标题。
-        """
-        return self.aligns["gfx"]["gfx_headline"]
+    def fg_max(self):
+        return self.aligns["mem"]["base"]["fg_max"]
 
     @property
-    def gfx_criteria(self):
-        """
-        报告中的性能评估标准描述。
-        """
-        return self.aligns["gfx"]["gfx_criteria"]
+    def fg_avg(self):
+        return self.aligns["mem"]["base"]["fg_avg"]
+
+    @property
+    def bg_max(self):
+        return self.aligns["mem"]["base"]["bg_max"]
+
+    @property
+    def bg_avg(self):
+        return self.aligns["mem"]["base"]["bg_avg"]
+
+    # ✅ 获取某个测试项的 headline 字符
+    def get_headline(self, section: str, subfield: str = None) -> str:
+        if subfield:
+            return self.aligns.get(section, {}).get(subfield, {}).get("headline", "")
+
+        return self.aligns.get(section, {}).get("headline", "")
+
+    # ✅ 获取某个测试项的 sections 列表
+    def get_sections(self, section: str, subfield: str = None) -> list:
+        if subfield:
+            return self.aligns.get(section, {}).get(subfield, {}).get("sections", [])
+
+        return self.aligns.get(section, {}).get("sections", [])
 
     @label.setter
     def label(self, value: typing.Any):
@@ -152,78 +126,47 @@ class Align(object):
     @mem_speed.setter
     def mem_speed(self, value: typing.Any):
         limit = min(10.0, max(Parser.parse_decimal(value), 0.1))
-        self.aligns["mem"]["mem_speed"] = limit
-
-    @fg_max.setter
-    def fg_max(self, value: typing.Any):
-        self.aligns["mem"]["fg_max"] = Parser.parse_decimal(value)
-
-    @fg_avg.setter
-    def fg_avg(self, value: typing.Any):
-        self.aligns["mem"]["fg_avg"] = Parser.parse_decimal(value)
-
-    @bg_max.setter
-    def bg_max(self, value: typing.Any):
-        self.aligns["mem"]["bg_max"] = Parser.parse_decimal(value)
-
-    @bg_avg.setter
-    def bg_avg(self, value: typing.Any):
-        self.aligns["mem"]["bg_avg"] = Parser.parse_decimal(value)
-
-    @base_headline.setter
-    def base_headline(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["mem"]["base_headline"] = value
-
-    @base_criteria.setter
-    def base_criteria(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["mem"]["base_criteria"] = value
-
-    @leak_headline.setter
-    def leak_headline(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["mem"]["leak_headline"] = value
-
-    @leak_criteria.setter
-    def leak_criteria(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["mem"]["leak_criteria"] = value
+        self.aligns["common"]["mem_speed"] = limit
 
     @gfx_speed.setter
     def gfx_speed(self, value: typing.Any):
         limit = min(60.0, max(Parser.parse_decimal(value), 5.0))
-        self.aligns["gfx"]["gfx_speed"] = limit
+        self.aligns["common"]["gfx_speed"] = limit
 
-    @gfx_headline.setter
-    def gfx_headline(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["gfx"]["gfx_headline"] = value
+    @fg_max.setter
+    def fg_max(self, value: typing.Any):
+        self.aligns["mem"]["base"]["fg_max"] = Parser.parse_decimal(value)
 
-    @gfx_criteria.setter
-    def gfx_criteria(self, value: typing.Any):
-        if Parser.is_valid(value):
-            self.aligns["gfx"]["gfx_criteria"] = value
+    @fg_avg.setter
+    def fg_avg(self, value: typing.Any):
+        self.aligns["mem"]["base"]["fg_avg"] = Parser.parse_decimal(value)
+
+    @bg_max.setter
+    def bg_max(self, value: typing.Any):
+        self.aligns["mem"]["base"]["bg_max"] = Parser.parse_decimal(value)
+
+    @bg_avg.setter
+    def bg_avg(self, value: typing.Any):
+        self.aligns["mem"]["base"]["bg_avg"] = Parser.parse_decimal(value)
 
     async def load_align(self) -> None:
-        """
-        加载 YAML 配置文件并更新当前配置项。
-
-        如果指定的配置文件存在且格式正确，则逐项读取其中内容并设置为当前属性值。
-        若文件不存在或读取失败（语法错误等），则自动写入默认配置并覆盖原文件。
-        """
         try:
             user_align = await FileAssist.read_yaml(self.align_file)
-            for key, value in self.aligns.items():
-                for k, v in value.items():
-                    setattr(self, k, user_align.get(key, {}).get(k, v))
+
+            # 校验并设置三个字段，触发 setter
+            self.label = user_align.get("common", {}).get("label", self.label)
+            self.mem_speed = user_align.get("common", {}).get("mem_speed", self.mem_speed)
+            self.gfx_speed = user_align.get("common", {}).get("gfx_speed", self.gfx_speed)
+
+            # 其余字段直接更新 aligns 内容（不触发 setter）
+            for section in list(self.aligns.keys())[1:]:
+                if section in user_align:
+                    self.aligns[section].update(user_align[section])
+
         except (FileNotFoundError, yaml.YAMLError):
             await self.dump_align()
 
     async def dump_align(self) -> None:
-        """
-        将当前配置结构写入 YAML 文件，自动格式化并支持中文。
-        """
         os.makedirs(os.path.dirname(self.align_file), exist_ok=True)
         await FileAssist.dump_yaml(self.align_file, self.aligns)
 
