@@ -32,7 +32,6 @@ from jinja2 import (
 from concurrent.futures import ProcessPoolExecutor
 from engine.tinker import Period
 from memcore.cubicle import Cubicle
-from memcore.design import Design
 from memcore.profile import Align
 from memnova.painter import Painter
 from memnova.scores import Scores
@@ -63,7 +62,7 @@ class Reporter(object):
         self.background_tasks: list = []
 
     @staticmethod
-    async def make_report(template: str, destination: str, *args, **kwargs) -> None:
+    async def make_report(template: str, destination: str, *args, **kwargs) -> str:
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -79,7 +78,7 @@ class Reporter(object):
             await f.write(html)
             logger.info(html_file)
 
-        Design.build_file_tree(html_file)
+        return html_file
 
     # Workflow: ======================== MEM & I/O ========================
 
