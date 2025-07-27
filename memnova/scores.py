@@ -22,7 +22,7 @@ class Scores(object):
     @staticmethod
     def analyze_mem_score(
         df: "pd.DataFrame",
-        column: str,
+        column: str = "pss",
         r2_threshold: float = 0.5,
         slope_threshold: float = 0.01
     ) -> dict:
@@ -38,15 +38,21 @@ class Scores(object):
             "color": "#BBBBBB"
         }
 
+        df = df.copy()
+
         if column not in df or column.lower() not in ("pss", "rss", "uss") or df[column].isnull().any():
             return {"trend": "Invalid Data"} | result
 
         if len(values := df[column].to_numpy()) < 10:
             return {"trend": "Insufficient Data"} | result
 
+        # 🟨 ==== 基础统计 ====
+        avg_val = values.mean()
+        max_val = values.max()
+        min_val = values.min()
+
         # 🟨 ==== 抖动指数 ====
-        diffs = np.diff(values)
-        jitter_index = round(float(np.std(diffs)) / float(np.mean(values)) + 1e-6, 4)
+        jitter_index = round(values.std() / (avg_val or 1e-6), 4)
 
         # 🟨 ==== 线性拟合 ====
         x = np.arange(len(values))
@@ -72,17 +78,17 @@ class Scores(object):
             color = "#FFA500"
             score = 0.3
 
-        # 🟨 ==== Score/Level ====
+        # 🟨 ==== 综合输出 ====
         return {
             "trend": trend,
             "trend_score": score,
             "jitter_index": jitter_index,
             "r_squared": r_squared,
             "slope": slope,
-            "avg": values.mean(),
-            "max": values.max(),
-            "min": values.min(),
-            "color": color
+            "avg": round(avg_val, 2),
+            "max": round(max_val, 2),
+            "min": round(min_val, 2),
+            "color": color,
         }
 
     # Workflow: ======================== GFX ========================
@@ -205,9 +211,9 @@ class Scores(object):
     @staticmethod
     def analyze_io_score(
         df: "pd.DataFrame",
-        swap_threshold: int = 10240,
         rw_peak_threshold: int = 102400,
-        idle_threshold=10
+        idle_threshold=10,
+        swap_threshold: int = 10240
     ) -> dict:
 
         result = {
@@ -227,11 +233,13 @@ class Scores(object):
             "grade": "S"
         }
 
-        tags, penalties = [], []
-
         df = df.copy()
+
         for col in ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]:
             df[col] = df[col].astype(float).diff().fillna(0).clip(lower=0)
+
+        # 🟦 ==== 标签统计 ====
+        tags, penalties = [], []
 
         # 🟦 ==== RW峰值与抖动 ====
         rw_vals = pd.concat([df["read_bytes"], df["write_bytes"]])
@@ -242,7 +250,7 @@ class Scores(object):
         if rw_peak > rw_peak_threshold:
             penalties.append(15)
             tags.append("rw_peak_high")
-            result["risk"].append("RW高峰")
+            result["risk"].append("RW Peak High")
 
         # 🟦 ==== 爆发段 ====
         rw_burst_ratio = (rw_vals > (rw_vals.mean() + rw_vals.std())).sum() / len(rw_vals)
@@ -250,7 +258,7 @@ class Scores(object):
         if rw_burst_ratio > 0.1:
             penalties.append(10)
             tags.append("rw_burst")
-            result["risk"].append("RW爆发")
+            result["risk"].append("RW Burst")
 
         # 🟦 ==== Idle段 ====
         idle_mask = ((df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1)) < idle_threshold)
@@ -259,7 +267,7 @@ class Scores(object):
         if idle_ratio > 0.4:
             penalties.append(10)
             tags.append("rw_idle")
-            result["risk"].append("IO异常空闲")
+            result["risk"].append("IO Idle")
 
         # 🟦 ==== 系统调用突变 ====
         cr_burst = (df["syscr"] > df["syscr"].mean() + 2 * df["syscr"].std()).sum()
@@ -269,22 +277,22 @@ class Scores(object):
         if sys_burst_events > 3:
             penalties.append(5)
             tags.append("sys_burst")
-            result["risk"].append("系统调用爆发")
+            result["risk"].append("Sys Burst")
 
-        # 🟦 ==== Swap ====
+        # 🟦 ==== Swap爆发 ====
         swap_vals = df["swap"].astype(float) * 1024
         swap_max = swap_vals.max()
         result["swap_max_kb"] = round(swap_max, 2)
         if swap_max > swap_threshold:
             penalties.append(20)
             tags.append("swap_burst")
-            result["risk"].append("Swap爆发")
+            result["risk"].append("Swap Burst")
         swap_burst_mask = (swap_vals > swap_threshold)
         swap_burst_ratio = swap_burst_mask.sum() / len(df)
         result["swap_burst_ratio"] = round(swap_burst_ratio, 2)
         result["swap_burst_count"] = swap_burst_mask.sum()
 
-        # 🟦 ==== Score/Level ====
+        # 🟦 ==== 综合输出 ====
         score = max(100 - sum(penalties), 0)
         result["score"], result["tags"] = score, tags
 
