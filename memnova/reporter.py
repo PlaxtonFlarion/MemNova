@@ -163,31 +163,6 @@ class Reporter(object):
                     }
                 ]
 
-            # gs, all_ok = group_stats.set_index("mode"), True
-            # if "FG" in gs.index:
-            #     all_ok &= gs.loc["FG", "max_pss"] < self.align.fg_max
-            #     all_ok &= gs.loc["FG", "avg_pss"] < self.align.fg_avg
-            # if "BG" in gs.index:
-            #     all_ok &= gs.loc["BG", "max_pss"] < self.align.bg_max
-            #     all_ok &= gs.loc["BG", "avg_pss"] < self.align.bg_avg
-            #
-            # evaluate = [
-            #     {
-            #         "fields": [
-            #             {"text": "Pass" if all_ok else "Fail", "class": "expiry-pass" if all_ok else "expiry-fail"}
-            #         ]
-            #     }
-            # ]
-            #
-            # tag_lines = [
-            #     {
-            #         "fields": [
-            #             {"label": f"{row['mode']}-MAX: ", "value": f"{row['max_pss']:.2f}", "unit": "MB"},
-            #             {"label": f"{row['mode']}-AVG: ", "value": f"{row['avg_pss']:.2f}", "unit": "MB"}
-            #         ]
-            #     } for _, row in group_stats.iterrows()
-            # ]
-
         # 🟡 ==== 内存泄漏 ====
         else:
             trace_loc, leak_loc, gfx_loc = None, Path(group) / f"{head}_leak.png", None
@@ -272,15 +247,7 @@ class Reporter(object):
             ) for d in cur_data)
         )
 
-        major_summary = [
-            {
-                "label": "测试时间",
-                "value": [
-                    {"text": cur_time, "class": "time"}
-                ]
-            }
-        ]
-        minor_summary = []
+        major_summary, minor_summary = [], []
 
         if baseline:
             headline = self.align.base_headline
@@ -341,6 +308,7 @@ class Reporter(object):
         return {
             "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
+            "time": cur_time,
             "headline": headline,
             "major_summary_items": major_summary,
             "minor_summary_items": minor_summary,
@@ -547,12 +515,6 @@ class Reporter(object):
 
         major_summary_items = [
             {
-                "label": "测试时间",
-                "value": [
-                    {"text": cur_time or "Unknown", "class": "time"}
-                ]
-            },
-            {
                 "label": "准出标准",
                 "value": [
                     {"text": self.align.gfx_criteria, "class": "criteria"}
@@ -563,6 +525,7 @@ class Reporter(object):
         return {
             "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
+            "time": cur_time,
             "headline": self.align.gfx_headline,
             "major_summary_items": major_summary_items,
         }
