@@ -17,7 +17,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
     <style>
-        /* 标题 */
+        
         #headline-container {
             display: flex;
             justify-content: center;
@@ -40,15 +40,15 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             cursor: grab;
         }
 
+        /* 标题 */
         #headline-container {
             display: flex;
             justify-content: center;
         }
-
         #headline {
             font-size: 2.2em;
             color: #2f2f2f;
-            padding: 14px 28px;
+            padding: 10px 30px;
             border-radius: 16px;
             background: linear-gradient(135deg, #f7f7f7 0%, #e3e3e3 100%);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
@@ -58,19 +58,18 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             transition: all 0.3s ease;
             letter-spacing: 0.4px;
         }
-
         #headline:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
             cursor: grab;
         }
 
-
         #time-container {
+            max-width: 280px;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: -10px auto 24px auto;
+            margin: 5px auto 30px auto;
             padding: 10px 22px;
             border-radius: 30px;
             background: linear-gradient(135deg, #fafafa 0%, #e4e4e4 100%);
@@ -79,22 +78,18 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             font-size: 15px;
             color: #3a3a3a;
             font-weight: 500;
-            max-width: 260px;
             letter-spacing: 0.3px;
             transition: all 0.3s ease;
         }
-
         #time-container:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         }
-
         .time-value {
             font-style: italic;
             position: relative;
-            padding-left: 22px;
+            padding-left: 30px;
         }
-
         .time-value::before {
             content: "🕐";
             position: absolute;
@@ -120,11 +115,9 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             opacity: 0;
             animation: fadeSlideIn 0.6s ease forwards;
         }
-
         #headline {
             animation-delay: 0.1s;
         }
-
         #time-container {
             animation-delay: 0.3s;
         }
