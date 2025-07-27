@@ -429,8 +429,7 @@ class Reporter(object):
 
         # 🟢 ==== GFX Painter ====
         draw_future = loop.run_in_executor(
-            executor,
-            Painter.draw_gfx_metrics,
+            executor, Painter.draw_gfx_metrics,
             raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
         self.background_tasks.append(draw_future)
