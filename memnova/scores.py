@@ -253,7 +253,8 @@ class Scores(object):
             result["risk"].append("RW Peak High")
 
         # 🟦 ==== 爆发段 ====
-        rw_burst_ratio = (rw_vals > (rw_vals.mean() + rw_vals.std())).sum() / len(rw_vals)
+        rw_burst_threshold = rw_vals.mean() + rw_vals.std()
+        rw_burst_ratio = (rw_vals > rw_burst_threshold).mean()
         result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
         if rw_burst_ratio > 0.1:
             penalties.append(10)
@@ -262,7 +263,7 @@ class Scores(object):
 
         # 🟦 ==== Idle段 ====
         idle_mask = ((df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1)) < idle_threshold)
-        idle_ratio = idle_mask.sum() / len(df)
+        idle_ratio = idle_mask.mean()
         result["rw_idle_ratio"] = round(idle_ratio, 2)
         if idle_ratio > 0.4:
             penalties.append(10)
@@ -288,8 +289,7 @@ class Scores(object):
             tags.append("swap_burst")
             result["risk"].append("Swap Burst")
         swap_burst_mask = (swap_vals > swap_threshold)
-        swap_burst_ratio = swap_burst_mask.sum() / len(df)
-        result["swap_burst_ratio"] = round(swap_burst_ratio, 2)
+        result["swap_burst_ratio"] = round(swap_burst_mask.mean(), 2)
         result["swap_burst_count"] = swap_burst_mask.sum()
 
         # 🟦 ==== 综合输出 ====

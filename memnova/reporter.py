@@ -435,9 +435,7 @@ class Reporter(object):
         self.background_tasks.append(draw_future)
 
         # 🟩 ==== GFX 评分 ====
-        score = Scores.analyze_gfx_score(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-        )
+        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
         evaluate = [
             {
                 "fields": [

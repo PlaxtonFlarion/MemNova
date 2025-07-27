@@ -380,11 +380,11 @@ class Templater(object):
         )
         p.line(
             [x_start, x_close], [y_avg, y_avg],
-            line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg Duration: {y_avg:.1f}ms"
+            line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg: {y_avg:.1f}ms"
         )
         p.line(
             [x_start, x_close], [y_max, y_max],
-            line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max Duration: {y_max:.1f}ms"
+            line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max: {y_max:.1f}ms"
         )
 
         # 🟢 ==== Quad 绘制背景区间 ====
