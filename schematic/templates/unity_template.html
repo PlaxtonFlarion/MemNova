@@ -554,7 +554,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </style>
 </head>
 <body>
-    <!--标题-->
+    <!-- 标题 -->
     <div id="headline-container">
         <h1 id="headline">{{ headline }}</h1>
     </div>
@@ -564,7 +564,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         <span class="time-value">{{ time }}</span>
     </div>
 
-    <!--主摘要信息显示-->
+    <!-- 主摘要信息显示 -->
     {% if major_summary_items %}
     <div class="summary-container">
         <div id="major-summary">
@@ -588,7 +588,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </div>
     {% endif %}
 
-    <!--副摘要信息显示-->
+    <!-- 副摘要信息显示 -->
     {% if minor_summary_items %}
     <div class="summary-container">
         <div id="minor-summary">
@@ -608,7 +608,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </div>
     {% endif %}
 
-    <!--报告信息-->
+    <!-- 报告信息 -->
     {% for res in report_list %}
     <div class="information">
         {% if res.subtitle and res.subtitle_link %}
@@ -647,10 +647,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     </div>
     {% endfor %}
 
-    <!--提示信息-->
+    <!-- 提示信息 -->
     <div id="notification"></div>
 
-    <!--页面加载-->
+    <!-- 页面加载 -->
     <div class="loading-overlay" id="loading">
         <div class="bar-container">
             <div class="bar"></div>
