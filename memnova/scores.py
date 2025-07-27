@@ -40,7 +40,7 @@ class Scores(object):
 
         df = df.copy()
 
-        if column not in df or column.lower() not in ("pss", "rss", "uss") or df[column].isnull().any():
+        if column not in df or df[column].isnull().any():
             return {"trend": "Invalid Data"} | result
 
         if len(values := df[column].to_numpy()) < 10:
@@ -99,7 +99,7 @@ class Scores(object):
         roll_ranges: list[dict],
         drag_ranges: list[dict],
         jank_ranges: list[dict],
-        fps_key: str
+        fps_key: str = "fps_app"
     ) -> typing.Optional[dict]:
 
         if (total_frames := len(frames)) < 5:
@@ -111,18 +111,11 @@ class Scores(object):
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
             return None
 
-        # 🟩 ==== 最低帧 ====
+        # 🟩 ==== 基础统计 ====
         min_fps = round(min(fps_values), 2)
-
-        # 🟩 ==== 平均帧 ====
         avg_fps = round(sum(fps_values) / len(fps_values), 2)
-
-        # 🟩 ==== 掉帧率 ====
         jnk_fps = round(sum(1 for f in frames if f.get("is_jank")) / total_frames * 100, 2)
-
-        # 🟩 ==== 95分位帧率 ====
         p95_fps = round(float(np.percentile(fps_values, 95)), 2)
-
         statistical = {
             "min_fps": min_fps, "avg_fps": avg_fps, "jnk_fps": jnk_fps, "p95_fps": p95_fps,
         }
