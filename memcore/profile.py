@@ -40,8 +40,8 @@ class Align(object):
         },
         "gfx": {
             "gfx_speed": 30.0,
-            "headline": "标题",
-            "criteria": "准出标准"
+            "gfx_headline": "标题",
+            "gfx_criteria": "准出标准"
         }
     }
 
@@ -136,14 +136,14 @@ class Align(object):
         """
         报告页标题。
         """
-        return self.aligns["gfx"]["headline"]
+        return self.aligns["gfx"]["gfx_headline"]
 
     @property
     def gfx_criteria(self):
         """
         报告中的性能评估标准描述。
         """
-        return self.aligns["gfx"]["criteria"]
+        return self.aligns["gfx"]["gfx_criteria"]
 
     @label.setter
     def label(self, value: typing.Any):
@@ -198,12 +198,12 @@ class Align(object):
     @gfx_headline.setter
     def gfx_headline(self, value: typing.Any):
         if Parser.is_valid(value):
-            self.aligns["gfx"]["headline"] = value
+            self.aligns["gfx"]["gfx_headline"] = value
 
     @gfx_criteria.setter
     def gfx_criteria(self, value: typing.Any):
         if Parser.is_valid(value):
-            self.aligns["gfx"]["criteria"] = value
+            self.aligns["gfx"]["gfx_criteria"] = value
 
     async def load_align(self) -> None:
         """
