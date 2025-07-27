@@ -147,8 +147,8 @@ class Reporter(object):
                 evaluate += [
                     {
                         "fields": [
-                            {"text": f"{mode}-Trend: {score['trend']}", "class": "refer"},
-                            {"text": f"{mode}-Shake: {score['jitter_index']}", "class": "refer"}
+                            {"text": f"{mode}-Trend: {score['trend']}", "class": "general"},
+                            {"text": f"{mode}-Shake: {score['jitter_index']}", "class": "general"}
                         ]
                     }
                 ]
@@ -182,14 +182,14 @@ class Reporter(object):
             evaluate = [
                 {
                     "fields": [
-                        {"text": f"Trend: {score['trend']}", "class": "refer"},
-                        {"text": f"Score: {score['trend_score']}", "class": "refer"}
+                        {"text": f"Trend: {score['trend']}", "class": "general"},
+                        {"text": f"Score: {score['trend_score']}", "class": "general"}
                     ]
                 },
                 {
                     "fields": [
-                        {"text": f"Shake: {score['jitter_index']}", "class": "refer"},
-                        {"text": f"Slope: {score['slope']}", "class": "refer"}
+                        {"text": f"Shake: {score['jitter_index']}", "class": "general"},
+                        {"text": f"Slope: {score['slope']}", "class": "general"}
                     ]
                 }
             ]
@@ -272,10 +272,10 @@ class Reporter(object):
                 {
                     "label": "参考标准",
                     "value": [
-                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "max-threshold"},
-                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "avg-threshold"},
-                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "max-threshold"},
-                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "avg-threshold"},
+                        {"text": f"FG-MAX: {self.align.fg_max:.2f} MB", "class": "refer"},
+                        {"text": f"FG-AVG: {self.align.fg_avg:.2f} MB", "class": "refer"},
+                        {"text": f"BG-MAX: {self.align.bg_max:.2f} MB", "class": "refer"},
+                        {"text": f"BG-AVG: {self.align.bg_avg:.2f} MB", "class": "refer"},
                     ]
                 },
                 {
@@ -443,14 +443,14 @@ class Reporter(object):
         evaluate = [
             {
                 "fields": [
-                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "refer"},
-                    {"text": f"Level: {score['level']}", "class": "refer"}
+                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "general"},
+                    {"text": f"Level: {score['level']}", "class": "general"}
                 ]
             },
             {
                 "fields": [
-                    {"text": f"P95: {score['p95_fps']} FPS", "class": "refer"},
-                    {"text": f"JNK: {score['jnk_fps']} %", "class": "refer"}
+                    {"text": f"P95: {score['p95_fps']} FPS", "class": "general"},
+                    {"text": f"JNK: {score['jnk_fps']} %", "class": "general"}
                 ]
             }
         ]
