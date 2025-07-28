@@ -115,7 +115,7 @@ class Memrix(object):
         self.memories.update(
             {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
             if self.storm else
-            {"MSG": msg, "ERR": "*", "ANA": "*"}
+            {"MSG": msg, "ANA": "*", "ERR": "*"}
         )
         logger.info(msg)
 
