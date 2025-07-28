@@ -28,10 +28,12 @@ class Manage(object):
             "model": "ro.product.model",
             "release": "ro.build.version.release"
         }
+        
         cmd = [self.adb, "-s", serial, "shell", "getprop"]
         response = await asyncio.gather(
             *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
         )
+        
         return {k: v or "N/A" for k, v in zip(keys, response)}
 
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
