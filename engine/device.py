@@ -26,12 +26,13 @@ class Device(object):
 
     __facilities: typing.Optional[typing.Union["u2.Device", "u2.UiObject"]] = None
 
-    def __init__(self, adb: str, serial: str):
+    def __init__(self, adb: str, serial: str, *_, **kwargs):
         self.__initial = [adb, "-s", serial]
         self.serial = serial
+        self.device_info = kwargs
 
     def __str__(self):
-        return f"<Device serial={self.serial}>"
+        return f"<Device serial={self.serial} info={self.device_info}>"
 
     __repr__ = __str__
 
