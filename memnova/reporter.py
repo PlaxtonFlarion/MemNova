@@ -143,6 +143,10 @@ class Reporter(object):
                 score = Scores.analyze_mem_score(part_df, column="pss")
                 logger.info(f"{mode}-Score: {score}")
 
+                # 🟡 ==== 数据无效 ====
+                if not row["count"] or pd.isna(row["avg_pss"]):
+                    continue
+
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
                     {
