@@ -9,7 +9,6 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import re
 import math
 import time
 import typing
@@ -668,10 +667,10 @@ class Design(object):
         )
 
         def get_theme_by_mod() -> list:
-            if re.search(r"FORE", prev) or re.search(r"BACK", prev):
-                return list(random.choice(color_themes).values())
-
-            return list(default_theme.values())
+            if prev == dt:
+                return list(default_theme.values())
+            
+            return list(random.choice(color_themes).values())
 
         def make_header() -> str:
             head = f"[bold {dc}][{const.APP_DESC}::"
