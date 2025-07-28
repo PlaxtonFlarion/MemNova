@@ -107,18 +107,10 @@ class Memrix(object):
         self.__remote = value if isinstance(value, dict) else {}
 
     def task_clean_up(self, *_, **__) -> None:
-        if self.storm:
-            msg = f"Extract data {self.file_insert}"
-        else:
-            msg = f"Shutting down background operations"
-
-        self.memories.update(
-            {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
-            if self.storm else
-            {"MSG": msg, "ANA": "*", "ERR": "*"}
-        )
-        logger.info(msg)
-
+        self.memories.update({
+            "MSG": (msg := "Finishing up ...")
+        })
+        logger.info(msg)       
         self.task_close_event.set()
 
     async def watcher(self) -> None:
@@ -195,6 +187,13 @@ class Memrix(object):
                     await task
                 except asyncio.CancelledError:
                     logger.info(f"Cancelled: {task.get_name()}")
+
+        msg = f"{self.file_insert} records. Zero point."
+        self.memories.update(
+            {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
+            if self.storm else
+            {"MSG": msg, "ANA": "*", "ERR": "*"}
+        )
 
         if self.animation_task:
             try:
