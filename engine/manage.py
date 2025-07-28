@@ -28,7 +28,7 @@ class Manage(object):
             "model": "ro.product.model",
             "release": "ro.build.version.release"
         }
-        cmd = [self.adb, "-s", serial, "getprop"]
+        cmd = [self.adb, "-s", serial, "shell", "getprop"]
         response = await asyncio.gather(
             *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
         )
