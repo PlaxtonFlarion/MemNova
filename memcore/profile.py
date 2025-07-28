@@ -26,12 +26,15 @@ class Align(object):
         },
         "mem": {
             "base": {
-                "fg_max": 0.0,
-                "fg_avg": 0.0,
-                "bg_max": 0.0,
-                "bg_avg": 0.0,
                 "headline": "内存基线",
                 "sections": [
+                    {
+                        "title": "参考标准",
+                        "class": "refer",
+                        "value": [
+                            "FG-MAX: 0.00 MB", "FG-AVG: 0.00 MB", "BG-MAX: 0.00 MB", "BG-AVG: 0.00 MB"
+                        ]
+                    },
                     {
                         "title": "准出标准",
                         "class": "criteria",
@@ -43,28 +46,40 @@ class Align(object):
                 "headline": "内存泄露",
                 "sections": [
                     {
+                        "title": "参考标准",
+                        "class": "refer",
+                        "value": []
+                    },
+                    {
                         "title": "准出标准",
                         "class": "criteria",
-                        "lines": True,
                         "value": []
                     }
                 ]
             },
         },
         "gfx": {
-            "headline": "流畅度",
-            "sections": [
-                {
-                    "title": "参考标准",
-                    "class": "refer",
-                    "value": []
-                },
-                {
-                    "title": "准出标准",
-                    "class": "criteria",
-                    "value": []
-                }
-            ]
+            "base": {
+                "headline": "流畅度",
+                "sections": [
+                    {
+                        "title": "参考标准",
+                        "class": "refer",
+                        "value": [
+                            "平均 FPS ≥ 55",
+                            "最大连续掉帧段 ≤ 2",
+                            "单帧耗时 > 50ms 占比 ≤ 3%",
+                            "滑动段平均帧率 ≥ 50",
+                            "Trace 文件中无明显主线程阻塞"
+                        ]
+                    },
+                    {
+                        "title": "准出标准",
+                        "class": "criteria",
+                        "value": []
+                    }
+                ]
+            }
         }
     }
 
@@ -88,22 +103,6 @@ class Align(object):
     @property
     def gfx_speed(self):
         return self.aligns["common"]["gfx_speed"]
-
-    @property
-    def fg_max(self):
-        return self.aligns["mem"]["base"]["fg_max"]
-
-    @property
-    def fg_avg(self):
-        return self.aligns["mem"]["base"]["fg_avg"]
-
-    @property
-    def bg_max(self):
-        return self.aligns["mem"]["base"]["bg_max"]
-
-    @property
-    def bg_avg(self):
-        return self.aligns["mem"]["base"]["bg_avg"]
 
     # ✅ 获取某个测试项的 headline 字符
     def get_headline(self, section: str, subfield: str = None) -> str:
@@ -133,32 +132,14 @@ class Align(object):
         limit = min(60.0, max(Parser.parse_decimal(value), 5.0))
         self.aligns["common"]["gfx_speed"] = limit
 
-    @fg_max.setter
-    def fg_max(self, value: typing.Any):
-        self.aligns["mem"]["base"]["fg_max"] = Parser.parse_decimal(value)
-
-    @fg_avg.setter
-    def fg_avg(self, value: typing.Any):
-        self.aligns["mem"]["base"]["fg_avg"] = Parser.parse_decimal(value)
-
-    @bg_max.setter
-    def bg_max(self, value: typing.Any):
-        self.aligns["mem"]["base"]["bg_max"] = Parser.parse_decimal(value)
-
-    @bg_avg.setter
-    def bg_avg(self, value: typing.Any):
-        self.aligns["mem"]["base"]["bg_avg"] = Parser.parse_decimal(value)
-
     async def load_align(self) -> None:
         try:
             user_align = await FileAssist.read_yaml(self.align_file)
 
-            # 校验并设置三个字段，触发 setter
             self.label = user_align.get("common", {}).get("label", self.label)
             self.mem_speed = user_align.get("common", {}).get("mem_speed", self.mem_speed)
             self.gfx_speed = user_align.get("common", {}).get("gfx_speed", self.gfx_speed)
 
-            # 其余字段直接更新 aligns 内容（不触发 setter）
             for section in list(self.aligns.keys())[1:]:
                 if section in user_align:
                     self.aligns[section].update(user_align[section])

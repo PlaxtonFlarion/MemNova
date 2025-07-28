@@ -28,13 +28,13 @@ class Manage(object):
             "model": "ro.product.model",
             "release": "ro.build.version.release"
         }
-        
+
         cmd = [self.adb, "-s", serial, "shell", "getprop"]
         response = await asyncio.gather(
             *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
         )
-        
-        return {k: v or "N/A" for k, v in zip(keys, response)}
+
+        return {k: v or "N/A" for k, v in zip(keys, response)} | {"serial": serial}
 
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
@@ -44,7 +44,7 @@ class Manage(object):
                 return Design.Doc.log(f"[#FF5F00]设备连接超时 ...")
 
             result = await Terminal.cmd_line([self.adb, "devices"])
-            
+
             device_dict = {}
             for i, line in enumerate(result.splitlines()[1:], start=1):
                 if not (parts := line.strip().split()):

@@ -80,6 +80,24 @@ class Reporter(object):
 
         return html_file
 
+    async def begin_render(self, team_data: dict) -> tuple:
+        cur_time = team_data.get(
+            "time", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
+        )
+
+        cur_mark = (list(mark.values()) if isinstance(
+            mark, dict
+        ) else None) if (mark := team_data.get("mark")) else None
+
+        cur_data = team_data["file"]
+
+        return cur_time, cur_mark, cur_data
+
+    async def final_render(self, memories: dict, start_time: float) -> None:
+        memories.update({"MSG": f"Wait background tasks"})
+        await asyncio.gather(*self.background_tasks)
+        memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
+
     # Workflow: ======================== MEM & I/O ========================
 
     @staticmethod
@@ -96,7 +114,16 @@ class Reporter(object):
                 return round(float(np.mean(vals)), 2)
         return None
 
-    async def __classify_rendering(
+    @staticmethod
+    def mean_score_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
+        vals = [
+            float(item[group][field])
+            for item in compilation
+            if field in item and item[field] not in (None, "", "nan")
+        ]
+        return round(float(np.mean(vals)), 2) if vals else None
+
+    async def __mem_rendering(
         self,
         db: "aiosqlite.Connection",
         loop: "asyncio.AbstractEventLoop",
@@ -118,10 +145,10 @@ class Reporter(object):
         )
         if not mem_data:
             return logger.info(f"MEM data not found for {data_dir}")
-        title, timestamp = joint
+        title, timestamp, serial, brand, model, release = joint
 
         df = pd.DataFrame(mem_data)
-        
+
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = None
         leak_loc = None
@@ -136,20 +163,22 @@ class Reporter(object):
 
         # 🟡 ==== 内存基线 ====
         if baseline:
-            # 🟡 ==== 分组统计 ====
             evaluate, tag_lines, group_stats = [], [], (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
                 .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
             )
 
+            # 🟡 ==== 分组统计 ====
+            score_group = {}
             for _, row in group_stats.iterrows():
                 part_df = df[df["mode"] == (mode := row["mode"])]
                 score = Scores.analyze_mem_score(part_df, column="pss")
                 logger.info(f"{mode}-Score: {score}")
 
-                # 🟡 ==== 数据无效 ====
+                # 🟡 ==== 数据校验 ====
                 if not row["count"] or pd.isna(row["avg_pss"]):
                     continue
+                score_group[mode] = score
 
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
@@ -178,6 +207,7 @@ class Reporter(object):
             # 🟨 ==== MEM 评分 ====
             score = Scores.analyze_mem_score(df, column="pss")
             logger.info(f"Score: {score}")
+            score_group = {"MEM": score}
 
             # 🟡 ==== MEM 绘图 ====
             paint_func = partial(Painter.draw_mem_metrics, **score)
@@ -227,8 +257,11 @@ class Reporter(object):
         logger.info(msg)
 
         return {
-            "subtitle": title or data_dir,
-            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
+            **score_group,
+            "subtitle": {
+                "text": title or data_dir,
+                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name)
+            },
             "evaluate": evaluate,
             "tags": tag_lines
         }
@@ -246,52 +279,40 @@ class Reporter(object):
         *_
     ) -> dict:
 
-        cur_time = team_data.get("time", time.strftime("%Y-%m-%d %H:%M:%S"))
-        cur_data = team_data["file"]
+        cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
-            *(self.__classify_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
+            *(self.__mem_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
               for d in cur_data)
         )
         if not (compilation := [c for c in compilation if c]):
             return {}
 
-        major_summary, minor_summary = [], []
+        major_summary_items = [
+            {"title": "基础信息", "class": "general", "value": cur_mark}
+        ] if cur_mark else []
+        minor_summary_items = []
 
         # 🟡 ==== 内存基线 ====
         if baseline:
             headline = self.align.get_headline("mem", "base")
-            fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
-            bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
+            # fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
+            # bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
 
-            conclusion = [
-                ("FG-MAX HIGH", fg["FG-MAX"], self.align.fg_max),
-                ("FG-AVG HIGH", fg["FG-AVG"], self.align.fg_avg),
-                ("BG-MAX HIGH", bg["BG-MAX"], self.align.bg_max),
-                ("BG-AVG HIGH", bg["BG-AVG"], self.align.bg_avg),
-            ]
-            high = [desc for desc, val, limit in conclusion if val and val > limit]
+            fg = {
+                k: self.mean_score_field(compilation, group, field)
+                for k, group, field in [("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg")]
+            }
+            bg = {
+                k: self.mean_score_field(compilation, group, field)
+                for k, group, field in [("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")]
+            }
 
             # 🟡 ==== 主要容器 ====
-            major_summary += [
-                {
-                    "title": "测试结论",
-                    "class": "expiry-fail" if high else "expiry-pass",
-                    "value": ["Fail" if high else "Pass"]
-                },
-                {
-                    "title": "参考标准",
-                    "class": "refer",
-                    "value": [
-                        f"FG-MAX: {self.align.fg_max:.2f} MB", f"FG-AVG: {self.align.fg_avg:.2f} MB",
-                        f"BG-MAX: {self.align.bg_max:.2f} MB", f"BG-AVG: {self.align.bg_avg:.2f} MB"
-                    ]
-                }
-            ]
-            major_summary += self.align.get_sections("mem", "base")
+            major_summary_items += self.align.get_sections("mem", "base")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary += [
+            minor_summary_items += [
                 {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
                 {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
             ]
@@ -299,23 +320,29 @@ class Reporter(object):
         # 🟡 ==== 内存泄漏 ====
         else:
             headline = self.align.get_headline("mem", "leak")
-            union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
+            # union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
+            union = {
+                k: self.mean_score_field(compilation, group, field)
+                for k, group, field in [("MEM-MAX", "MEM", "max"), ("MEM-AVG", "MEM", "avg")]
+            }
 
             # 🟡 ==== 主要容器 ====
-            major_summary += self.align.get_sections("mem", "leak")
+            major_summary_items += self.align.get_sections("mem", "leak")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary += [
+            minor_summary_items += [
                 {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in union.items() if v]}
             ]
+
+        await self.final_render(memories, start_time)
 
         return {
             "report_list": compilation,
             "title": f"{const.APP_DESC} Information",
             "time": cur_time,
             "headline": headline,
-            "major_summary_items": major_summary,
-            "minor_summary_items": minor_summary,
+            "major_summary_items": major_summary_items,
+            "minor_summary_items": minor_summary_items,
         }
 
     # Workflow: ======================== GFX ========================
@@ -422,7 +449,7 @@ class Reporter(object):
         )
         if not gfx_data:
             return logger.info(f"GFX data not found for {data_dir}")
-        title, timestamp = joint
+        title, timestamp, serial, brand, model, release = joint
 
         frame_merged = self.__merge_alignment_frames(gfx_data)
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
@@ -436,6 +463,7 @@ class Reporter(object):
         # 🟩 ==== GFX 评分 ====
         score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
         logger.info(f"Score: {score}")
+        score_group = {"GFX": score}
 
         # 🟢 ==== GFX 绘图 ====
         paint_func = partial(Painter.draw_gfx_metrics, **score)
@@ -492,8 +520,11 @@ class Reporter(object):
         logger.info(msg)
 
         return {
-            "subtitle": title or data_dir,
-            "subtitle_link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
+            **score_group,
+            "subtitle": {
+                "text": title or data_dir,
+                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
+            },
             "evaluate": evaluate,
             "tags": tag_lines
         }
@@ -510,8 +541,7 @@ class Reporter(object):
         *_
     ) -> typing.Optional[dict]:
 
-        cur_time = team_data.get("time", time.strftime("%Y-%m-%d %H:%M:%S"))
-        cur_data = team_data["file"]
+        cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
             *(self.__gfx_rendering(db, loop, executor, templater, memories, start_time, d)
@@ -520,13 +550,24 @@ class Reporter(object):
         if not (compilation := [c for c in compilation if c]):
             return {}
 
-        headline = self.align.get_headline("gfx")
-        union = {k: self.__mean_of_field(compilation, [k]) for k in ["MIN", "AVG"]}
-        
-        major_summary_items = self.align.get_sections("gfx")
-        minor_summary_items = [
+        headline = self.align.get_headline("gfx", "base")
+        # union = {k: self.__mean_of_field(compilation, [k]) for k in ["MIN", "AVG"]}
+        union = {
+            k: self.mean_score_field(compilation, group, field)
+            for k, group, field in [("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")]
+        }
+
+        major_summary_items = [
+            {"title": "基础信息", "class": "general", "value": cur_mark}
+        ] if cur_mark else []
+        minor_summary_items = []
+
+        major_summary_items += self.align.get_sections("gfx", "base")
+        minor_summary_items += [
             {"value": [f"MEAN-{k}: {v:.2f} FPS" for k, v in union.items() if v]}
         ]
+
+        await self.final_render(memories, start_time)
 
         return {
             "report_list": compilation,

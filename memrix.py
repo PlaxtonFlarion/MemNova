@@ -71,7 +71,7 @@ class Memrix(object):
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.nodes, self.title, self.front, *_ = args
+        _, _, _, self.focus, self.nodes, self.title, self.layer, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -110,7 +110,7 @@ class Memrix(object):
         self.memories.update({
             "MSG": (msg := "Finishing up ...")
         })
-        logger.info(msg)       
+        logger.info(msg)
         self.task_close_event.set()
 
     async def watcher(self) -> None:
@@ -161,7 +161,7 @@ class Memrix(object):
         else:
             scene = {
                 "time": format_before_time,
-                "mark": device.serial,
+                "mark": device.device_info,
                 "type": prefix,
                 "file": [self.file_folder]
             }
@@ -174,7 +174,7 @@ class Memrix(object):
 
     async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
         if self.dumped and not self.dumped.is_set():
-            logger.info(f"等待采样任务结束 ...")
+            logger.info(f"Awaiting final sync ...")
             try:
                 await asyncio.wait_for(self.dumped.wait(), timeout=3)
             except asyncio.TimeoutError:
@@ -497,7 +497,7 @@ class Memrix(object):
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.initialize_tables(
-                db, self.file_folder, self.title, Period.convert_time(now_time)
+                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info
             )
             self.animation_task = asyncio.create_task(
                 self.design.mem_wave(self.memories, self.task_close_event)
@@ -571,28 +571,25 @@ class Memrix(object):
             with ProcessPoolExecutor(initializer=Active.active, initargs=(const.SHOW_LEVEL,)) as executor:
                 self.memories.update({"MSG": f"Rendering {total} tasks"})
                 if not (rendition := await getattr(reporter, render)(
-                    db, loop, executor, templater, self.memories, start_time, team_data, self.front
+                    db, loop, executor, templater, self.memories, start_time, team_data, self.layer
                 )):
                     self.task_close_event.set()
                     await self.animation_task
-                    raise MemrixError(f"Rendering {total} tasks failed")
-
-                self.memories.update({"MSG": f"Wait background tasks"})
-                await asyncio.gather(*reporter.background_tasks)
-                self.memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
+                    raise MemrixError(f"Rendering tasks failed")
 
         self.memories.update({"MSG": f"Polymerization"})
         html_file = await reporter.make_report(self.unity_template, templater.download, **rendition)
         self.memories.update({
-            "MSG": f"Done",
-            "TMS": f"{time.time() - start_time:.1f} s"
+            "MSG": f"Done", "TMS": f"{time.time() - start_time:.1f} s"
         })
         self.task_close_event.set()
         await self.animation_task
+
         Design.console.print()
         Design.build_file_tree(html_file)
         Design.console.print()
-        await self.design.system_disintegrate()
+
+        return await self.design.system_disintegrate()
 
 
 class Perfetto(object):
@@ -879,7 +876,7 @@ async def main() -> typing.Any:
 
     positions = (
         cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.front,
+        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.layer,
     )
     keywords = {
         "src_opera_place": src_opera_place,

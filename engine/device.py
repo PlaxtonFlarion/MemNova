@@ -32,7 +32,7 @@ class Device(object):
         self.device_info = kwargs
 
     def __str__(self):
-        return f"<Device serial={self.serial} info={self.device_info}>"
+        return f"<Device {self.device_info}>"
 
     __repr__ = __str__
 

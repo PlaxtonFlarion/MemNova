@@ -107,15 +107,6 @@ class Parser(object):
             '''),
         )
         minor_group.add_argument(
-            "--front", action="store_true",
-            help=textwrap.dedent(f'''\
-                \033[1;36m^*极昼极夜*^\033[0m
-                -------------------------
-                - 极昼极夜
-
-            ''')
-        )
-        minor_group.add_argument(
             "--focus", type=str, default=None,
             help=textwrap.dedent(f'''\
                 \033[1;36m^*数据魔方*^\033[0m
@@ -148,6 +139,15 @@ class Parser(object):
                 \033[1;36m^*星辰序列*^\033[0m
                 -------------------------
                 - 星辰序列
+
+            ''')
+        )
+        minor_group.add_argument(
+            "--layer", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*极昼极夜*^\033[0m
+                -------------------------
+                - 极昼极夜
 
             ''')
         )

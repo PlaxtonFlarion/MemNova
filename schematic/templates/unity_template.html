@@ -174,7 +174,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             display: flex;
             flex-direction: column;
         }
-        
+
         .message-main {
             display: flex;
             align-items: center;
@@ -341,7 +341,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0 4px 10px rgba(130, 160, 180, 0.25);
             color: #101c24;
         }
-        
+
         /* 其他：钛银中性色 */
         .others {
             color: #2c2c2c;
@@ -353,7 +353,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0 4px 10px rgba(120, 120, 120, 0.2);
             color: #111111;
         }
-        
+
         /* 其他：通用中性色 */
         .general {
             color: #1a1a1a;
@@ -685,9 +685,9 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <!-- 报告信息 -->
     {% for res in report_list %}
     <div class="information">
-        {% if res.subtitle and res.subtitle_link %}
+        {% if res.subtitle and res.subtitle.text and res.subtitle.link %}
             <div class="subtitle">
-                <a class="access" href="{{ res.subtitle_link }}" target="_blank">{{ res.subtitle }}</a>
+                <a class="access" href="{{ res.subtitle.link }}" target="_blank">{{ res.subtitle.text }}</a>
             </div>
         {% endif %}
         <div class="evaluate">

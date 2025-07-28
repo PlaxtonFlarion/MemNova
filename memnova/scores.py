@@ -26,6 +26,7 @@ class Scores(object):
         slope_threshold: float = 0.01
     ) -> dict:
 
+        # 🟨 ==== 默认结果 ====
         result = {
             "trend_score": 0.0,
             "jitter_index": 0.0,
@@ -43,7 +44,7 @@ class Scores(object):
             return {"trend": "Invalid Data"} | result
 
         if len(values := df[column].to_numpy()) < 10:
-            return {"trend": "Insufficient Data"} | result
+            return {"trend": "Few Data"} | result
 
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
@@ -61,7 +62,7 @@ class Scores(object):
 
         # 🟨 ==== 趋势判断 ====
         if r_squared < r2_threshold:
-            trend = "Fluctuating ~"
+            trend = "Wave ~"
             color = "#999999"
             score = 0.0
         elif slope > slope_threshold:
@@ -101,29 +102,25 @@ class Scores(object):
         fps_key: str = "fps_app"
     ) -> dict:
 
-        # ==== 默认结果 ====
+        # 🟩 ==== 默认结果 ====
         result = {
-            "score": 0.0,
             "level": "N/A",
+            "score": 0.0,
             "color": "#BBBBBB",
-            "label": "No valid data",
             "min_fps": 0.0,
             "avg_fps": 0.0,
             "jnk_fps": 0.0,
             "p95_fps": 0.0,
         }
 
-        if (total_frames := len(frames)) < 5:
-            result["label"] = "Too few frames"
-            return result
+        if (total_frames := len(frames)) < 10:
+            return {"label": "Few Frames"} | result
 
-        if not (fps_values := [f.get(fps_key) for f in frames if f.get(fps_key) is not None]):
-            result["label"] = "No FPS data"
-            return result
+        if not (fps_values := [fps for f in frames if (fps := f.get(fps_key))]):
+            return {"label": "No FPS"} | result
 
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
-            result["label"] = "Invalid time span"
-            return result
+            return {"label": "Invalid Time"} | result
 
         # 🟩 ==== 基础统计 ====
         min_fps = round(min(fps_values), 2)
@@ -166,50 +163,50 @@ class Scores(object):
 
         if final_score >= 0.93:
             return {
-                "score": final_score,
+                "label": "Flawless - Ultra Smooth",
                 "level": "S",
+                "score": final_score,
                 "color": "#005822",
-                "label": "极致流畅，近乎完美",
                 **statistical
             }
         elif final_score >= 0.80:
             return {
-                "score": final_score,
+                "label": "Excellent - Stable & Fast",
                 "level": "A",
+                "score": final_score,
                 "color": "#1B5E20",
-                "label": "稳定流畅，表现优秀",
                 **statistical
             }
         elif final_score >= 0.68:
             return {
-                "score": final_score,
+                "label": "Good - Minor Stutters",
                 "level": "B",
+                "score": final_score,
                 "color": "#D39E00",
-                "label": "基本流畅，偶有波动",
                 **statistical
             }
         elif final_score >= 0.50:
             return {
-                "score": final_score,
+                "label": "Fair - Noticeable Lag",
                 "level": "C",
+                "score": final_score,
                 "color": "#E65100",
-                "label": "有明显卡顿，影响体验",
                 **statistical
             }
         elif final_score >= 0.35:
             return {
-                "score": final_score,
+                "label": "Poor - Frequent Stutter",
                 "level": "D",
+                "score": final_score,
                 "color": "#C62828",
-                "label": "严重卡顿，需要优化",
                 **statistical
             }
         else:
             return {
-                "score": final_score,
+                "label": "Unusable - Critical Lag",
                 "level": "E",
+                "score": final_score,
                 "color": "#7B1FA2",
-                "label": "极差体验，建议排查",
                 **statistical
             }
 
@@ -223,6 +220,7 @@ class Scores(object):
         swap_threshold: int = 10240
     ) -> dict:
 
+        # 🟦 ==== 默认结果 ====
         result = {
             "swap_status": "PASS",
             "swap_max_kb": 0.0,

@@ -52,8 +52,6 @@ STRUCTURE       = r"Structure"
 SRC_OPERA_PLACE = f"{APP_DESC}_Mix"
 SRC_TOTAL_PLACE = f"{APP_DESC}_Report"
 
-ALLOWED_TYPES   = {"mem", "gfx", "io"}
-
 # ========【日志与显示设置】========
 SHOW_LEVEL    = r"WARNING"
 NOTE_LEVEL    = r"INFO"

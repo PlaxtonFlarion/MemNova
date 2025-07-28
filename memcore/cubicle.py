@@ -27,12 +27,13 @@ class Cubicle(object):
             data_dir: str,
             title: str,
             timestamp: str,
+            payload: dict
     ) -> typing.Any:
 
         await asyncio.gather(
             Cubicle.__create_joint_table(db), Cubicle.__create_mem_table(db), Cubicle.__create_gfx_table(db)
         )
-        return await Cubicle.insert_joint_data(db, data_dir, title, timestamp)
+        return await Cubicle.insert_joint_data(db, data_dir, title, timestamp, payload)
 
     @staticmethod
     async def __create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
@@ -40,23 +41,36 @@ class Cubicle(object):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             title TEXT,
-            timestamp TEXT)''')
+            timestamp TEXT,
+            brand TEXT,
+            model TEXT,
+            release TEXT,
+            serial TEXT)''')
         await db.commit()
 
     @staticmethod
     async def insert_joint_data(
             db: "aiosqlite.Connection",
-            data_dir,
-            title,
-            timestamp
+            data_dir: str,
+            title: str,
+            timestamp: str,
+            payload: dict,
     ):
         await db.execute(f'''INSERT INTO {Cubicle.__joint_table} (
             data_dir,
             title,
-            timestamp) VALUES (?, ?, ?)''', (
+            timestamp,
+            brand,
+            model,
+            release,
+            serial) VALUES (?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 title,
-                timestamp
+                timestamp,
+                payload["brand"],
+                payload["model"],
+                payload["release"],
+                payload["serial"]
             )
         )
         await db.commit()
@@ -64,7 +78,13 @@ class Cubicle(object):
     @staticmethod
     async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
         sql = f"""
-            SELECT title, timestamp
+            SELECT
+                title,
+                timestamp,
+                brand,
+                model,
+                release,
+                serial
             FROM {Cubicle.__joint_table}
             WHERE data_dir = ?
         """
