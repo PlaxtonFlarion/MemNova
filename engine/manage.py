@@ -29,10 +29,10 @@ class Manage(object):
             "release": "ro.build.version.release"
         }
         cmd = [self.adb, "-s", serial, "getprop"]
-        results = await asyncio.gather(
+        response = await asyncio.gather(
             *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
         )
-        return {k: v or "N/A" for k, v in zip(keys, results)}
+        return {k: v or "N/A" for k, v in zip(keys, response)}
 
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
@@ -47,7 +47,7 @@ class Manage(object):
             for i, line in enumerate(result.splitlines()[1:], start=1):
                 if not (parts := line.strip().split()):
                     continue
-                info = self.device_info(self.adb, serial := parts[0])
+                info = await self.device_info(serial := parts[0])
                 device_dict[str(i)] = Device(self.adb, serial, **info)
 
             if not device_dict:
