@@ -141,8 +141,6 @@ class Reporter(object):
             for _, row in group_stats.iterrows():
                 part_df = df[df["mode"] == (mode := row["mode"])]
                 score = Scores.analyze_mem_score(part_df, column="pss")
-                if score["trend"] in ["Invalid Data", "Insufficient Data"]:
-                    return logger.info(f"{mode}-Score: {score}")
                 logger.info(f"{mode}-Score: {score}")
 
                 # 🟡 ==== 评价部分 ====
@@ -171,8 +169,6 @@ class Reporter(object):
 
             # 🟨 ==== MEM 评分 ====
             score = Scores.analyze_mem_score(df, column="pss")
-            if score["trend"] in ["Invalid Data", "Insufficient Data"]:
-                return logger.info(f"Score: {score}")
             logger.info(f"Score: {score}")
 
             # 🟡 ==== MEM 绘图 ====
