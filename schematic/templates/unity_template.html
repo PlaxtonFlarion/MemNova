@@ -106,6 +106,38 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             animation-delay: 0.7s;
         }
 
+        /* 分割线 */
+        .divider {
+            position: relative;
+            text-align: center;
+            margin: 40px 0;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            font-weight: 600;
+            color: #888888;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        .divider::before, .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: linear-gradient(to right, #ddd, #aaa);
+        }
+        .divider::before {
+            left: 0;
+        }
+        .divider::after {
+            right: 0;
+        }
+        .divider span {
+            background: #ffffff;
+            padding: 0 10px;
+            z-index: 1;
+            position: relative;
+        }
+
         /* 摘要容器 */
         .summary-container {
             display: flex;
@@ -607,6 +639,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                         {% endfor %}
                     </div>
                 {% endif %}
+                <div class="divider"><span></span></div>
             </div>
             {% endfor %}
         </div>
