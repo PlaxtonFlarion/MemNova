@@ -452,8 +452,8 @@ class Reporter(object):
             },
             {
                 "fields": [
-                    {"text": f"P95: {score['p95_fps']} FPS", "class": "fluency"},
-                    {"text": f"JNK: {score['jnk_fps']} %", "class": "fluency"}
+                    {"text": f"P95: {score['p95_fps']:.2f} FPS", "class": "fluency"},
+                    {"text": f"JNK: {score['jnk_fps']:.2f} %", "class": "fluency"}
                 ]
             }
         ]
@@ -462,8 +462,8 @@ class Reporter(object):
         tag_lines = [
             {
                 "fields": [
-                    {"label": "MIN: ", "value": score['min_fps'], "unit": "FPS"},
-                    {"label": "AVG: ", "value": score['avg_fps'], "unit": "FPS"}
+                    {"label": "MIN: ", "value": f"{score['min_fps']:.2f}", "unit": "FPS"},
+                    {"label": "AVG: ", "value": f"{score['avg_fps']:.2f}", "unit": "FPS"}
                 ]
             }
         ]
@@ -518,8 +518,12 @@ class Reporter(object):
             return {}
 
         headline = self.align.get_headline("gfx")
+        union = {k: self.__mean_of_field(compilation, [k]) for k in ["MIN", "AVG"]}
+        
         major_summary_items = self.align.get_sections("gfx")
-        minor_summary_items = []
+        minor_summary_items = [
+            {"value": [f"{k}: {v:.2f} FPS" for k, v in union.items() if v]}
+        ]
 
         return {
             "report_list": compilation,
