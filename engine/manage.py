@@ -22,6 +22,18 @@ class Manage(object):
     def __init__(self, adb: str):
         self.adb = adb
 
+    async def device_info(self, serial: str) -> dict:
+        keys = {
+            "brand": "ro.product.brand",
+            "model": "ro.product.model",
+            "release": "ro.build.version.release"
+        }
+        cmd = [self.adb, "-s", serial, "getprop"]
+        results = await asyncio.gather(
+            *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
+        )
+        return {k: v or "N/A" for k, v in zip(keys, results)}
+
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
 
@@ -30,10 +42,13 @@ class Manage(object):
                 return Design.Doc.log(f"[#FF5F00]设备连接超时 ...")
 
             result = await Terminal.cmd_line([self.adb, "devices"])
-            device_dict = {
-                str(i): Device(self.adb, serial) for i, line in enumerate(result.splitlines()[1:], 1)
-                if (parts := line.strip().split()) and (serial := parts[0])
-            } if result else {}
+            
+            device_dict = {}
+            for i, line in enumerate(result.splitlines()[1:], start=1):
+                if not (parts := line.strip().split()):
+                    continue
+                info = self.device_info(self.adb, serial := parts[0])
+                device_dict[str(i)] = Device(self.adb, serial, **info)
 
             if not device_dict:
                 try_again += 1
