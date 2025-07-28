@@ -108,34 +108,19 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         /* 分割线 */
         .divider {
-            position: relative;
-            text-align: center;
+            width: 100%;
+            height: 6px;
             margin: 40px 0;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            font-weight: 600;
-            color: #888888;
-            font-size: 14px;
-            letter-spacing: 1px;
+            background: repeating-linear-gradient(to right, transparent 0 5px, #999 5px 10px);
+            animation: scrollDots 1s linear infinite;
         }
-        .divider::before, .divider::after {
-            content: "";
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: linear-gradient(to right, #ddd, #aaa);
-        }
-        .divider::before {
-            left: 0;
-        }
-        .divider::after {
-            right: 0;
-        }
-        .divider span {
-            background: #ffffff;
-            padding: 0 10px;
-            z-index: 1;
-            position: relative;
+        @keyframes scrollDots {
+            from {
+                background-position: 0 0;
+            }
+            to {
+                background-position: 10px 0;
+            }
         }
 
         /* 摘要容器 */
@@ -632,8 +617,8 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                         {% endfor %}
                     </div>
                 {% endif %}
-                <div class="divider"><span></span></div>
             </div>
+            <div class="divider"></div>
             {% endfor %}
         </div>
     </div>
