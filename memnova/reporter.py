@@ -116,7 +116,12 @@ class Reporter(object):
         mem_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
+        if not mem_data:
+            return logger.info(f"MEM data not found for {data_dir}")
         title, timestamp = joint
+
+        df = pd.DataFrame(mem_data)
+        
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = None
         leak_loc = None
@@ -128,8 +133,6 @@ class Reporter(object):
             executor, Painter.draw_io_metrics, mem_data, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
-
-        df = pd.DataFrame(mem_data)
 
         # 🟡 ==== 内存基线 ====
         if baseline:
