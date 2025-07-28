@@ -685,11 +685,12 @@ async def main() -> typing.Any:
         if not Path(align_file).exists():
             await align.dump_align()
 
+        Design.console.print()
         Design.build_file_tree(align_file)
         await FileAssist.open(align_file)
         await align.load_align()
 
-        return Design.console.print_json(data=align.aligns)
+        return Design.console.print()
 
     async def authorized() -> None:
         """
