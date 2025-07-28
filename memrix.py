@@ -188,8 +188,6 @@ class Memrix(object):
             except asyncio.TimeoutError:
                 pass
 
-        await self.data_queue.join()
-
         for task in args:
             if isinstance(task, asyncio.Task):
                 try:
@@ -518,6 +516,7 @@ class Memrix(object):
             mem_task = await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
+            await self.data_queue.join()
 
         # Workflow: ========== 结束采样 ==========
         await asyncio.gather(
