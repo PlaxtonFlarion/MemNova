@@ -118,6 +118,9 @@ class Reporter(object):
         )
         title, timestamp = joint
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        trace_loc = None
+        leak_loc = None
+        gfx_loc = None
         io_loc = Path(group) / f"{head}_io.png"
 
         # 🔵 ==== I/O 绘图 ====
@@ -130,8 +133,6 @@ class Reporter(object):
 
         # 🟡 ==== 内存基线 ====
         if baseline:
-            trace_loc = leak_loc = gfx_loc = None
-
             # 🟡 ==== 分组统计 ====
             evaluate, tag_lines, group_stats = [], [], (
                 df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
@@ -169,7 +170,7 @@ class Reporter(object):
 
         # 🟡 ==== 内存泄漏 ====
         else:
-            trace_loc, leak_loc, gfx_loc = None, Path(group) / f"{head}_leak.png", None
+            leak_loc = Path(group) / f"{head}_leak.png"
 
             # 🟨 ==== MEM 评分 ====
             score = Scores.analyze_mem_score(df, column="pss")
