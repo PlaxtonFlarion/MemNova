@@ -100,16 +100,31 @@ class Scores(object):
         drag_ranges: list[dict],
         jank_ranges: list[dict],
         fps_key: str = "fps_app"
-    ) -> typing.Optional[dict]:
+    ) -> dict:
+
+        # ==== 默认结果 ====
+        result = {
+            "score": 0.0,
+            "level": "N/A",
+            "color": "#BBBBBB",
+            "label": "No valid data",
+            "min_fps": 0.0,
+            "avg_fps": 0.0,
+            "jnk_fps": 0.0,
+            "p95_fps": 0.0,
+        }
 
         if (total_frames := len(frames)) < 5:
-            return None
+            result["label"] = "Too few frames"
+            return result
 
-        if not (fps_values := [f.get(fps_key) for f in frames if f.get(fps_key)]):
-            return None
+        if not (fps_values := [f.get(fps_key) for f in frames if f.get(fps_key) is not None]):
+            result["label"] = "No FPS data"
+            return result
 
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
-            return None
+            result["label"] = "Invalid time span"
+            return result
 
         # 🟩 ==== 基础统计 ====
         min_fps = round(min(fps_values), 2)
