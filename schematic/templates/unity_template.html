@@ -121,6 +121,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             flex-direction: column;
         }
 
+        /* 高亮 */
         .highlight {
             padding: 4px 10px;
             border-radius: 6px;
@@ -179,17 +180,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             width: fit-content;
             margin: 0 0 0 25px;
         }
-        .schema-msg-main p {
-            margin: 0 8px;
-        }
-        .schema-msg-line p {
-            margin: 5px;
+        .schema-msg-main p, .schema-msg-line p {
+            margin: 8px;
         }
 
         /* 摘要容器内标签全局通用样式 */
         .refer,
         .expiry-pass, .expiry-fail,
-        .baseline, .leak, .fluency,
+        .baseline, .leak, .fluency, .others,
         .general {
             font-weight: 600;
             padding: 4px 10px;
@@ -202,7 +200,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         /* 摘要容器内标签全局悬浮样式 */
         .refer:hover,
         .expiry-pass:hover, .expiry-fail:hover,
-        .baseline:hover, .leak:hover, .fluency:hover,
+        .baseline:hover, .leak:hover, .fluency:hover, .others:hover,
         .general:hover {
             transform: translateY(-1px);
             cursor: default;
@@ -261,7 +259,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             cursor: default;
         }
 
-        /* 📘 内存基线：淡青灰蓝系 */
+        /* 内存基线：淡青灰蓝系 */
         .baseline {
             color: #1f3a48;
             background: linear-gradient(135deg, #d8e7f3 0%, #c2dbe9 100%);
@@ -273,7 +271,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             color: #142a36;
         }
 
-        /* 🟣 内存泄漏：雾紫 + 暗灰蓝调 */
+        /* 内存泄漏：雾紫 + 暗灰蓝调 */
         .leak {
             color: #322c3b;
             background: linear-gradient(135deg, #e2ddf2 0%, #cbc5e5 100%);
@@ -285,7 +283,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             color: #1e1a25;
         }
 
-        /* 🌫 流畅度：深海雾蓝 */
+        /* 流畅度：深海雾蓝 */
         .fluency {
             color: #20303c;
             background: linear-gradient(135deg, #d2e5ef 0%, #b6cfde 100%);
@@ -296,8 +294,20 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             box-shadow: 0 4px 10px rgba(130, 160, 180, 0.25);
             color: #101c24;
         }
-
-        /* 通用 */
+        
+        /* 其他：钛银中性色 */
+        .others {
+            color: #2c2c2c;
+            background: linear-gradient(135deg, #eeeeee 0%, #d8d8d8 100%);
+            box-shadow: 0 2px 6px rgba(160, 160, 160, 0.15);
+        }
+        .others:hover {
+            background: linear-gradient(135deg, #dcdcdc 0%, #c5c5c5 100%);
+            box-shadow: 0 4px 10px rgba(120, 120, 120, 0.2);
+            color: #111111;
+        }
+        
+        /* 其他：通用中性色 */
         .general {
             color: #1a1a1a;
             background: linear-gradient(135deg, #e0ecf8 0%, #c7dfff 100%);
