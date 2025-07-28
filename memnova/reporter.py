@@ -288,8 +288,8 @@ class Reporter(object):
 
             # 🟡 ==== 次要容器 ====
             minor_summary += [
-                {"value": [f"{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
-                {"value": [f"{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
+                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
+                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
             ]
 
         # 🟡 ==== 内存泄漏 ====
@@ -302,7 +302,7 @@ class Reporter(object):
 
             # 🟡 ==== 次要容器 ====
             minor_summary += [
-                {"value": [f"{k}: {v:.2f} MB" for k, v in union.items() if v]}
+                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in union.items() if v]}
             ]
 
         return {
@@ -522,7 +522,7 @@ class Reporter(object):
         
         major_summary_items = self.align.get_sections("gfx")
         minor_summary_items = [
-            {"value": [f"{k}: {v:.2f} FPS" for k, v in union.items() if v]}
+            {"value": [f"MEAN-{k}: {v:.2f} FPS" for k, v in union.items() if v]}
         ]
 
         return {
