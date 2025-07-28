@@ -430,10 +430,7 @@ class Reporter(object):
         io_loc = None
 
         # 🟩 ==== GFX 评分 ====
-        if not (score := Scores.analyze_gfx_score(
-            raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-        )):
-            return logger.info(f"Score not found for {data_dir}")
+        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
         logger.info(f"Score: {score}")
 
         # 🟢 ==== GFX 绘图 ====
