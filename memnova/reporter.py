@@ -406,7 +406,7 @@ class Reporter(object):
         start_time: float,
         data_dir: str,
         *_,
-    ) -> dict:
+    ) -> typing.Optional[dict]:
 
         # 🟢 ==== 数据查询 ====
         os.makedirs(
@@ -416,6 +416,8 @@ class Reporter(object):
         gfx_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
+        if not gfx_data:
+            return logger.info(f"GFX data not found for {data_dir}")
         title, timestamp = joint
 
         frame_merged = self.__merge_alignment_frames(gfx_data)
@@ -431,7 +433,7 @@ class Reporter(object):
         if not (score := Scores.analyze_gfx_score(
             raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
         )):
-            return {}
+            return logger.info(f"Score not found for {data_dir}")
         logger.info(f"Score: {score}")
 
         # 🟢 ==== GFX 绘图 ====
