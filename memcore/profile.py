@@ -32,13 +32,20 @@ class Align(object):
                         "title": "参考标准",
                         "class": "refer",
                         "value": [
-                            "FG-MAX: 0.00 MB", "FG-AVG: 0.00 MB", "BG-MAX: 0.00 MB", "BG-AVG: 0.00 MB"
+                            "前台 FG-MAX、FG-AVG 控制在业务常规阈值",
+                            "后台 BG-MAX、BG-AVG 不大幅高于前台",
+                            "无突增、无长时间高位波动",
+                            "运行周期无内存泄漏表现"
                         ]
                     },
                     {
                         "title": "准出标准",
                         "class": "criteria",
-                        "value": []
+                        "value": [
+                            "前台、后台峰值和均值均不超标",
+                            "整体内存趋势平稳，无明显异常",
+                            "报告周期内未检测到泄漏趋势"
+                        ]    
                     }
                 ]
             },
@@ -59,7 +66,12 @@ class Align(object):
                     {
                         "title": "准出标准",
                         "class": "criteria",
-                        "value": []
+                        "value": [
+                            "内存曲线稳定，无持续上升趋势",
+                            "Slope ≤ 0.01 或 R² ≤ 0.5",
+                            "峰值能被 GC 有效回收",
+                            "排除启动、切后台等短期波动"
+                        ]
                     }
                 ]
             },
@@ -82,7 +94,12 @@ class Align(object):
                     {
                         "title": "准出标准",
                         "class": "criteria",
-                        "value": []
+                        "value": [
+                            "整体 FPS 高于 55，波动小",
+                            "无严重连续掉帧或主线程卡死",
+                            "卡帧（>50ms）比例很低",
+                            "滑动区域流畅度达标"
+                        ]
                     }
                 ]
             }
