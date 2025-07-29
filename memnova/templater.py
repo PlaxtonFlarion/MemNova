@@ -154,6 +154,7 @@ class Templater(object):
         avg_color = "#BDB5D5"  # 均值灰紫
         max_color = "#FF5872"  # 峰值桃红
         min_color = "#54E3AF"  # 谷值薄荷绿
+        sld_color = "#A8BFFF"
 
         # 🟡 ==== 区块色 ====
         fg_color = "#8FE9FC"  # 前台湖蓝
@@ -229,7 +230,7 @@ class Templater(object):
         # 🟡 ==== 滑窗均值线 ====
         p.line(
             "x", "pss_sliding_avg",
-            source=source, line_width=1.5, color=avg_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
+            source=source, line_width=1.5, color=sld_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
         )
 
         # 🟡 ==== 极值点 ====
