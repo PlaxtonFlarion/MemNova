@@ -631,7 +631,7 @@ class Perfetto(object):
             logger.info(line.decode(const.CHARSET).strip())
 
     async def __start(self) -> typing.Optional[str]:
-        unique_id = uuid.uuid4().hex[:6] + "_" +time.strftime("%Y%m%d%H%M%S")
+        unique_id = time.strftime("%Y%m%d%H%M%S") + "_" + uuid.uuid4().hex[:6]
         device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
