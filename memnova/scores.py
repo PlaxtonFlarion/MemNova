@@ -85,9 +85,9 @@ class Scores(object):
             "jitter_index": jitter_index,
             "r_squared": r_squared,
             "slope": slope,
-            "avg": round(avg_val, 2),
-            "max": round(max_val, 2),
-            "min": round(min_val, 2),
+            "avg": avg_val,
+            "max": max_val,
+            "min": min_val,
             "color": color,
         }
 
@@ -123,10 +123,10 @@ class Scores(object):
             return {"label": "Invalid Time"} | result
 
         # 🟩 ==== 基础统计 ====
-        min_fps = round(min(fps_values), 2)
-        avg_fps = round(sum(fps_values) / len(fps_values), 2)
-        jnk_fps = round(sum(1 for f in frames if f.get("is_jank")) / total_frames * 100, 2)
-        p95_fps = round(float(np.percentile(fps_values, 95)), 2)
+        min_fps = min(fps_values)
+        avg_fps = sum(fps_values) / len(fps_values)
+        jnk_fps = sum(1 for f in frames if f.get("is_jank")) / total_frames * 100
+        p95_fps = float(np.percentile(fps_values, 95))
         statistical = {
             "min_fps": min_fps, "avg_fps": avg_fps, "jnk_fps": jnk_fps, "p95_fps": p95_fps,
         }
