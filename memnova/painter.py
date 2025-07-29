@@ -59,10 +59,6 @@ class Painter(object):
         block_stats = df.groupby(["block_id", "mode"]).agg(
             start_time=("num_x", "first"),
             end_time=("num_x", "last"),
-            avg_pss=("pss", "mean"),
-            max_pss=("pss", "max"),
-            min_pss=("pss", "min"),
-            size=("pss", "size"),
         ).reset_index()
 
         # 🟡 ==== 判断内存趋势 ====
