@@ -361,24 +361,7 @@ class Templater(object):
             source=source, size=4, color="color", alpha=0.8
         )
 
-        # 🟢 ==== Hover 信息 ====
-        p.add_tools(HoverTool(tooltips="""
-            <div style="padding: 5px;">
-                <b>时间:</b> @timestamp_s{0.0} s<br/>
-                <b>耗时:</b> @duration_ms{0.000} ms<br/>
-                <b>掉帧:</b> @is_jank<br/>
-                <b>类型:</b> @frame_type<br/>
-                <b>系统FPS:</b> @fps_sys<br/>
-                <b>应用FPS:</b> @fps_app<br/>
-                <b>图层:</b> @layer_name
-            </div>
-        """, mode="mouse", renderers=[spot]))
-
-        # 🟢 ==== 阈值线 + 平均线 + 最大值线 ====
-        p.line(
-            [x_start, x_close], [16.67, 16.67],
-            line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
-        )
+        # 🟢 ==== 平均线 + 最高线 + 阈值线 ====
         p.line(
             [x_start, x_close], [y_avg, y_avg],
             line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg: {y_avg:.1f}ms"
@@ -386,6 +369,10 @@ class Templater(object):
         p.line(
             [x_start, x_close], [y_max, y_max],
             line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max: {y_max:.1f}ms"
+        )
+        p.line(
+            [x_start, x_close], [16.67, 16.67],
+            line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
         )
 
         # 🟢 ==== Quad 绘制背景区间 ====
@@ -406,6 +393,19 @@ class Templater(object):
                     left="left", right="right", top="top", bottom="bottom",
                     source=quad_source, fill_color=color, fill_alpha=alpha, line_alpha=0, legend_label=label
                 )
+
+        # 🟢 ==== Hover 信息 ====
+        p.add_tools(HoverTool(tooltips="""
+            <div style="padding: 5px;">
+                <b>时间:</b> @timestamp_s{0.0} s<br/>
+                <b>耗时:</b> @duration_ms{0.000} ms<br/>
+                <b>掉帧:</b> @is_jank<br/>
+                <b>类型:</b> @frame_type<br/>
+                <b>系统FPS:</b> @fps_sys<br/>
+                <b>应用FPS:</b> @fps_app<br/>
+                <b>图层:</b> @layer_name
+            </div>
+        """, mode="mouse", renderers=[spot]))
 
         # 🟢 ==== 图例设置 ====
         p.legend.location = "top_right"
