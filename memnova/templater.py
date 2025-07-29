@@ -162,13 +162,13 @@ class Templater(object):
         bg_alpha = 0.35
 
         # 🟡 ==== 堆叠配色（马卡龙/莫兰迪风）====
-        stack_fields = ["native_heap", "dalvik_heap", "graphics"]
+        stack_fields = ["summary_java_heap", "summary_native_heap", "summary_graphics"]
         stack_colors = [
-            "#FFD6E0",  # Native Heap 淡粉
-            "#D4E7FF",  # Dalvik Heap 淡蓝
+            "#FFD6E0",  # Java Heap 淡粉
+            "#D4E7FF",  # Native Heap 淡蓝
             "#CAE7E1",  # Graphics    淡青
         ]
-        stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
+        stack_labels = ["Java Heap", "Native Heap", "Graphics"]
 
         # 🟡 ==== 堆叠数据 ====
         stack_source = ColumnDataSource(df)
