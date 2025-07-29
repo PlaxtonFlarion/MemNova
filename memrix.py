@@ -288,13 +288,13 @@ class Memrix(object):
     ) -> typing.Optional["asyncio.Task"]:
 
         async def mem_analyze() -> dict:
-            mem_map = {}
+            meminfo_map, summary_map = {}, {}
 
             if not (mem_info := await device.mem_info(self.focus)):
-                return mem_map
+                return {}
 
             if not re.search(r"====MEM====.*?====EOF====", mem_info, re.S):
-                return mem_map
+                return {}
 
             if app_meminfo := re.search(r"\*\* MEMINFO.*?(?=App Summary)", mem_info, re.S):
                 logger.info(f"Current APP MEMINFO\n{(meminfo_c := app_meminfo.group())}")
@@ -303,17 +303,17 @@ class Memrix(object):
                     ".so mmap", ".jar mmap", ".apk mmap", ".ttf mmap", ".dex mmap", ".oat mmap", ".art mmap",
                     "Other mmap", "GL mtrack", "Unknown"
                 ]:
-                    mem_map[i] = ToolKit.fit_mem(i, meminfo_c)
-                mem_map["TOTAL USS"] = ToolKit.uss_addition(meminfo_c)
+                    meminfo_map[i] = ToolKit.fit_mem(i, meminfo_c)
+                meminfo_map["TOTAL USS"] = ToolKit.uss_addition(meminfo_c)
 
             if app_summary := re.search(r"App Summary.*?(?=Objects)", mem_info, re.S):
                 logger.info(f"Current APP SUMMARY\n{(summary_c := app_summary.group())}")
                 for i in [
-                    "Java Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
+                    "Java Heap", "Native Heap", "Graphics", "TOTAL PSS", "TOTAL RSS", "TOTAL SWAP"
                 ]:
-                    mem_map[i] = ToolKit.fit_mem(i, summary_c)
+                    summary_map[i] = ToolKit.fit_mem(i, summary_c)
 
-            return {"mem": mem_map}
+            return {"meminfo": meminfo_map} | {"summary": summary_map}
 
         async def io_analyze(pid: str) -> dict:
             io_map = {}
@@ -425,7 +425,7 @@ class Memrix(object):
                 self.memories[state] += 1
                 self.memories.update({
                     "MSG": f"[bold #87D700]{msg}",
-                    "PSS": f"{final_map.get('mem', {}).get('TOTAL PSS', 0):.2f} MB"
+                    "PSS": f"{final_map.get('summary', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
 
             else:
