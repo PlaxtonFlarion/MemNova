@@ -23,7 +23,9 @@ class Scores(object):
         df: "pd.DataFrame",
         column: str = "pss",
         r2_threshold: float = 0.5,
-        slope_threshold: float = 0.01
+        slope_threshold: float = 0.01,
+        window: int = None,                 # 滑动窗口长度, 如30
+        remove_outlier: bool = False        # 是否异常剔除
     ) -> dict:
 
         # 🟨 ==== 默认结果 ====
@@ -35,7 +37,14 @@ class Scores(object):
             "avg": 0.0,
             "max": 0.0,
             "min": 0.0,
-            "color": "#BBBBBB"
+            "color": "#BBBBBB",
+            "poly_trend": "-",
+            "poly_r2": 0.0,
+            "poly_coef": [],
+            "window_slope": None,
+            "window_slope_max": None,
+            "window_slope_min": None,
+            "outlier_count": 0
         }
 
         df = df.copy()
@@ -59,6 +68,38 @@ class Scores(object):
         slope, intercept, r_val, _, _ = linregress(x, values)
         r_squared = round(r_val ** 2, 4)
         slope = round(slope, 4)
+
+        # 🟨 ==== 多项式拟合（2阶） ====
+        try:
+            poly_coef = np.polyfit(x, values, 2)
+            poly_fit = np.poly1d(poly_coef)
+            fitted = poly_fit(x)
+            poly_r2 = 1 - np.sum((values - fitted) ** 2) / np.sum((values - np.mean(values)) ** 2)
+            poly_r2 = round(poly_r2, 4)
+            if abs(poly_coef[0]) < 1e-8:
+                poly_trend = "Linear ~"
+            elif poly_coef[0] > 0:
+                poly_trend = "U-shape ↑↓"
+            else:
+                poly_trend = "∩-shape ↓↑"
+        except Exception:
+            poly_coef = [0, 0, 0]
+            poly_r2 = 0.0
+            poly_trend = "-"
+
+        # 🟨 ==== 滑动窗口趋势分析 ====
+        window_slope = window_slope_max = window_slope_min = None
+        if window and len(values) >= window:
+            slopes = []
+            for i in range(0, len(values) - window + 1):
+                segment = values[i:i+window]
+                xw = np.arange(window)
+                s, _, _, _, _ = linregress(xw, segment)
+                slopes.append(s)
+            if slopes:
+                window_slope = round(np.mean(slopes), 4)
+                window_slope_max = round(np.max(slopes), 4)
+                window_slope_min = round(np.min(slopes), 4)
 
         # 🟨 ==== 趋势判断 ====
         if r_squared < r2_threshold:
@@ -89,6 +130,13 @@ class Scores(object):
             "max": max_val,
             "min": min_val,
             "color": color,
+            "poly_trend": poly_trend,
+            "poly_r2": poly_r2,
+            "poly_coef": [round(c, 6) for c in poly_coef],
+            "window_slope": window_slope,
+            "window_slope_max": window_slope_max,
+            "window_slope_min": window_slope_min,
+            "outlier_count": int(outlier_count)
         }
 
     # Workflow: ======================== GFX ========================
