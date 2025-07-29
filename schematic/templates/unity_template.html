@@ -175,11 +175,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             flex-direction: column;
         }
 
-        .message-main {
-            display: flex;
-            align-items: center;
-        }
-        .message-line {
+        .message {
             display: flex;
             flex-direction: column;
         }
@@ -209,12 +205,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
         .schema-msg-main {
             display: flex;
+            margin: 0 0 0 30px;
         }
         .schema-msg-line {
             display: flex;
             flex-direction: column;
             width: fit-content;
-            margin: 0 0 0 25px;
+            margin: 0 0 0 30px;
         }
         .schema-msg-main p, .schema-msg-line p {
             margin: 8px;
@@ -640,14 +637,14 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
     <div class="summary-container">
         <div id="major-summary">
             {% for section in major_summary_items %}
-            <div class="{{ 'message-line' if section.lines is defined else 'message-main' }}">
+            <div class="message">
                 {% if section.title %}
                     <div class="schema">
                         <p>{{ section.title }}</p>
                     </div>
                 {% endif %}
                 {% if section.value %}
-                    <div class="{{ 'schema-msg-line' if section.lines is defined else 'schema-msg-main' }}">
+                    <div class="{{ 'schema-msg-line' if section.enter is defined else 'schema-msg-main' }}">
                         {% for i in section.value %}
                             <p class="{{ section.class if section.class is defined else 'general' }}">
                                 {{ i }}
