@@ -130,7 +130,7 @@ class Reporter(object):
         )
         if not mem_data:
             return logger.info(f"MEM data not found for {data_dir}")
-        title, timestamp, serial, brand, model, release = joint
+        title, timestamp, *_ = joint
 
         df = pd.DataFrame(mem_data)
 
@@ -431,7 +431,7 @@ class Reporter(object):
         )
         if not gfx_data:
             return logger.info(f"GFX data not found for {data_dir}")
-        title, timestamp, serial, brand, model, release = joint
+        title, timestamp, *_ = joint
 
         frame_merged = self.__merge_alignment_frames(gfx_data)
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
