@@ -101,20 +101,6 @@ class Reporter(object):
     # Workflow: ======================== MEM & I/O ========================
 
     @staticmethod
-    def __mean_of_field(compilation: list[dict], keys: list[str]) -> typing.Optional[float]:
-        for key in keys:
-            # 提取所有 compilation 里的 fields 并找 label 以 key 结尾的值
-            vals = [
-                float(field["value"])
-                for item in compilation if "tags" in item for tag in item["tags"] for field in tag["fields"]
-                if field["label"].endswith(f"{key}: ") and field.get("value") not in (None, "", "nan")
-            ]
-            # 计算均值
-            if vals:
-                return round(float(np.mean(vals)), 2)
-        return None
-
-    @staticmethod
     def mean_score_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
             float(c[group][field]) for c in compilation
