@@ -43,14 +43,15 @@ class Manage(object):
             if try_again == max_try_again:
                 return Design.Doc.log(f"[#FF5F00]设备连接超时 ...")
 
-            result = await Terminal.cmd_line([self.adb, "devices"])
+            if not (result := await Terminal.cmd_line([self.adb, "devices"])):
+                continue
 
             device_dict = {}
             for i, line in enumerate(result.splitlines()[1:], start=1):
                 if not (parts := line.strip().split()):
                     continue
-                info = await self.device_info(serial := parts[0])
-                device_dict[str(i)] = Device(self.adb, serial, **info)
+                info = await self.device_info(parts[0])
+                device_dict[str(i)] = Device(self.adb, **info)
 
             if not device_dict:
                 try_again += 1
