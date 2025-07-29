@@ -87,7 +87,7 @@ class Painter(object):
         fg_color = "#8FE9FC"
         bg_color = "#F1F1F1"
         fg_alpha = 0.15
-        bg_alpha = 0.10
+        bg_alpha = 0.35
 
         # 🟡 ==== 绘图 ====
         fig, ax = plt.subplots(figsize=(16, 6))
