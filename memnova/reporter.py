@@ -117,9 +117,8 @@ class Reporter(object):
     @staticmethod
     def mean_score_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
-            float(item[group][field])
-            for item in compilation
-            if field in item and item[field] not in (None, "", "nan")
+            float(c[group][field]) for c in compilation
+            if group in c and c[group] not in (None, "", "nan")
         ]
         return round(float(np.mean(vals)), 2) if vals else None
 
