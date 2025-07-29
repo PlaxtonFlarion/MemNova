@@ -26,8 +26,8 @@ class Scores(object):
         column: str = "pss",
         r2_threshold: float = 0.5,
         slope_threshold: float = 0.01,
-        window: int = None,                 # 滑动窗口长度, 如30
-        remove_outlier: bool = False        # 是否异常剔除
+        window: int = 10,   
+        remove_outlier: bool = True
     ) -> dict:
 
         # 🟨 ==== 默认结果 ====
