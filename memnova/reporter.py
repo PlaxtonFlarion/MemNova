@@ -281,8 +281,6 @@ class Reporter(object):
         # 🟡 ==== 内存基线 ====
         if baseline:
             headline = self.align.get_headline("mem", "base")
-            # fg = {k: self.__mean_of_field(compilation, [k]) for k in ["FG-MAX", "FG-AVG"]}
-            # bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
 
             fg = {
                 k: self.__mean_of_field(compilation, group, field)
