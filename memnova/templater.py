@@ -250,9 +250,9 @@ class Templater(object):
             ("PSS", "@pss{0.00} MB"),
             ("RSS", "@rss{0.00} MB"),
             ("USS", "@uss{0.00} MB"),
-            ("Native Heap", "@native_heap{0.00} MB"),
-            ("Dalvik Heap", "@dalvik_heap{0.00} MB"),
-            ("Graphics", "@graphics{0.00} MB"),
+            ("Java Heap", "@summary_java__heap{0.00} MB"),
+            ("Native Heap", "@summary_native_heap{0.00} MB"),
+            ("Graphics", "@summary_graphics{0.00} MB"),
             ("当前页", "@activity"),
             ("优先级", "@mode"),
         ]
