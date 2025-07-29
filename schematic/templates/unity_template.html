@@ -245,7 +245,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         /* 结论 */
         .expiry-pass, .expiry-fail {
             color: #ffffff;
-            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         .expiry-pass {
             background: linear-gradient(135deg, #b6f57e 0%, #89e403 100%);
@@ -255,8 +254,13 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
             box-shadow: 0 2px 6px rgba(232, 65, 24, 0.25);
         }
-        .expiry-pass:hover, .expiry-fail:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        .expiry-pass:hover {
+            background: linear-gradient(135deg, #d6ff66 0%, #a4e403 100%);
+            box-shadow: 0 6px 18px rgba(137, 228, 3, 0.45);
+        }
+        .expiry-fail:hover {
+            background: linear-gradient(135deg, #ff3c00 0%, #a00000 100%);
+            box-shadow: 0 6px 18px rgba(160, 0, 0, 0.5)
         }
 
         /* 高亮 */
