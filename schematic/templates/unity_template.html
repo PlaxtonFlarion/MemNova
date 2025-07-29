@@ -175,30 +175,43 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             flex-direction: column;
         }
 
+        /* 摘要容器内标签全局通用样式 */
+        .schema, .general,
+        .expiry-pass, .expiry-fail, .highlight,
+        .baseline, .leak, .fluency, .others,
+        .refer {
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        /* 摘要容器内标签全局悬浮样式 */
+        .schema:hover, .general:hover,
+        .expiry-pass:hover, .expiry-fail:hover, .highlight:hover,
+        .baseline:hover, .leak:hover, .fluency:hover, .others:hover,
+        .refer:hover {
+            transform: translateY(-1px);
+            cursor: default;
+        }
+
         .message {
             display: flex;
             flex-direction: column;
         }
-
         .schema {
             width: fit-content;
-            white-space: nowrap;
-            margin: 5px 8px;
-            padding: 4px 10px;
-            font-weight: 600;
+            margin: 5px 8px
             color: #1a1a1a;
             background: linear-gradient(135deg, #dff1ff 0%, #8ec5fc 100%);
-            border-radius: 6px;
             box-shadow: 0 2px 6px rgba(142, 197, 252, 0.25);
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
         }
         .schema:hover {
             background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
             color: #000000;
-            cursor: default;
             box-shadow: 0 4px 12px rgba(142, 197, 252, 0.4);
-            transform: translateY(-1px);
         }
         .schema p {
             margin: 0;
@@ -215,28 +228,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
         .schema-msg-main p, .schema-msg-line p {
             margin: 8px;
-        }
-
-        /* 摘要容器内标签全局通用样式 */
-        .general,
-        .expiry-pass, .expiry-fail, .highlight,
-        .baseline, .leak, .fluency, .others,
-        .refer {
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 6px;
-            white-space: nowrap;
-            font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
-            transition: all 0.3s ease;
-        }
-
-        /* 摘要容器内标签全局悬浮样式 */
-        .general:hover,
-        .expiry-pass:hover, .expiry-fail:hover, .highlight:hover,
-        .baseline:hover, .leak:hover, .fluency:hover, .others:hover,
-        .refer:hover {
-            transform: translateY(-1px);
-            cursor: default;
         }
 
         /* 参考 */
