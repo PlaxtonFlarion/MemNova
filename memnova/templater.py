@@ -165,7 +165,7 @@ class Templater(object):
         # 🟡 ==== 堆叠配色（马卡龙/莫兰迪风）====
         stack_fields = ["summary_java_heap", "summary_native_heap", "summary_graphics"]
         stack_colors = [
-            "#FFD6E0",  # Java Heap 淡粉
+            "#FFD6E0",  # Java Heap   淡粉
             "#D4E7FF",  # Native Heap 淡蓝
             "#CAE7E1",  # Graphics    淡青
         ]
@@ -202,7 +202,7 @@ class Templater(object):
             alpha=0.4
         )
 
-        # 🟡 ==== 折线 & 极值点 ====
+        # 🟡 ==== 折线 / 极值点 ====
         df["colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
         )
@@ -233,15 +233,15 @@ class Templater(object):
             source=source, line_width=1.5, color=sld_color, alpha=0.7, legend_label="Sliding Avg", line_dash="dotdash"
         )
 
+        # 🟡 ==== 均值线 ====
+        p.add_layout(
+            Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
+        )
+
         # 🟡 ==== 极值点 ====
         pss_spot = p.scatter(
             "x", "pss",
             source=source, size="sizes", color="colors", alpha=0.98
-        )
-
-        # 🟡 ==== 均值线 ====
-        p.add_layout(
-            Span(location=avg_value, dimension="width", line_color=avg_color, line_dash="dotted", line_width=2)
         )
 
         # 🟡 ==== 悬浮提示 ====
@@ -299,11 +299,6 @@ class Templater(object):
         drag_ranges: typing.Optional[list[dict]],
         jank_ranges: typing.Optional[list[dict]]
     ) -> "figure":
-
-        # 🟢 ==== 计算得分 ====
-        evaluate = Scores.analyze_gfx_score(
-            frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app"
-        )
 
         # 🟢 ==== 汇总所有区间时间 ====
         all_starts, all_closes = [], []
@@ -420,8 +415,8 @@ class Templater(object):
 
         # 🟢 ==== 标题设置 ====
         p.title.text_font_size = "16pt"
-        p.title.text = f"[Range] - [{evaluate['score']}] - [{evaluate['level']}]"
-        p.title.text_color = evaluate["color"]
+        p.title.text = "[Frame Range]"
+        p.title.text_color = "#FFAF5F"
 
         return p
 

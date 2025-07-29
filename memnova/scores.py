@@ -8,7 +8,6 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
-import statistics
 import numpy as np
 import pandas as pd
 from scipy.stats import (
@@ -26,12 +25,13 @@ class Scores(object):
         column: str = "pss",
         r2_threshold: float = 0.5,
         slope_threshold: float = 0.01,
-        window: int = 10,   
+        window: int = 30,
         remove_outlier: bool = True
     ) -> dict:
 
         # 🟨 ==== 默认结果 ====
         result = {
+            "trend": "",
             "trend_score": 0.0,
             "jitter_index": 0.0,
             "r_squared": 0.0,
@@ -49,6 +49,7 @@ class Scores(object):
             "outlier_count": 0
         }
 
+        # 🟨 ==== 数据校验 ====
         df = df.copy()
 
         if column not in df or df[column].isnull().any():
@@ -60,14 +61,12 @@ class Scores(object):
         # 🟨 ==== 异常剔除 ====
         outlier_count = 0
         if remove_outlier:
-            zs = zscore(values)
-            if np.all(np.isnan(zs)):
-                return {"trend": "All NaN After Zscore", "outlier_count": len(values)} | result
+            if np.all(np.isnan(zs := zscore(values))):
+                return {"trend": "All NaN", "outlier_count": len(values)} | result
             mask = np.abs(zs) < 3
             outlier_count = np.sum(~mask)
-            values = values[mask]
-            if len(values) < 10:
-                return {"trend": "Cleaned Out", "outlier_count": outlier_count} | result
+            if len(values := values[mask]) < 10:
+                return {"trend": "Cleaned", "outlier_count": outlier_count} | result
 
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
@@ -166,111 +165,147 @@ class Scores(object):
 
         # 🟩 ==== 默认结果 ====
         result = {
+            "label": "",
             "level": "N/A",
             "score": 0.0,
             "color": "#BBBBBB",
+            "frame_count": len(frames),
+            "duration_s": 0,
             "min_fps": 0.0,
             "avg_fps": 0.0,
-            "jnk_fps": 0.0,
+            "max_fps": 0.0,
             "p95_fps": 0.0,
+            "p99_fps": 0.0,
+            "fps_std": 0.0,
+            "jank_ratio": 0.0,
+            "high_latency_ratio": 0.0,
+            "max_frame_time": 0.0,
+            "min_frame_time": 0.0,
+            "roll_avg_fps": None,
+            "roll_jnk_ratio": None,
+            "drag_avg_fps": None,
+            "drag_jnk_ratio": None,
+            "longest_low_fps": 0.0,
+            "score_jank": 0.0,
+            "score_latency": 0.0,
+            "score_fps_var": 0.0,
+            "score_motion": 0.0,
         }
 
+        # 🟩 ==== 数据校验 ====
         if (total_frames := len(frames)) < 10:
-            return {"label": "Few Frames"} | result
-
-        if not (fps_values := [fps for f in frames if (fps := f.get(fps_key))]):
-            return {"label": "No FPS"} | result
+            return {"label": "Few Frames", **result}
 
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
-            return {"label": "Invalid Time"} | result
+            return {"label": "Invalid Time", **result}
+
+        if not (fps_values := [app_fps for f in frames if (app_fps := f.get(fps_key)) is not None]):
+            return {"label": "No FPS", **result}
+
+        result["duration_s"] = (duration_s := duration / 1000)
+        result["frame_count"] = total_frames
 
         # 🟩 ==== 基础统计 ====
-        min_fps = min(fps_values)
-        avg_fps = sum(fps_values) / len(fps_values)
-        jnk_fps = sum(1 for f in frames if f.get("is_jank")) / total_frames * 100
-        p95_fps = float(np.percentile(fps_values, 95))
-        statistical = {
-            "min_fps": min_fps, "avg_fps": avg_fps, "jnk_fps": jnk_fps, "p95_fps": p95_fps,
-        }
+        result["min_fps"] = min(fps_values)
+        result["max_fps"] = max(fps_values)
+        result["avg_fps"] = float(np.mean(fps_values))
+        result["fps_std"] = float(np.std(fps_values, ddof=1)) if len(fps_values) > 1 else 0
+        result["p95_fps"] = float(np.percentile(fps_values, 95))
+        result["p99_fps"] = float(np.percentile(fps_values, 99))
+        frame_times = [f["duration_ms"] for f in frames]
+        result["max_frame_time"] = max(frame_times)
+        result["min_frame_time"] = min(frame_times)
 
-        # 🟩 ==== Jank 比例 ====
-        jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
-        jank_score = 1.0 - min(jank_total / duration, 1.0)
-
-        # 🟩 ==== 帧延迟比例 ====
+        # 🟩 ==== 掉帧指标 ====
+        result["jank_ratio"] = sum(1 for f in frames if f.get("is_jank")) / total_frames * 100
         ideal_frame_time = 1000 / 60
         over_threshold = sum(1 for f in frames if f["duration_ms"] > ideal_frame_time)
-        latency_score = 1.0 - over_threshold / len(frames)
+        result["high_latency_ratio"] = over_threshold / total_frames * 100
 
-        # 🟩 ==== FPS 波动与平均值 ====
-        fps_std = statistics.stdev(fps_values) if len(fps_values) >= 2 else 0
-        fps_score = max(1.0 - min(fps_std / 10, 1.0), 0.0) * min(avg_fps / 60, 1.0)
+        # 🟩 ==== 连续低FPS最长段 ====
+        low_fps_threshold, longest, cur = 30, 0, 0
+        for fps in fps_values:
+            if fps < low_fps_threshold:
+                cur += 1
+                longest = max(longest, cur)
+            else:
+                cur = 0
+        result["longest_low_fps"] = longest * duration_s / total_frames if total_frames else 0.0
 
-        # 🟩 ==== 滑动/拖拽区域中抖动占比 ====
-        if (motion_total := sum(r["end_ts"] - r["start_ts"] for r in roll_ranges + drag_ranges)) == 0:
+        # 🟩 ==== 滑动区指标 ====
+        roll_frames = []
+        for r in roll_ranges or []:
+            roll_frames.extend([f for f in frames if r["start_ts"] <= f["timestamp_ms"] <= r["end_ts"]])
+        if roll_frames:
+            roll_fps = [f.get(fps_key) for f in roll_frames if f.get(fps_key) is not None]
+            roll_jnk = [f.get("is_jank", 0) for f in roll_frames]
+            result["roll_avg_fps"] = float(np.mean(roll_fps)) if roll_fps else None
+            result["roll_jnk_ratio"] = sum(roll_jnk) / len(roll_jnk) * 100 if roll_jnk else None
+
+        # 🟩 ==== 拖拽区指标 ====
+        drag_frames = []
+        for r in drag_ranges or []:
+            drag_frames.extend([f for f in frames if r["start_ts"] <= f["timestamp_ms"] <= r["end_ts"]])
+        if drag_frames:
+            drag_fps = [f.get(fps_key) for f in drag_frames if f.get(fps_key) is not None]
+            drag_jnk = [f.get("is_jank", 0) for f in drag_frames]
+            result["drag_avg_fps"] = float(np.mean(drag_fps)) if drag_fps else None
+            result["drag_jnk_ratio"] = sum(drag_jnk) / len(drag_jnk) * 100 if drag_jnk else None
+
+        # 🟩 ==== 评分组成 ====
+        jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
+        score_jank = 1.0 - min(jank_total / duration, 1.0)
+        latency_score = 1.0 - result["high_latency_ratio"] / 100
+        fps_score = max(1.0 - min(result["fps_std"] / 10, 1.0), 0.0) * min(result["avg_fps"] / 60, 1.0)
+        motion_total = sum(r["end_ts"] - r["start_ts"] for r in (roll_ranges or []) + (drag_ranges or []))
+
+        if motion_total == 0:
             motion_score = 0.0
         else:
             motion_jank_overlap = sum(
                 max(0, min(rj["end_ts"], rm["end_ts"]) - max(rj["start_ts"], rm["start_ts"]))
-                for rm in roll_ranges + drag_ranges
-                for rj in jank_ranges
+                for rm in (roll_ranges or []) + (drag_ranges or [])
+                for rj in (jank_ranges or [])
             )
-            motion_jank_ratio = motion_jank_overlap / (motion_total + 1e-6)
-            motion_score = 1.0 - min(motion_jank_ratio, 1.0)
+            motion_score = 1.0 - min(motion_jank_overlap / (motion_total + 1e-6), 1.0)
+
+        result["score_jank"] = score_jank
+        result["score_latency"] = latency_score
+        result["score_fps_var"] = fps_score
+        result["score_motion"] = motion_score
 
         # 🟩 ==== 综合得分 ====
-        final_score = round(
-            (jank_score * 0.5 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.1), 3
+        final_score = (
+            score_jank * 0.5 + latency_score * 0.2 + fps_score * 0.2 + motion_score * 0.1
         )
+        result["score"] = final_score
 
         if final_score >= 0.93:
-            return {
-                "label": "Flawless - Ultra Smooth",
-                "level": "S",
-                "score": final_score,
-                "color": "#005822",
-                **statistical
-            }
+            result.update({
+                "label": "Flawless - Ultra Smooth", "level": "S", "color": "#005822"
+            })
         elif final_score >= 0.80:
-            return {
-                "label": "Excellent - Stable & Fast",
-                "level": "A",
-                "score": final_score,
-                "color": "#1B5E20",
-                **statistical
-            }
+            result.update({
+                "label": "Excellent - Stable & Fast", "level": "A", "color": "#1B5E20"
+            })
         elif final_score >= 0.68:
-            return {
-                "label": "Good - Minor Stutters",
-                "level": "B",
-                "score": final_score,
-                "color": "#D39E00",
-                **statistical
-            }
+            result.update({
+                "label": "Good - Minor Stutters", "level": "B", "color": "#D39E00"
+            })
         elif final_score >= 0.50:
-            return {
-                "label": "Fair - Noticeable Lag",
-                "level": "C",
-                "score": final_score,
-                "color": "#E65100",
-                **statistical
-            }
+            result.update({
+                "label": "Fair - Noticeable Lag", "level": "C", "color": "#E65100"
+            })
         elif final_score >= 0.35:
-            return {
-                "label": "Poor - Frequent Stutter",
-                "level": "D",
-                "score": final_score,
-                "color": "#C62828",
-                **statistical
-            }
+            result.update({
+                "label": "Poor - Frequent Stutter", "level": "D", "color": "#C62828"
+            })
         else:
-            return {
-                "label": "Unusable - Critical Lag",
-                "level": "E",
-                "score": final_score,
-                "color": "#7B1FA2",
-                **statistical
-            }
+            result.update({
+                "label": "Unusable - Critical Lag", "level": "E", "color": "#7B1FA2"
+            })
+
+        return result
 
     # Workflow: ======================== I/O ========================
 

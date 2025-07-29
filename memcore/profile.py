@@ -20,22 +20,27 @@ class Align(object):
 
     aligns = {
         "common": {
-            "label": "应用名称",
+            "app_label": "应用名称",
             "mem_speed": 0.5,
             "gfx_speed": 30.0,
         },
         "mem": {
             "base": {
                 "headline": "内存基线",
+                "standard": {
+                    "fg-max": 0.00,
+                    "fg-avg": 0.00,
+                    "bg-max": 0.00,
+                    "bg-avg": 0.00,
+                },
                 "sections": [
                     {
                         "title": "参考标准",
                         "class": "refer",
+                        "enter": True,
                         "value": [
-                            "前台 FG-MAX、FG-AVG 控制在业务常规阈值",
-                            "后台 BG-MAX、BG-AVG 不大幅高于前台",
-                            "无突增、无长时间高位波动",
-                            "运行周期无内存泄漏表现"
+                            "前台 FG-MAX、FG-AVG 控制在业务常规阈值，后台 BG-MAX、BG-AVG 不大幅高于前台",
+                            "无突增、无长时间高位波动，运行周期无内存泄漏表现"
                         ]
                     },
                     {
@@ -45,7 +50,7 @@ class Align(object):
                             "前台、后台峰值和均值均不超标",
                             "整体内存趋势平稳，无明显异常",
                             "报告周期内未检测到泄漏趋势"
-                        ]    
+                        ]
                     }
                 ]
             },
@@ -57,10 +62,7 @@ class Align(object):
                         "class": "refer",
                         "value": [
                             "PSS 持续上升且无明显回落",
-                            "趋势斜率 Slope > 0.01 且拟合优度 R² > 0.5",
-                            "内存峰值不因 GC 回落到初始水平",
-                            "业务稳定阶段分析，启动等异常不计入",
-                            "内存波动但无趋势上涨（R² < 0.5）不判为泄漏"
+                            "趋势斜率 Slope > 0.01 且拟合优度 R² > 0.5"
                         ]
                     },
                     {
@@ -68,9 +70,7 @@ class Align(object):
                         "class": "criteria",
                         "value": [
                             "内存曲线稳定，无持续上升趋势",
-                            "Slope ≤ 0.01 或 R² ≤ 0.5",
-                            "峰值能被 GC 有效回收",
-                            "排除启动、切后台等短期波动"
+                            "Slope ≤ 0.01 或 R² ≤ 0.5"
                         ]
                     }
                 ]
@@ -79,16 +79,25 @@ class Align(object):
         "gfx": {
             "base": {
                 "headline": "流畅度",
+                "standard": {
+                    "avg-fps": 55.0,
+                    "std-fps": 5.0,
+                    "jnk": 0.03,
+                    "hi-lat": 0.02,
+                    "roll-fps": 50.0,
+                    "low-fps-max": 2.0
+                },
                 "sections": [
                     {
                         "title": "参考标准",
                         "class": "refer",
                         "value": [
-                            "平均 FPS ≥ 55",
-                            "最大连续掉帧段 ≤ 2",
-                            "单帧耗时 > 50ms 占比 ≤ 3%",
-                            "滑动段平均帧率 ≥ 50",
-                            "Trace 文件中无明显主线程阻塞"
+                            "AVG FPS ≥ 55",
+                            "STD FPS ≤ 5",
+                            "JNK % ≤ 3%",
+                            "Hi-Lat % ≤ 2%",
+                            "Roll FPS ≥ 50",
+                            "Low-FPS Max ≤ 2s"
                         ]
                     },
                     {
@@ -116,8 +125,8 @@ class Align(object):
         self.aligns = state
 
     @property
-    def label(self):
-        return self.aligns["common"]["label"]
+    def app_label(self):
+        return self.aligns["common"]["app_label"]
 
     @property
     def mem_speed(self):
@@ -129,21 +138,39 @@ class Align(object):
 
     # ✅ 获取某个测试项的 headline 字符
     def get_headline(self, section: str, subfield: str = None) -> str:
+        primary_key = "headline"
         if subfield:
-            return self.aligns.get(section, {}).get(subfield, {}).get("headline", "")
+            return self.aligns.get(section, {}).get(subfield, {}).get(primary_key, "")
 
-        return self.aligns.get(section, {}).get("headline", "")
+        return self.aligns.get(section, {}).get(primary_key, "")
+
+    # ✅ 获取某个测试项的 headline 字符
+    def get_standard(self, section: str, subfield: str = None) -> typing.Optional[float]:
+        primary_key = "standard"
+        if subfield:
+            value = self.aligns.get(section, {}).get(subfield, {}).get(primary_key, "")
+        else:
+            value = self.aligns.get(section, {}).get(primary_key, "")
+
+        if isinstance(value, str or int or float):
+            try:
+                return round(float(value), 2)
+            except TypeError:
+                return None
+
+        return None
 
     # ✅ 获取某个测试项的 sections 列表
     def get_sections(self, section: str, subfield: str = None) -> list:
+        primary_key = "sections"
         if subfield:
-            return self.aligns.get(section, {}).get(subfield, {}).get("sections", [])
+            return self.aligns.get(section, {}).get(subfield, {}).get(primary_key, [])
 
-        return self.aligns.get(section, {}).get("sections", [])
+        return self.aligns.get(section, {}).get(primary_key, [])
 
-    @label.setter
-    def label(self, value: typing.Any):
-        self.aligns["common"]["label"] = value
+    @app_label.setter
+    def app_label(self, value: typing.Any):
+        self.aligns["common"]["app_label"] = value
 
     @mem_speed.setter
     def mem_speed(self, value: typing.Any):
@@ -159,7 +186,7 @@ class Align(object):
         try:
             user_align = await FileAssist.read_yaml(self.align_file)
 
-            self.label = user_align.get("common", {}).get("label", self.label)
+            self.app_label = user_align.get("common", {}).get("app_label", self.app_label)
             self.mem_speed = user_align.get("common", {}).get("mem_speed", self.mem_speed)
             self.gfx_speed = user_align.get("common", {}).get("gfx_speed", self.gfx_speed)
 

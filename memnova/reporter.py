@@ -165,12 +165,15 @@ class Reporter(object):
                     continue
                 score_group[mode] = score
 
+                trend = score["trend"]
+                style = "expiry-fail" if trend.lower().startwith("up") else "baseline"
+
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
                     {
                         "fields": [
-                            {"text": f"{mode}-Trend: {score['trend']}", "class": "baseline"},
-                            {"text": f"{mode}-Shake: {score['jitter_index']:.2f}", "class": "baseline"}
+                            {"text": f"{mode}: {trend}", "class": style},
+                            {"text": f"{mode} Jitter: {score['jitter_index']:.2f}", "class": "baseline"}
                         ]
                     }
                 ]
@@ -201,18 +204,23 @@ class Reporter(object):
             )
             self.background_tasks.append(draw_leak_future)
 
+            trend = score["trend"]
+            style = "expiry-fail" if trend.lower().startwith("up") else "leak"
+
             # 🟡 ==== 评价部分 ====
             evaluate = [
                 {
                     "fields": [
-                        {"text": f"Trend: {score['trend']}", "class": "leak"},
-                        {"text": f"Score: {score['trend_score']}", "class": "leak"}
+                        {"text": trend, "class": style},
+                        {"text": score['poly_trend'], "class": "leak"},
+                        {"text": f"Score: {score['trend_score']:.2f}", "class": "leak"}
                     ]
                 },
                 {
                     "fields": [
-                        {"text": f"Shake: {score['jitter_index']:.2f}", "class": "leak"},
-                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"}
+                        {"text": f"Jitter: {score['jitter_index']:.2f}", "class": "leak"},
+                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"},
+                        {"text": f"R²: {score['r_squared']:.2f}", "class": "leak"}
                     ]
                 }
             ]
@@ -282,16 +290,24 @@ class Reporter(object):
         if baseline:
             headline = self.align.get_headline("mem", "base")
 
-            fg = {
-                k: self.__mean_of_field(compilation, group, field)
-                for k, group, field in [("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg")]
-            }
-            bg = {
-                k: self.__mean_of_field(compilation, group, field)
-                for k, group, field in [("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")]
-            }
+            key_tuples = [
+                ("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg"), ("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")
+            ]
+
+            grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
+            fg = {k: grouped[k] for k in ["FG-MAX", "FG-AVG"]}
+            bg = {k: grouped[k] for k in ["BG-MAX", "BG-AVG"]}
 
             # 🟡 ==== 主要容器 ====
+            assemble = [
+                f"{k} HIGH" for k, v in grouped.items()
+                if v and (
+                    standard := self.align.get_standard("mem", k.lower())
+                ) is not None and v > standard
+            ]
+            if assemble:
+                major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
+
             major_summary_items += self.align.get_sections("mem", "base")
 
             # 🟡 ==== 次要容器 ====
@@ -303,10 +319,13 @@ class Reporter(object):
         # 🟡 ==== 内存泄漏 ====
         else:
             headline = self.align.get_headline("mem", "leak")
-            union = {
-                k: self.__mean_of_field(compilation, group, field)
-                for k, group, field in [("MAX", "MEM", "max"), ("AVG", "MEM", "avg")]
-            }
+
+            key_tuples = [
+                ("MAX", "MEM", "max"), ("AVG", "MEM", "avg")
+            ]
+
+            grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
+            union = {k: grouped[k] for k in ["MAX", "AVG"]}
 
             # 🟡 ==== 主要容器 ====
             major_summary_items += self.align.get_sections("mem", "leak")
@@ -455,18 +474,28 @@ class Reporter(object):
         )
         self.background_tasks.append(draw_future)
 
+        roll_avg_fps = score["roll_avg_fps"]
+        is_scroll = f"Roll FPS: {roll_avg_fps:.2f} FPS" if roll_avg_fps else score["level"]
+
+        standard_std = self.align.get_standard("gfx", "std-fps")
+        std_class = "fluency" if standard_std and score["fps_std"] <= standard_std else "expiry-fail"
+        standard_jnk = self.align.get_standard("gfx", "jnk")
+        jnk_class = "fluency" if standard_jnk and score["jank_ratio"] <= standard_jnk else "expiry-fail"
+
         # 🟢 ==== 评价部分 ====
         evaluate = [
             {
                 "fields": [
-                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"},
-                    {"text": f"Level: {score['level']}", "class": "fluency"}
+                    {"text": f"STD: {score['fps_std']:.2f}", "class": std_class},
+                    {"text": f"JNK: {score['jank_ratio']:.2f} %", "class": jnk_class},
+                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"}
                 ]
             },
             {
                 "fields": [
-                    {"text": f"P95: {score['p95_fps']:.2f} FPS", "class": "fluency"},
-                    {"text": f"JNK: {score['jnk_fps']:.2f} %", "class": "fluency"}
+                    {"text": is_scroll, "class": "fluency"},
+                    {"text": f"Low-FPS MAX: {score['longest_low_fps']} s", "class": "fluency"},
+                    {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": "fluency"}
                 ]
             }
         ]
@@ -533,10 +562,13 @@ class Reporter(object):
             return {}
 
         headline = self.align.get_headline("gfx", "base")
-        union = {
-            k: self.__mean_of_field(compilation, group, field)
-            for k, group, field in [("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")]
-        }
+
+        key_tuples = [
+            ("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")
+        ]
+
+        grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
+        union = {k: grouped[k] for k in ["MIN", "AVG"]}
 
         major_summary_items = [
             {"title": "基础信息", "class": "general", "value": cur_mark}
