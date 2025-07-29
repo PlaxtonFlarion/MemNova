@@ -217,6 +217,7 @@ class Painter(object):
         # 🟢 ==== 计算帧耗时平均和最大值 ====
         avg_dur = np.mean(durations) if durations else 0
         max_dur = np.max(durations) if durations else 0
+        ths_dur, ths_tag = 16.67, "16.67ms / 60 FPS"
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
@@ -232,7 +233,7 @@ class Painter(object):
         ax1.plot(timestamps, durations, label="Frame Duration", color=dur_color, linewidth=1.2)
         ax1.axhline(avg_dur, linestyle=":", linewidth=1.2, color=avg_color, alpha=0.88, label="Avg Duration")
         ax1.axhline(max_dur, linestyle="--", linewidth=1.2, color=max_color, alpha=0.88, label="Max Duration")
-        ax1.axhline(16.67, linestyle="--", linewidth=1.2, color="#FF0000", alpha=0.88, label="16.67ms / 60 FPS")
+        ax1.axhline(ths_dur, linestyle="--", linewidth=1.2, color="#FF0000", alpha=0.88, label=ths_tag)
 
         # 🟢 ==== 多帧率基准线 ====
         fps_marks = {
@@ -270,7 +271,7 @@ class Painter(object):
             Line2D([0], [0], color=dur_color, lw=1.2, label="Frame Duration"),
             Line2D([0], [0], color=avg_color, lw=1.2, linestyle=":", label=f"Avg: {avg_dur:.1f}ms"),
             Line2D([0], [0], color=max_color, lw=1.2, linestyle="--", label=f"Max: {max_dur:.1f}ms"),
-            Line2D([0], [0], color="#FF0000", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"),
+            Line2D([0], [0], color="#FF0000", lw=1.2, linestyle='--', label=ths_tag),
             Line2D([0], [0], color="#999999", lw=0.8, linestyle='--', label="45 FPS / 90 FPS"),
             Line2D([0], [0], color="#BBBBBB", lw=0.8, linestyle='--', label="30 FPS / 120 FPS"),
             Patch(facecolor=roll_color, edgecolor="none", label="Scroll Region"),
