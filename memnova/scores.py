@@ -55,6 +55,17 @@ class Scores(object):
         if len(values := df[column].to_numpy()) < 10:
             return {"trend": "Few Data"} | result
 
+        # 🟨 ==== 异常剔除 ====
+        outlier_count = 0
+        if remove_outlier:
+            zs = np.abs(zscore(values))
+            mask = zs < 3
+            outlier_count = np.sum(~mask)
+            values = values[mask]
+            df = df.iloc[mask]
+            if len(values) < 10:
+                return {"trend": "Cleaned Out", "outlier_count": outlier_count} | result
+
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
         max_val = values.max()
