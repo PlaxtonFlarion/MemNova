@@ -228,6 +228,22 @@ class Painter(object):
         avg_color = "#448AFF"
         max_color = "#FF4081"
 
+        # 🟢 ==== 主线 / 平均线 / 最高线 ====
+        ax1.plot(timestamps, durations, label="Frame Duration", color=main_color, linewidth=1.2)
+        ax1.axhline(avg_dur, linestyle=":", linewidth=1.2, color=avg_color, alpha=0.88, label="Avg Duration")
+        ax1.axhline(max_dur, linestyle="--", linewidth=1.2, color=max_color, alpha=0.88, label="Max Duration")
+        ax1.axhline(16.67, linestyle="--", linewidth=1.2, color="#FF0000", alpha=0.88, label="16.67ms / 60 FPS")
+
+        # 🟢 ==== 多帧率基准线 ====
+        fps_marks = {
+            "120 FPS": {"ms": 1000 / 120, "color": "#BBBBBB"},
+            "90 FPS": {"ms": 1000 / 90, "color": "#999999"},
+            "45 FPS": {"ms": 1000 / 45, "color": "#999999"},
+            "30 FPS": {"ms": 1000 / 30, "color": "#BBBBBB"}
+        }
+        for label, style in fps_marks.items():
+            ax1.axhline(style["ms"], linestyle="--", linewidth=0.8, color=style["color"])
+
         # 🟢 ==== 滑动区 / 拖拽区 / 掉帧区 背景区块绘制 ====
         for r in roll_ranges:
             ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=roll_color, alpha=0.10)
@@ -235,23 +251,6 @@ class Painter(object):
             ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=drag_color, alpha=0.15)
         for r in jank_ranges:
             ax1.axvspan(r["start_ts"] / 1000, r["end_ts"] / 1000, color=jank_color, alpha=0.35)
-
-        # 🟢 ==== 主线 / 平均线 / 最高线 ====
-        ax1.plot(timestamps, durations, label="Frame Duration", color=main_color, linewidth=1.2)
-        ax1.axhline(avg_dur, linestyle=":", linewidth=1.3, color=avg_color, alpha=0.88, label="Avg Duration")
-        ax1.axhline(max_dur, linestyle="--", linewidth=1.1, color=max_color, alpha=0.88, label="Max Duration")
-
-        # 🟢 ==== 多帧率基准线 ====
-        fps_marks = {
-            "120 FPS": {"ms": 1000 / 120, "color": "#BBBBBB"},
-            "90 FPS": {"ms": 1000 / 90, "color": "#999999"},
-            "60 FPS": {"ms": 1000 / 60, "color": "#FF0000"},
-            "45 FPS": {"ms": 1000 / 45, "color": "#999999"},
-            "30 FPS": {"ms": 1000 / 30, "color": "#BBBBBB"}
-        }
-
-        for label, style in fps_marks.items():
-            ax1.axhline(style["ms"], linestyle="--", linewidth=1.0, color=style["color"])
 
         # 🟢 ==== FPS 统计信息 ====
         max_sys = max(fps_sys, default=0)
@@ -269,11 +268,11 @@ class Painter(object):
         # 🟢 ==== 自定义图例（颜色区块 + 主线 + 60 FPS）====
         legend_elements = [
             Line2D([0], [0], color=main_color, lw=1.2, label="Frame Duration"),
-            Line2D([0], [0], color="#FF0000", lw=1.0, linestyle='--', label="16.67ms / 60 FPS"),
-            Line2D([0], [0], color=avg_color, lw=1.3, linestyle=":", label=f"Avg: {avg_dur:.1f}ms"),
-            Line2D([0], [0], color=max_color, lw=1.1, linestyle="--", label=f"Max: {max_dur:.1f}ms"),
-            Line2D([0], [0], color="#999999", lw=1.0, linestyle='--', label="45 FPS / 90 FPS"),
-            Line2D([0], [0], color="#BBBBBB", lw=1.0, linestyle='--', label="30 FPS / 120 FPS"),
+            Line2D([0], [0], color=avg_color, lw=1.2, linestyle=":", label=f"Avg: {avg_dur:.1f}ms"),
+            Line2D([0], [0], color=max_color, lw=1.2, linestyle="--", label=f"Max: {max_dur:.1f}ms"),
+            Line2D([0], [0], color="#FF0000", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"),
+            Line2D([0], [0], color="#999999", lw=0.8, linestyle='--', label="45 FPS / 90 FPS"),
+            Line2D([0], [0], color="#BBBBBB", lw=0.8, linestyle='--', label="30 FPS / 120 FPS"),
             Patch(facecolor=roll_color, edgecolor="none", label="Scroll Region"),
             Patch(facecolor=drag_color, edgecolor="none", label="Drag Region"),
             Patch(facecolor=jank_color, edgecolor="none", label="Jank Region"),
