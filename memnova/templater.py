@@ -118,7 +118,7 @@ class Templater(object):
         df = df.copy()
         df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
-        for col in ["pss", "rss", "uss", "native_heap", "dalvik_heap", "graphics"]:
+        for col in ["summary_java_heap", "summary_native_heap", "summary_graphics", "pss", "rss", "uss"]:
             df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
         df["activity"] = df["activity"].fillna("")
 
