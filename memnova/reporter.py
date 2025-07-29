@@ -101,7 +101,7 @@ class Reporter(object):
     # Workflow: ======================== MEM & I/O ========================
 
     @staticmethod
-    def mean_score_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
+    def __mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
             float(c[group][field]) for c in compilation
             if group in c and c[group] not in (None, "", "nan")
@@ -285,11 +285,11 @@ class Reporter(object):
             # bg = {k: self.__mean_of_field(compilation, [k]) for k in ["BG-MAX", "BG-AVG"]}
 
             fg = {
-                k: self.mean_score_field(compilation, group, field)
+                k: self.__mean_of_field(compilation, group, field)
                 for k, group, field in [("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg")]
             }
             bg = {
-                k: self.mean_score_field(compilation, group, field)
+                k: self.__mean_of_field(compilation, group, field)
                 for k, group, field in [("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")]
             }
 
@@ -305,9 +305,8 @@ class Reporter(object):
         # 🟡 ==== 内存泄漏 ====
         else:
             headline = self.align.get_headline("mem", "leak")
-            # union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
             union = {
-                k: self.mean_score_field(compilation, group, field)
+                k: self.__mean_of_field(compilation, group, field)
                 for k, group, field in [("MAX", "MEM", "max"), ("AVG", "MEM", "avg")]
             }
 
@@ -536,9 +535,8 @@ class Reporter(object):
             return {}
 
         headline = self.align.get_headline("gfx", "base")
-        # union = {k: self.__mean_of_field(compilation, [k]) for k in ["MIN", "AVG"]}
         union = {
-            k: self.mean_score_field(compilation, group, field)
+            k: self.__mean_of_field(compilation, group, field)
             for k, group, field in [("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")]
         }
 
