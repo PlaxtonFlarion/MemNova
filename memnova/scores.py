@@ -11,7 +11,9 @@
 import statistics
 import numpy as np
 import pandas as pd
-from scipy.stats import linregress
+from scipy.stats import (
+    linregress, zscore
+)
 
 
 class Scores(object):
