@@ -60,12 +60,9 @@ class Scores(object):
         # 🟨 ==== 异常剔除 ====
         outlier_count = 0
         if remove_outlier:
-            zs = np.abs(zscore(values))
-            mask = zs < 3
+            mask = np.abs(zscore(values)) < 3
             outlier_count = np.sum(~mask)
-            values = values[mask]
-            df = df.iloc[mask]
-            if len(values) < 10:
+            if len(values := values[mask]) < 10:
                 return {"trend": "Cleaned Out", "outlier_count": outlier_count} | result
 
         # 🟨 ==== 基础统计 ====
@@ -95,7 +92,7 @@ class Scores(object):
                 poly_trend = "U-shape ↑↓"
             else:
                 poly_trend = "∩-shape ↓↑"
-        except Exception:
+        except (np.linalg.LinAlgError, ValueError):
             poly_coef = [0, 0, 0]
             poly_r2 = 0.0
             poly_trend = "-"
