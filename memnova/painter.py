@@ -77,15 +77,15 @@ class Painter(object):
         pss_color = kwargs.get("color", "#3564B0")
         rss_color = "#FEB96B"
         uss_color = "#90B2C8"
-        avg_color = "#BD93F9"   # 均值
-        max_color = "#FF1D58"   # 峰值
-        min_color = "#009FFD"   # 谷值
+        avg_color = "#BDB5D5"   # 均值
+        max_color = "#FF5872"   # 峰值
+        min_color = "#54E3AF"   # 谷值
         sld_color = "#A8BFFF"
         avg_band_color = "#D0D0FF"
 
         # 🟡 ==== 前后台区块配色 ====
-        fg_color = "#3386E6"
-        bg_color = "#757575"
+        fg_color = "#8FE9FC"
+        bg_color = "#F1F1F1"
         fg_alpha = 0.15
         bg_alpha = 0.10
 
@@ -138,11 +138,11 @@ class Painter(object):
         # 🟡 ==== 极值点 ====
         ax.scatter(
             df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"],
-            s=60, color=max_color, zorder=3, label="Max"
+            s=20, color=max_color, zorder=3, label="Max"
         )
         ax.scatter(
             df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"],
-            s=60, color=min_color, zorder=3, label="Min"
+            s=20, color=min_color, zorder=3, label="Min"
         )
 
         # 🟡 ==== 设置轴与样式 ====
