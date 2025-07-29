@@ -148,11 +148,11 @@ class Memrix(object):
         logger.info(f"时间 -> {format_before_time}")
         logger.info(f"应用 -> {package}")
         logger.info(f"频率 -> {sample_speed}")
-        logger.info(f"标签 -> {self.align.label}")
+        logger.info(f"标签 -> {self.align.app_label}")
         logger.info(f"文件 -> {self.file_folder}\n")
 
         await self.design.summaries(
-            format_before_time, package, sample_speed, self.align.label, self.file_folder
+            format_before_time, package, sample_speed, self.align.app_label, self.file_folder
         )
 
         if Path(reporter.team_file).is_file():
@@ -204,7 +204,7 @@ class Memrix(object):
 
         time_cost = (time.time() - reporter.before_time) / 60
         logger.info(
-            f"Mark={self.align.label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
+            f"Mark={self.align.app_label} File={self.file_folder} Data={self.file_insert} Time={time_cost:.2f} m"
         )
         logger.info(f"{reporter.group_dir}")
 
@@ -231,7 +231,7 @@ class Memrix(object):
             data = await self.data_queue.get()
             final_map = data.get("final_map")
             try:
-                await Cubicle.insert_mem_data(db, self.file_folder, self.align.label, final_map)
+                await Cubicle.insert_mem_data(db, self.file_folder, self.align.app_label, final_map)
             finally:
                 self.data_queue.task_done()
 
@@ -261,7 +261,7 @@ class Memrix(object):
                 ))
 
                 await Cubicle.insert_gfx_data(
-                    db, self.file_folder, self.align.label, Period.convert_time(now_time), gfx_fmt_data
+                    db, self.file_folder, self.align.app_label, Period.convert_time(now_time), gfx_fmt_data
                 )
 
                 self.file_insert += 1
@@ -515,11 +515,12 @@ class Memrix(object):
             mem_task = await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
+            await pft_task
             await self.data_queue.join()
 
         # Workflow: ========== 结束采样 ==========
         await asyncio.gather(
-            watcher, self.sample_stop(reporter, gfx_task, pft_task, mem_task)
+            watcher, self.sample_stop(reporter, gfx_task, mem_task)
         )
 
     # """真相快照"""
@@ -608,64 +609,73 @@ class Perfetto(object):
         trace_conv: str
     ) -> None:
 
-        self.__track_enabled = track_enabled
-        self.__track_event = track_event
-        self.__data_queue = data_queue
-        self.__gfx_speed = gfx_speed
-        self.__device = device
-        self.__ft_file = ft_file
-        self.__traces_dir = traces_dir
-        self.__trace_loc = trace_loc
-        self.__trace_conv = trace_conv
+        self.track_enabled = track_enabled
+        self.track_event = track_event
+        self.data_queue = data_queue
+        self.gfx_speed = gfx_speed
+        self.device = device
+        self.ft_file = ft_file
+        self.traces_dir = traces_dir
+        self.trace_loc = trace_loc
+        self.trace_conv = trace_conv
 
-        self.__backs: list["asyncio.Task"] = []
+        self.backs: list["asyncio.Task"] = []
 
     @staticmethod
-    async def __input_stream(transports: "asyncio.subprocess.Process") -> None:
+    async def input_stream(transports: "asyncio.subprocess.Process") -> None:
         async for line in transports.stdout:
             logger.info(line.decode(const.CHARSET).strip())
 
     @staticmethod
-    async def __error_stream(transports: "asyncio.subprocess.Process") -> None:
+    async def error_stream(transports: "asyncio.subprocess.Process") -> None:
         async for line in transports.stderr:
             logger.info(line.decode(const.CHARSET).strip())
 
-    async def __start(self) -> typing.Optional[str]:
+    async def start(self) -> typing.Optional[str]:
         unique_id = time.strftime("%Y%m%d%H%M%S") + "_" + uuid.uuid4().hex[:6]
-        device_folder = f"/data/misc/perfetto-configs/{Path(self.__ft_file).name}"
+        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
-        await self.__device.push(self.__ft_file, device_folder)
-        await self.__device.change_mode(777, device_folder)
+        await self.device.push(self.ft_file, device_folder)
+        await self.device.change_mode(777, device_folder)
 
-        transports = await self.__device.perfetto_start(
+        transports = await self.device.perfetto_start(
             device_folder, target_folder
         )
-        _ = asyncio.create_task(self.__input_stream(transports))
-        _ = asyncio.create_task(self.__error_stream(transports))
+        _ = asyncio.create_task(self.input_stream(transports))
+        _ = asyncio.create_task(self.error_stream(transports))
 
         return target_folder
 
-    async def __close(self, target_folder: str) -> None:
-        trace_file = self.__traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
+    async def close(self, target_folder: str) -> None:
+        trace_file = self.traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
 
-        await self.__device.pull(target_folder, str(trace_file))
-        await self.__device.remove(target_folder)
-        await self.__data_queue.put({"trace_file": str(trace_file)})
+        await self.device.pull(target_folder, str(trace_file))
+        await self.device.remove(target_folder)
+        await self.data_queue.put({"trace_file": str(trace_file)})
 
-    async def auto_pilot(self) -> typing.Any:
-        if not self.__track_enabled:
+    async def replenish(self, target_folder: str) -> None:
+        if not self.track_enabled:
             return None
 
-        await self.__device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
+        await self.device.perfetto_close()
+        await self.close(target_folder)
 
-        while not self.__track_event.is_set():
-            target_folder = await self.__start()
-            await asyncio.sleep(self.__gfx_speed)
-            await self.__device.perfetto_close()
-            self.__backs.append(asyncio.create_task(self.__close(target_folder)))
+    async def auto_pilot(self) -> typing.Any:
+        if not self.track_enabled:
+            return None
 
-        return await asyncio.gather(*self.__backs)
+        await self.device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
+
+        target_folder = None
+        while not self.track_event.is_set():
+            target_folder = await self.start()
+            await asyncio.sleep(self.gfx_speed)
+            await self.device.perfetto_close()
+            self.backs.append(asyncio.create_task(self.close(target_folder)))
+
+        await asyncio.gather(*self.backs)
+        return await self.replenish(target_folder) if target_folder else None
 
 
 # """Main"""
