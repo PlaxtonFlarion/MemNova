@@ -60,9 +60,13 @@ class Scores(object):
         # 🟨 ==== 异常剔除 ====
         outlier_count = 0
         if remove_outlier:
-            mask = np.abs(zscore(values)) < 3
+            zs = zscore(values)
+            if np.all(np.isnan(zs)):
+                return {"trend": "All NaN After Zscore", "outlier_count": len(values)} | result
+            mask = np.abs(zs) < 3
             outlier_count = np.sum(~mask)
-            if len(values := values[mask]) < 10:
+            values = values[mask]
+            if len(values) < 10:
                 return {"trend": "Cleaned Out", "outlier_count": outlier_count} | result
 
         # 🟨 ==== 基础统计 ====
