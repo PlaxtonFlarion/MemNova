@@ -349,10 +349,15 @@ class Templater(object):
         p.xaxis.axis_label = f"Time (s) - Start {align_start}s"
         p.xaxis.major_label_orientation = 0.5
 
+        # 🟢 ==== 颜色定义 ====
+        main_color = "#A9A9A9"
+        avg_color = "#8700FF"
+        max_color = "#FF69B4"
+
         # 🟢 ==== 主折线 ====
         p.line(
             "timestamp_s", "duration_ms",
-            source=source, line_width=2, color="#A9A9A9", alpha=0.6, legend_label="Frame Duration"
+            source=source, line_width=2, color=main_color, alpha=0.6, legend_label="Frame Duration"
         )
 
         # 🟢 ==== 点图 ====
@@ -364,11 +369,11 @@ class Templater(object):
         # 🟢 ==== 平均线 + 最高线 + 阈值线 ====
         p.line(
             [x_start, x_close], [y_avg, y_avg],
-            line_color="#8700FF", line_dash="dotted", line_width=1, legend_label=f"Avg: {y_avg:.1f}ms"
+            line_color=avg_color, line_dash="dotted", line_width=1, legend_label=f"Avg: {y_avg:.1f}ms"
         )
         p.line(
             [x_start, x_close], [y_max, y_max],
-            line_color="#FF69B4", line_dash="dashed", line_width=1, legend_label=f"Max: {y_max:.1f}ms"
+            line_color=max_color, line_dash="dashed", line_width=1, legend_label=f"Max: {y_max:.1f}ms"
         )
         p.line(
             [x_start, x_close], [16.67, 16.67],
@@ -376,7 +381,8 @@ class Templater(object):
         )
 
         # 🟢 ==== Quad 绘制背景区间 ====
-        quad_top, quad_bottom, quad_types = y_close, y_start, [
+        quad_top, quad_bottom = y_close, y_start
+        quad_types = [
             ("Scroll Region", roll_ranges, "#ADD8E6", 0.30),
             ("Drag Region", drag_ranges, "#FFA500", 0.25),
             ("Jank Region", jank_ranges, "#FF0000", 0.15),
