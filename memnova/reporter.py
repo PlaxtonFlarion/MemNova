@@ -235,8 +235,8 @@ class Reporter(object):
             tag_lines = [
                 {
                     "fields": [
-                        {"label": f"MEM-MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
-                        {"label": f"MEM-AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
+                        {"label": "MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
+                        {"label": "AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
                     ]
                 }
             ]
@@ -322,7 +322,7 @@ class Reporter(object):
             # union = {k: self.__mean_of_field(compilation, [k]) for k in ["MEM-MAX", "MEM-AVG"]}
             union = {
                 k: self.mean_score_field(compilation, group, field)
-                for k, group, field in [("MEM-MAX", "MEM", "max"), ("MEM-AVG", "MEM", "avg")]
+                for k, group, field in [("MAX", "MEM", "max"), ("AVG", "MEM", "avg")]
             }
 
             # 🟡 ==== 主要容器 ====
