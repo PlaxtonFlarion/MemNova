@@ -221,15 +221,15 @@ class Painter(object):
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # 🟢 ==== 颜色定义 ====
-        main_color = "#585858"
+        dur_color = "#585858"
+        avg_color = "#448AFF"
+        max_color = "#FF4081"
         roll_color = "#A2C8E6"
         drag_color = "#FFD39B"
         jank_color = "#F24C4C"
-        avg_color = "#448AFF"
-        max_color = "#FF4081"
 
         # 🟢 ==== 主线 / 平均线 / 最高线 ====
-        ax1.plot(timestamps, durations, label="Frame Duration", color=main_color, linewidth=1.2)
+        ax1.plot(timestamps, durations, label="Frame Duration", color=dur_color, linewidth=1.2)
         ax1.axhline(avg_dur, linestyle=":", linewidth=1.2, color=avg_color, alpha=0.88, label="Avg Duration")
         ax1.axhline(max_dur, linestyle="--", linewidth=1.2, color=max_color, alpha=0.88, label="Max Duration")
         ax1.axhline(16.67, linestyle="--", linewidth=1.2, color="#FF0000", alpha=0.88, label="16.67ms / 60 FPS")
@@ -267,7 +267,7 @@ class Painter(object):
 
         # 🟢 ==== 自定义图例（颜色区块 + 主线 + 60 FPS）====
         legend_elements = [
-            Line2D([0], [0], color=main_color, lw=1.2, label="Frame Duration"),
+            Line2D([0], [0], color=dur_color, lw=1.2, label="Frame Duration"),
             Line2D([0], [0], color=avg_color, lw=1.2, linestyle=":", label=f"Avg: {avg_dur:.1f}ms"),
             Line2D([0], [0], color=max_color, lw=1.2, linestyle="--", label=f"Max: {max_dur:.1f}ms"),
             Line2D([0], [0], color="#FF0000", lw=1.2, linestyle='--', label="16.67ms / 60 FPS"),
