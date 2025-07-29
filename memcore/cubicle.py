@@ -198,7 +198,7 @@ class Cubicle(object):
                 payload["summary"]["Graphics"],
                 payload["summary"]["TOTAL PSS"],
                 payload["summary"]["TOTAL RSS"],
-                payload["summary"]["TOTAL USS"],
+                payload["meminfo"]["TOTAL USS"],
                 payload["summary"]["TOTAL SWAP"],
 
                 payload["meminfo"]["Native Heap"],
