@@ -105,12 +105,12 @@ class Painter(object):
 
         # 🟡 ==== 堆叠区 ====
         stack_colors = ["#FFD6E0", "#D4E7FF", "#CAE7E1"]
-        stack_labels = ["Native Heap", "Dalvik Heap", "Graphics"]
+        stack_labels = ["Java Heap", "Native Heap", "Graphics"]
         ax.stackplot(
             df["num_x"],
-            df["native_heap"],
-            df["dalvik_heap"],
-            df["graphics"],
+            df["summary_java_heap"],
+            df["summary_native_heap"],
+            df["summary_graphics"],
             colors=stack_colors,
             alpha=0.38,
             labels=stack_labels
