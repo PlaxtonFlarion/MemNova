@@ -28,10 +28,10 @@ class Align(object):
             "base": {
                 "headline": "内存基线",
                 "standard": {
-                    "fg-max": {"threshold": 0.00, "direction": "gt"},
-                    "fg-avg": {"threshold": 0.00, "direction": "gt"},
-                    "bg-max": {"threshold": 0.00, "direction": "gt"},
-                    "bg-avg": {"threshold": 0.00, "direction": "gt"}
+                    "fg-max": {"threshold": 0.00, "direction": "le"},
+                    "fg-avg": {"threshold": 0.00, "direction": "le"},
+                    "bg-max": {"threshold": 0.00, "direction": "le"},
+                    "bg-avg": {"threshold": 0.00, "direction": "le"}
                 },
                 "sections": [
                     {
@@ -80,12 +80,12 @@ class Align(object):
             "base": {
                 "headline": "流畅度",
                 "standard": {
-                    "avg_fps": {"threshold": 55.0, "direction": "lt"},
-                    "fps_std": {"threshold": 5.0, "direction": "gt"},
-                    "jank_ratio": {"threshold": 0.03, "direction": "lt"},
-                    "high_latency_ratio": {"threshold": 0.02, "direction": "lt"},
-                    "roll_jnk_ratio": {"threshold": 50.0, "direction": "lt"},
-                    "longest_low_fps": {"threshold": 2.0, "direction": "gt"}
+                    "avg_fps": {"threshold": 55.0, "direction": "ge"},
+                    "fps_std": {"threshold": 5.0, "direction": "le"},
+                    "jank_ratio": {"threshold": 0.03, "direction": "ge"},
+                    "high_latency_ratio": {"threshold": 0.02, "direction": "le"},
+                    "roll_jnk_ratio": {"threshold": 50.0, "direction": "ge"},
+                    "longest_low_fps": {"threshold": 2.0, "direction": "le"}
                 },
                 "sections": [
                     {
