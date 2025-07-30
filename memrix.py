@@ -580,8 +580,6 @@ class Memrix(object):
 class Perfetto(object):
     """Perfetto"""
 
-    __transports: typing.Optional["asyncio.subprocess.Process"] = None
-
     def __init__(
         self,
         track_enabled: bool,
@@ -601,38 +599,42 @@ class Perfetto(object):
         self.device = device
         self.ft_file = ft_file
         self.traces_dir = traces_dir
+        self.trace_loc = trace_loc
 
-        self.device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        self.target_folder = str(trace_loc)
+        self.last_folder: str = ""
         self.background: list["asyncio.Task"] = []
 
-    async def input_stream(self) -> None:
-        async for line in self.__transports.stdout:
-            logger.info(line.decode(const.CHARSET).strip())
-    
-    async def error_stream(self) -> None:
-        async for line in self.__transports.stderr:
+    @staticmethod
+    async def input_stream(transports: "asyncio.subprocess.Process") -> None:
+        async for line in transports.stdout:
             logger.info(line.decode(const.CHARSET).strip())
 
-    async def start(self) -> typing.Optional[str]:
+    @staticmethod
+    async def error_stream(transports: "asyncio.subprocess.Process") -> None:
+        async for line in transports.stderr:
+            logger.info(line.decode(const.CHARSET).strip())
+
+    async def start(self) -> str:
         unique_id = time.strftime("%Y%m%d%H%M%S") + "_" + uuid.uuid4().hex[:6]
-        self.device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        self.target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
+        device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
+        self.last_folder = target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
-        await self.device.push(self.ft_file, self.device_folder)
-        await self.device.change_mode(777, self.device_folder)
+        await self.device.push(self.ft_file, device_folder)
+        await self.device.change_mode(777, device_folder)
 
-        self.__transports = await self.device.perfetto_start(
-            self.device_folder, self.target_folder
+        transports = await self.device.perfetto_start(
+            device_folder, target_folder
         )
-        _ = asyncio.create_task(self.input_stream())
-        _ = asyncio.create_task(self.error_stream())
+        _ = asyncio.create_task(self.input_stream(transports))
+        _ = asyncio.create_task(self.error_stream(transports))
 
-    async def close(self) -> None:
-        trace_file = self.traces_dir / f"{Path(self.target_folder).stem}.perfetto-trace"
+        return target_folder
 
-        await self.device.pull(self.target_folder, str(trace_file))
-        await self.device.remove(self.target_folder)
+    async def close(self, target_folder: str) -> None:
+        trace_file = self.traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
+
+        await self.device.pull(target_folder, str(trace_file))
+        await self.device.remove(target_folder)
         await self.data_queue.put({"trace_file": str(trace_file)})
 
     async def replenish(self) -> None:
@@ -640,19 +642,22 @@ class Perfetto(object):
             return None
 
         await self.device.perfetto_close()
-        await self.close()
+        await self.close(self.last_folder)
 
-    async def auto_pilot(self) -> None:
+    async def auto_pilot(self, memories: dict) -> None:
         if not self.track_enabled:
             return None
 
         await self.device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
 
         while not self.track_event.is_set():
-            await self.start()
+            target_folder = await self.start()
+            memories.update({
+                "MSG": "[bold #5FAFD7]Sampling ..."
+            })
             await asyncio.sleep(self.gfx_speed)
             await self.device.perfetto_close()
-            self.background.append(asyncio.create_task(self.close()))
+            self.background.append(asyncio.create_task(self.close(target_folder)))
 
 
 # """Main"""
