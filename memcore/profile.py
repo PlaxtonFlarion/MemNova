@@ -82,8 +82,8 @@ class Align(object):
                 "standard": {
                     "avg_fps": {"threshold": 55.0, "direction": "ge"},
                     "fps_std": {"threshold": 5.0, "direction": "le"},
-                    "jank_ratio": {"threshold": 0.03, "direction": "ge"},
-                    "high_latency_ratio": {"threshold": 0.02, "direction": "le"},
+                    "jank_ratio": {"threshold": 3.0, "direction": "ge"},
+                    "high_latency_ratio": {"threshold": 2.0, "direction": "le"},
                     "roll_jnk_ratio": {"threshold": 50.0, "direction": "ge"},
                     "longest_low_fps": {"threshold": 2.0, "direction": "le"}
                 },
@@ -93,7 +93,7 @@ class Align(object):
                         "class": "refer",
                         "value": [
                             "AVG FPS ≥ 55",
-                            "STD FPS ≤ 5",
+                            "FPS STD ≤ 5",
                             "JNK % ≤ 3%",
                             "Hi-Lat % ≤ 2%",
                             "Roll FPS ≥ 50",
