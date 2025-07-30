@@ -80,12 +80,12 @@ class Align(object):
             "base": {
                 "headline": "流畅度",
                 "standard": {
-                    "avg-fps": {"threshold": 55.0, "direction": "lt"},
-                    "std-fps": {"threshold": 5.0, "direction": "gt"},
-                    "jnk": {"threshold": 0.03, "direction": "lt"},
-                    "hi-lat": {"threshold": 0.02, "direction": "lt"},
-                    "roll-fps": {"threshold": 50.0, "direction": "lt"},
-                    "low-fps-max": {"threshold": 2.0, "direction": "gt"}
+                    "avg_fps": {"threshold": 55.0, "direction": "lt"},
+                    "fps_std": {"threshold": 5.0, "direction": "gt"},
+                    "jank_ratio": {"threshold": 0.03, "direction": "lt"},
+                    "high_latency_ratio": {"threshold": 0.02, "direction": "lt"},
+                    "roll_jnk_ratio": {"threshold": 50.0, "direction": "lt"},
+                    "longest_low_fps": {"threshold": 2.0, "direction": "gt"}
                 },
                 "sections": [
                     {
