@@ -119,6 +119,27 @@ class Reporter(object):
                 minor_items.append({"value": values, "class": group_cfg["class"]})
         return minor_items
 
+    @staticmethod
+    def calc_score_classes(score: dict, standard: dict, pass_class: str, fail_class: str) -> dict:
+        op_map = {
+            "le": lambda x, y: x <= y,
+            "lt": lambda x, y: x <  y,
+            "ge": lambda x, y: x >= y,
+            "gt": lambda x, y: x >  y,
+            "eq": lambda x, y: x == y,
+            "ne": lambda x, y: x != y,
+        }
+        result = {}
+        for key, cfg in standard.items():
+            if not isinstance(cfg, dict):
+                continue
+            value = score.get(key)
+            threshold = cfg.get("threshold")
+            direction = cfg.get("direction", "ge")
+            op = op_map.get(direction, op_map["ge"])
+            result[key] = pass_class if (value is not None and threshold is not None and op(value, threshold)) else fail_class
+        return result
+
     # Workflow: ======================== MEM & I/O ========================
 
     async def __mem_rendering(
