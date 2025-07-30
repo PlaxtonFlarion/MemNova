@@ -603,7 +603,7 @@ class Perfetto(object):
         self.traces_dir = traces_dir
 
         self.device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
-        self.target_folder = trace_loc
+        self.target_folder = str(trace_loc)
         self.background: list["asyncio.Task"] = []
 
     async def input_stream(self) -> None:
@@ -619,8 +619,8 @@ class Perfetto(object):
         self.device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         self.target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
 
-        await self.device.push(self.ft_file, device_folder)
-        await self.device.change_mode(777, device_folder)
+        await self.device.push(self.ft_file, self.device_folder)
+        await self.device.change_mode(777, self.device_folder)
 
         self.__transports = await self.device.perfetto_start(
             self.device_folder, self.target_folder
@@ -640,7 +640,7 @@ class Perfetto(object):
             return None
 
         await self.device.perfetto_close()
-        await self.close(self.target_folder)
+        await self.close()
 
     async def auto_pilot(self) -> None:
         if not self.track_enabled:
