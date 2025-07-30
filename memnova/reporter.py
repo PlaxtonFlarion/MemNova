@@ -316,7 +316,7 @@ class Reporter(object):
             assemble = [
                 f"{k} HIGH" for k, v in grouped.items()
                 if v and (
-                    standard := self.align.get_standard("mem", k.lower())
+                    standard := self.align.get_standard("mem", "base").get(k.lower())
                 ) is not None and v > standard
             ]
             if assemble:
