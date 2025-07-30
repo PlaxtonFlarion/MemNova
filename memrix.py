@@ -652,7 +652,6 @@ class Perfetto(object):
 
         await self.device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
 
-        target_folder = None
         while not self.track_event.is_set():
             target_folder = await self.start()
             await asyncio.sleep(self.gfx_speed)
