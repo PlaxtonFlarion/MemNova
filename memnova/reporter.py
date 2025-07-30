@@ -315,7 +315,7 @@ class Reporter(object):
             # 🟡 ==== 主要容器 ====
             assemble = [
                 f"{k} HIGH" for k, v in grouped.items()
-                if v and (
+                if v is not None and (
                     standard := self.align.get_standard("mem", "base").get(k.lower())
                 ) is not None and v > standard
             ]
