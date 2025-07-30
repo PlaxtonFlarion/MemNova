@@ -98,6 +98,8 @@ class Reporter(object):
         await asyncio.gather(*self.background_tasks)
         memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
 
+    # Workflow: ======================== MEM / GFX ========================
+
     @staticmethod
     def __mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
@@ -107,7 +109,7 @@ class Reporter(object):
         return round(float(np.mean(vals)), 2) if vals else None
 
     @staticmethod
-    def __build_minor_items(key_tuples: list, groups: list, grouped: dict) -> list:    
+    def __build_minor_items(key_tuples: list, groups: list, grouped: dict) -> list:
         minor_items = []
         for group_cfg in groups:
             keys = [k for k, g, f in key_tuples if g == group_cfg["name"]]
@@ -120,287 +122,31 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def __calc_score_classes(
-        score: dict, 
-        standard: dict, 
-        pass_class: str, 
-        fail_class: str,
-        default_class: str = None
-    ) -> dict:
-        
+    def __score_classes(score: dict, standard: dict, p_class: str, f_class: str, d_class: str = None) -> dict:
         op_map = {
             "le": lambda x, y: x <= y,
-            "lt": lambda x, y: x <  y,
+            "lt": lambda x, y: x < y,
             "ge": lambda x, y: x >= y,
-            "gt": lambda x, y: x >  y,
+            "gt": lambda x, y: x > y,
             "eq": lambda x, y: x == y,
-            "ne": lambda x, y: x != y,
+            "ne": lambda x, y: x != y
         }
 
-        result = {k: default_class or pass_class for k in score.keys()}
+        result = {k: d_class or p_class for k in score.keys()}
         for key, cfg in standard.items():
             value = score.get(key)
             threshold = cfg.get("threshold")
             direction = cfg.get("direction", "ge")
             op = op_map.get(direction, op_map["ge"])
-            result[key] = pass_class if (
+            result[key] = p_class if (
                 value is not None and threshold is not None and op(value, threshold)
-            ) else fail_class
+            ) else f_class
         return result
 
-    # Workflow: ======================== MEM & I/O ========================
-
-    async def __mem_rendering(
-        self,
-        db: "aiosqlite.Connection",
-        loop: "asyncio.AbstractEventLoop",
-        executor: "ProcessPoolExecutor",
-        templater: "Templater",
-        memories: dict,
-        start_time: float,
-        data_dir: str,
-        baseline: bool,
-    ) -> typing.Optional[dict]:
-
-        # 🟡 ==== 数据查询 ====
-        os.makedirs(
-            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
-        )
-
-        mem_data, (joint, *_) = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
-        )
-        if not mem_data:
-            return logger.info(f"MEM data not found for {data_dir}")
-        title, timestamp, *_ = joint
-
-        df = pd.DataFrame(mem_data)
-
-        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        trace_loc = None
-        leak_loc = None
-        gfx_loc = None
-        io_loc = Path(group) / f"{head}_io.png"
-
-        # 🔵 ==== I/O 绘图 ====
-        draw_io_future = loop.run_in_executor(
-            executor, Painter.draw_io_metrics, mem_data, str(io_loc)
-        )
-        self.background_tasks.append(draw_io_future)
-
-        # 🟡 ==== 内存基线 ====
-        if baseline:
-            evaluate, tag_lines, group_stats = [], [], (
-                df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
-                .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
-            )
-
-            # 🟡 ==== 分组统计 ====
-            score_group = {}
-            for _, row in group_stats.iterrows():
-                part_df = df[df["mode"] == (mode := row["mode"])]
-                score = Scores.analyze_mem_score(part_df, column="pss")
-                logger.info(f"{mode}-Score: {score}")
-
-                # 🟡 ==== 数据校验 ====
-                if not row["count"] or pd.isna(row["avg_pss"]):
-                    continue
-                score_group[mode] = score
-
-                trend = score["trend"]
-                match trend[0]:
-                    case "I" | "F" | "A" | "C": trend_c = "expiry-none"
-                    case "U": trend_c = "expiry-fail"
-                    case _: trend_c = "baseline"
-
-                # 🟡 ==== 评价部分 ====
-                evaluate += [
-                    {
-                        "fields": [
-                            {"text": f"{mode}: {trend}", "class": trend_c},
-                            {"text": f"{mode} Jitter: {score['jitter_index']:.2f}", "class": "baseline"}
-                        ]
-                    }
-                ]
-
-                # 🟡 ==== 指标部分 ====
-                tag_lines += [
-                    {
-                        "fields": [
-                            {"label": f"{mode}-MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
-                            {"label": f"{mode}-AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
-                        ]
-                    }
-                ]
-
-        # 🟡 ==== 内存泄漏 ====
-        else:
-            leak_loc = Path(group) / f"{head}_leak.png"
-
-            # 🟨 ==== MEM 评分 ====
-            score = Scores.analyze_mem_score(df, column="pss")
-            logger.info(f"Score: {score}")
-            score_group = {"MEM": score}
-
-            # 🟡 ==== MEM 绘图 ====
-            paint_func = partial(Painter.draw_mem_metrics, **score)
-            draw_leak_future = loop.run_in_executor(
-                executor, paint_func, mem_data, str(leak_loc)
-            )
-            self.background_tasks.append(draw_leak_future)
-
-            trend = score["trend"]
-            match trend[0]:
-                case "I" | "F" | "A" | "C": trend_c = "expiry-none"
-                case "U": trend_c = "expiry-fail"
-                case _: trend_c = "leak"
-
-            # 🟡 ==== 评价部分 ====
-            evaluate = [
-                {
-                    "fields": [
-                        {"text": trend, "class": trend_c},
-                        {"text": score['poly_trend'], "class": "leak"},
-                        {"text": f"Score: {score['trend_score']:.2f}", "class": "leak"}
-                    ]
-                },
-                {
-                    "fields": [
-                        {"text": f"Jitter: {score['jitter_index']:.2f}", "class": "leak"},
-                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"},
-                        {"text": f"R²: {score['r_squared']:.2f}", "class": "leak"}
-                    ]
-                }
-            ]
-
-            # 🟡 ==== 指标部分 ====
-            tag_lines = [
-                {
-                    "fields": [
-                        {"label": "MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
-                        {"label": "AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
-                    ]
-                }
-            ]
-
-        # 🟡 ==== MEM 渲染 ====
-        plot = await templater.plot_mem_analysis(df)
-        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
-        save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
-
-        # 🟡 ==== MEM 进度 ====
-        memories.update({
-            "MSG": (msg := f"{data_dir} Handler Done ..."),
-            "CUR": memories.get("CUR", 0) + 1,
-            "TMS": f"{time.time() - start_time:.1f} s",
-        })
-        logger.info(msg)
-
-        return {
-            **score_group,
-            "subtitle": {
-                "text": title or data_dir,
-                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name)
-            },
-            "evaluate": evaluate,
-            "tags": tag_lines
-        }
-
-    async def mem_rendition(
-        self,
-        db: "aiosqlite.Connection",
-        loop: "asyncio.events.AbstractEventLoop",
-        executor: "ProcessPoolExecutor",
-        templater: "Templater",
-        memories: dict,
-        start_time: float,
-        team_data: dict,
-        baseline: bool,
-        *_
-    ) -> dict:
-
-        cur_time, cur_mark, cur_data = await self.begin_render(team_data)
-
-        compilation = await asyncio.gather(
-            *(self.__mem_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
-              for d in cur_data)
-        )
-        if not (compilation := [c for c in compilation if c]):
-            return {}
-
-        major_summary_items = [
-            {"title": "基础信息", "class": "general", "value": cur_mark}
-        ] if cur_mark else []
-        minor_summary_items = []
-
-        # 🟡 ==== 内存基线 ====
-        if baseline:
-            headline = self.align.get_headline("mem", "base")
-
-            key_tuples = [
-                ("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg"), ("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")
-            ]
-            groups = [
-                {"name": "FG", "unit": "MB", "class": "fg-copy"},
-                {"name": "BG", "unit": "MB", "class": "bg-copy"},
-            ]   
-            grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
-
-            standard = self.align.get_standard("mem", "base")
-            classes = self.__calc_score_classes(grouped, standard, "expiry-pass", "expiry-fail")
-            
-            # 🟡 ==== 主要容器 ====
-            assemble = [
-                f"{k} HIGH" for k, v in grouped.items() if classes.get(k.lower()) == "expiry-fail"
-            ]
-            if assemble:
-                major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
-
-            major_summary_items += self.align.get_sections("mem", "base")
-
-            # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
-            
-        # 🟡 ==== 内存泄漏 ====
-        else:
-            headline = self.align.get_headline("mem", "leak")
-
-            key_tuples = [
-                ("MAX", "MEM", "max"), ("AVG", "MEM", "avg")
-            ]
-            groups = [
-                {"name": "MEM", "unit": "MB", "class": None},
-            ]
-            grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
-
-            # 🟡 ==== 主要容器 ====
-            major_summary_items += self.align.get_sections("mem", "leak")
-
-            # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
-
-        await self.final_render(memories, start_time)
-
-        return {
-            "report_list": compilation,
-            "title": f"{const.APP_DESC} Information",
-            "time": cur_time,
-            "headline": headline,
-            "major_summary_items": major_summary_items,
-            "minor_summary_items": minor_summary_items,
-        }
-
-    # Workflow: ======================== GFX ========================
-
     @staticmethod
-    def __split_frames_with_ranges(
-        frames: list[dict],
-        roll_ranges: list[dict],
-        drag_ranges: list[dict],
-        jank_ranges: list[dict],
-        segment_ms: int = 60000
-    ) -> list[tuple]:
+    def __split_ranges(frames: list[dict], *args, **kwargs) -> list[tuple]:
+
+        (roll_ranges, drag_ranges, jank_ranges, *_), segment_ms = args, kwargs.get("segment_ms", 60000)
 
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
         start_ts, close_ts = frames[0]["timestamp_ms"], frames[-1]["timestamp_ms"]
@@ -473,23 +219,183 @@ class Reporter(object):
 
         return merged
 
-    async def __gfx_rendering(
+    # Workflow: ======================== Rendering ========================
+
+    async def __mem_rendering(
         self,
         db: "aiosqlite.Connection",
-        loop: "asyncio.AbstractEventLoop",
+        loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
         templater: "Templater",
         memories: dict,
         start_time: float,
         data_dir: str,
-        *_,
+        baseline: bool,
     ) -> typing.Optional[dict]:
 
-        # 🟢 ==== 数据查询 ====
         os.makedirs(
             group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
         )
 
+        # 🟡 ==== 数据查询 ====
+        mem_data, (joint, *_) = await asyncio.gather(
+            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+        )
+        if not mem_data:
+            return logger.info(f"MEM data not found for {data_dir}")
+        title, timestamp, *_ = joint
+
+        df = pd.DataFrame(mem_data)
+
+        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
+        trace_loc = None
+        leak_loc = None
+        gfx_loc = None
+        io_loc = Path(group) / f"{head}_io.png"
+
+        # 🔵 ==== I/O 绘图 ====
+        draw_io_future = loop.run_in_executor(
+            executor, Painter.draw_io_metrics, mem_data, str(io_loc)
+        )
+        self.background_tasks.append(draw_io_future)
+
+        # 🟡 ==== 内存基线 ====
+        if baseline:
+            evaluate, tag_lines, group_stats = [], [], (
+                df.groupby("mode")["pss"].agg(avg_pss="mean", max_pss="max", count="count")
+                .reindex(["FG", "BG"]).reset_index().dropna(subset=["mode"])
+            )
+
+            # 🟡 ==== 分组统计 ====
+            score_group = {}
+            for _, row in group_stats.iterrows():
+                part_df = df[df["mode"] == (mode := row["mode"])]
+                score = Scores.analyze_mem_score(part_df, column="pss")
+                logger.info(f"{mode}-Score: {score}")
+
+                # 🟡 ==== 数据校验 ====
+                if not row["count"] or pd.isna(row["avg_pss"]):
+                    continue
+                score_group[mode] = score
+
+                # 🟡 ==== 趋势标签 ====
+                trend = score["trend"]
+                match trend[0]:
+                    case "I" | "F" | "A" | "C": trend_c = "expiry-none"
+                    case "U": trend_c = "expiry-fail"
+                    case _: trend_c = "baseline"
+
+                # 🟡 ==== 评价部分 ====
+                evaluate += [
+                    {
+                        "fields": [
+                            {"text": f"{mode}: {trend}", "class": trend_c},
+                            {"text": f"{mode} Jitter: {score['jitter_index']:.2f}", "class": "baseline"}
+                        ]
+                    }
+                ]
+
+                # 🟡 ==== 指标部分 ====
+                tag_lines += [
+                    {
+                        "fields": [
+                            {"label": f"{mode}-MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
+                            {"label": f"{mode}-AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
+                        ]
+                    }
+                ]
+
+        # 🟡 ==== 内存泄漏 ====
+        else:
+            leak_loc = Path(group) / f"{head}_leak.png"
+
+            # 🟨 ==== MEM 评分 ====
+            score = Scores.analyze_mem_score(df, column="pss")
+            logger.info(f"Score: {score}")
+            score_group = {"MEM": score}
+
+            # 🟡 ==== MEM 绘图 ====
+            paint_func = partial(Painter.draw_mem_metrics, **score)
+            draw_leak_future = loop.run_in_executor(
+                executor, paint_func, mem_data, str(leak_loc)
+            )
+            self.background_tasks.append(draw_leak_future)
+
+            # 🟡 ==== 趋势标签 ====
+            trend = score["trend"]
+            match trend[0]:
+                case "I" | "F" | "A" | "C": trend_c = "expiry-none"
+                case "U": trend_c = "expiry-fail"
+                case _: trend_c = "leak"
+
+            # 🟡 ==== 评价部分 ====
+            evaluate = [
+                {
+                    "fields": [
+                        {"text": trend, "class": trend_c},
+                        {"text": score['poly_trend'], "class": "leak"},
+                        {"text": f"Score: {score['trend_score']:.2f}", "class": "leak"}
+                    ]
+                },
+                {
+                    "fields": [
+                        {"text": f"Jitter: {score['jitter_index']:.2f}", "class": "leak"},
+                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"},
+                        {"text": f"R²: {score['r_squared']:.2f}", "class": "leak"}
+                    ]
+                }
+            ]
+
+            # 🟡 ==== 指标部分 ====
+            tag_lines = [
+                {
+                    "fields": [
+                        {"label": "MAX: ", "value": f"{score['max']:.2f}", "unit": "MB"},
+                        {"label": "AVG: ", "value": f"{score['avg']:.2f}", "unit": "MB"}
+                    ]
+                }
+            ]
+
+        # 🟡 ==== MEM 渲染 ====
+        plot = await templater.plot_mem_analysis(df)
+        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
+        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
+        save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
+
+        # 🟡 ==== MEM 进度 ====
+        memories.update({
+            "MSG": (msg := f"{data_dir} Handler Done ..."),
+            "CUR": memories.get("CUR", 0) + 1,
+            "TMS": f"{time.time() - start_time:.1f} s"
+        })
+        logger.info(msg)
+
+        return {
+            **score_group,
+            "subtitle": {
+                "text": title or data_dir,
+                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name)
+            },
+            "evaluate": evaluate,
+            "tags": tag_lines
+        }
+
+    async def __gfx_rendering(
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.events.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        data_dir: str,
+    ) -> typing.Optional[dict]:
+
+        os.makedirs(
+            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
+        )
+
+        # 🟢 ==== 数据查询 ====
         gfx_data, (joint, *_) = await asyncio.gather(
             Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
         )
@@ -518,9 +424,10 @@ class Reporter(object):
             raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
         self.background_tasks.append(draw_future)
-        
+
+        # 🟢 ==== 定制评价 ====
         standard = self.align.get_standard("gfx", "base")
-        classes = self.__calc_score_classes(score, standard, "fluency", "expiry-fail")
+        classes = self.__score_classes(score, standard, "fluency", "expiry-fail")
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
@@ -534,11 +441,11 @@ class Reporter(object):
             {
                 "fields": [
                     {
-                        "text": f"Roll FPS: {raf:.2f} FPS" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -", 
+                        "text": f"Roll FPS: {raf:.2f} FPS" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -",
                         "class": classes.get("roll_avg_fps", "fluency")
                     },
                     {"text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %", "class": classes["high_latency_ratio"]},
-                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]}
+                    {"text": f"LMax: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]}
                 ]
             }
         ]
@@ -554,7 +461,7 @@ class Reporter(object):
         ]
 
         # 🟢 ==== 分段切割 ====
-        segments = self.__split_frames_with_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
+        segments = self.__split_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
 
         # 🟢 ==== GFX 渲染 ====
         plots = await asyncio.gather(
@@ -569,7 +476,7 @@ class Reporter(object):
         memories.update({
             "MSG": (msg := f"{data_dir} Handler Done ..."),
             "CUR": memories.get("CUR", 0) + 1,
-            "TMS": f"{time.time() - start_time:.1f} s",
+            "TMS": f"{time.time() - start_time:.1f} s"
         })
         logger.info(msg)
 
@@ -583,6 +490,98 @@ class Reporter(object):
             "tags": tag_lines
         }
 
+    # Workflow: ======================== Rendition ========================
+
+    async def mem_rendition(
+        self,
+        db: "aiosqlite.Connection",
+        loop: "asyncio.events.AbstractEventLoop",
+        executor: "ProcessPoolExecutor",
+        templater: "Templater",
+        memories: dict,
+        start_time: float,
+        team_data: dict,
+        baseline: bool,
+        *_,
+        **__
+    ) -> dict:
+
+        cur_time, cur_mark, cur_data = await self.begin_render(team_data)
+
+        compilation = await asyncio.gather(
+            *(self.__mem_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
+              for d in cur_data)
+        )
+        if not (compilation := [c for c in compilation if c]):
+            return {}
+
+        # 🟡 ==== 定义容器 ====
+        major_summary_items = [
+            {"title": "基础信息", "class": "general", "value": cur_mark}
+        ] if cur_mark else []
+        minor_summary_items = []
+
+        # 🟡 ==== 内存基线 ====
+        if baseline:
+            headline = self.align.get_headline("mem", "base")
+
+            key_tuples = [
+                ("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg"), ("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")
+            ]
+            groups = [
+                {"name": "FG", "unit": "MB", "class": "fg-copy"},
+                {"name": "BG", "unit": "MB", "class": "bg-copy"}
+            ]
+            grouped = {
+                k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+            }
+
+            # 🟡 ==== 定制评价 ====
+            standard = self.align.get_standard("mem", "base")
+            classes = self.__score_classes(grouped, standard, "expiry-pass", "expiry-fail")
+
+            # 🟡 ==== 主要容器 ====
+            assemble = [
+                f"{k} HIGH" for k, v in grouped.items() if classes.get(k.lower()) == "expiry-fail"
+            ]
+            if assemble:
+                major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
+            major_summary_items += self.align.get_sections("mem", "base")
+
+            # 🟡 ==== 次要容器 ====
+            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
+
+        # 🟡 ==== 内存泄漏 ====
+        else:
+            headline = self.align.get_headline("mem", "leak")
+
+            key_tuples = [
+                ("MAX", "MEM", "max"), ("AVG", "MEM", "avg")
+            ]
+            groups = [
+                {"name": "MEM", "unit": "MB", "class": None}
+            ]
+            grouped = {
+                k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+            }
+
+            # 🟡 ==== 主要容器 ====
+            major_summary_items += self.align.get_sections("mem", "leak")
+
+            # 🟡 ==== 次要容器 ====
+            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
+
+        await self.final_render(memories, start_time)
+
+        return {
+            "report_list": compilation,
+            "title": f"{const.APP_DESC} Information",
+            "time": cur_time,
+            "headline": headline,
+            "major_summary_items": major_summary_items,
+            "minor_summary_items": minor_summary_items
+        }
+
     async def gfx_rendition(
         self,
         db: "aiosqlite.Connection",
@@ -592,7 +591,8 @@ class Reporter(object):
         memories: dict,
         start_time: float,
         team_data: dict,
-        *_
+        *_,
+        **__
     ) -> typing.Optional[dict]:
 
         cur_time, cur_mark, cur_data = await self.begin_render(team_data)
@@ -610,10 +610,13 @@ class Reporter(object):
             ("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")
         ]
         groups = [
-            {"name": "GFX", "unit": "FPS", "class": None},
+            {"name": "GFX", "unit": "FPS", "class": None}
         ]
-        grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
+        grouped = {
+            k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+        }
 
+        # 🟢 ==== 定义容器 ====
         major_summary_items = [
             {"title": "基础信息", "class": "general", "value": cur_mark}
         ] if cur_mark else []
@@ -621,7 +624,7 @@ class Reporter(object):
 
         # 🟢 ==== 主要容器 ====
         major_summary_items += self.align.get_sections("gfx", "base")
-        
+
         # 🟢 ==== 次要容器 ====
         minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
 
