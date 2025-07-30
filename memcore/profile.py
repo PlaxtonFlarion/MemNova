@@ -153,11 +153,13 @@ class Align(object):
             value = self.aligns.get(section, {}).get(primary_key, {})
 
         if isinstance(value, dict):
-            # 强制校验每个值都是 dict，并包含 threshold/direction
             filtered = {}
             for k, v in value.items():
-                if isinstance(v, dict) and "threshold" in v and "direction" in v:
-                    filtered[k] = v
+                if (isinstance(v, dict) and "threshold" in v and "direction" in v):
+                    try:
+                        filtered[k] = {"threshold": float(v["threshold"]), "direction": v["direction"]}
+                    except (TypeError, ValueError):
+                        continue
             return filtered
         return {}
 
