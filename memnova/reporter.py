@@ -533,7 +533,10 @@ class Reporter(object):
             },
             {
                 "fields": [
-                    {"text": f"Roll FPS: {score['roll_avg_fps']:.2f} FPS", "class": classes["roll_avg_fps"]},
+                    {
+                        "text": f"Roll FPS: {raf:.2f} FPS" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -", 
+                        "class": classes.get("roll_avg_fps", "fluency")
+                    },
                     {"text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %", "class": classes["high_latency_ratio"]},
                     {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]}
                 ]
