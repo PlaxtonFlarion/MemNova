@@ -494,7 +494,7 @@ class Reporter(object):
             {
                 "fields": [
                     {"text": is_scroll, "class": "fluency"},
-                    {"text": f"Low-FPS MAX: {score['longest_low_fps']} s", "class": "fluency"},
+                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": "fluency"},
                     {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": "fluency"}
                 ]
             }
