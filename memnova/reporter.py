@@ -98,8 +98,6 @@ class Reporter(object):
         await asyncio.gather(*self.background_tasks)
         memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
 
-    # Workflow: ======================== MEM & I/O ========================
-
     @staticmethod
     def __mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
@@ -107,6 +105,22 @@ class Reporter(object):
             if group in c and c[group] not in (None, "", "nan")
         ]
         return round(float(np.mean(vals)), 2) if vals else None
+
+    def build_minor_items(self, compilation: list[dict], key_tuples: list, groups: list) -> list:
+        grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
+    
+        minor_items = []
+        for group_cfg in groups:
+            keys = [k for k, g, f in key_tuples if g == group_cfg["name"]]
+            values = [
+                f"MEAN-{k}: {grouped[k]:.2f} {group_cfg['unit']}"
+                for k in keys if grouped.get(k) is not None
+            ]
+            if values:
+                minor_items.append({"value": values, "class": group_cfg["class"]})
+        return minor_items
+
+    # Workflow: ======================== MEM & I/O ========================
 
     async def __mem_rendering(
         self,
