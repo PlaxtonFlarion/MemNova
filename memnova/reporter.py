@@ -352,7 +352,7 @@ class Reporter(object):
             
             # 🟡 ==== 主要容器 ====
             assemble = [
-                f"{k} HIGH" for k, v in grouped.items() if score_classes.get(k.lower()) == "expiry-fail"
+                f"{k} HIGH" for k, v in grouped.items() if classes.get(k.lower()) == "expiry-fail"
             ]
             if assemble:
                 major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
