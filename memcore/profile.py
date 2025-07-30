@@ -145,20 +145,22 @@ class Align(object):
         return self.aligns.get(section, {}).get(primary_key, "")
 
     # ✅ 获取某个测试项的 headline 字符
-    def get_standard(self, section: str, subfield: str = None) -> typing.Any:
+    def get_standard(self, section: str, subfield: str = None) -> dict:
         primary_key = "standard"
         if subfield:
             value = self.aligns.get(section, {}).get(subfield, {}).get(primary_key, "")
         else:
             value = self.aligns.get(section, {}).get(primary_key, "")
 
-        if isinstance(value, str or int or float):
+        if isinstance(value, dict):
             try:
-                return round(float(value), 2)
+                return {
+                    k: round(float(v), 2) for k, v in value.items() if isinstance(v, str | int | float)
+                }
             except (TypeError, ValueError):
-                return None
+                return {}
 
-        return None
+        return {}
 
     # ✅ 获取某个测试项的 sections 列表
     def get_sections(self, section: str, subfield: str = None) -> list:
