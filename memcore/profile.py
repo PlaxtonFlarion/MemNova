@@ -155,7 +155,7 @@ class Align(object):
         if isinstance(value, str or int or float):
             try:
                 return round(float(value), 2)
-            except TypeError:
+            except (TypeError, ValueError):
                 return None
 
         return None
