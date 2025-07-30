@@ -177,7 +177,8 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         /* 摘要容器内标签全局通用样式 */
         .schema, .general,
-        .expiry-pass, .expiry-fail, .highlight,
+        .expiry-pass, .expiry-fail, .expiry-warn, .expiry-none, 
+        .highlight,
         .baseline, .leak, .fluency, .others,
         .refer {
             font-weight: 600;
@@ -190,7 +191,8 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
         /* 摘要容器内标签全局悬浮样式 */
         .schema:hover, .general:hover,
-        .expiry-pass:hover, .expiry-fail:hover, .highlight:hover,
+        .expiry-pass:hover, .expiry-fail:hover, .expiry-warn:hover, .expiry-none:hover,
+        .highlight:hover,
         .baseline:hover, .leak:hover, .fluency:hover, .others:hover,
         .refer:hover {
             transform: translateY(-1px);
@@ -246,21 +248,49 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         .expiry-pass, .expiry-fail {
             color: #ffffff;
         }
+        
+        /* ✅ 通过 */
         .expiry-pass {
             background: linear-gradient(135deg, #b6f57e 0%, #89e403 100%);
             box-shadow: 0 2px 6px rgba(137, 228, 3, 0.15);
-        }
-        .expiry-fail {
-            background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
-            box-shadow: 0 2px 6px rgba(232, 65, 24, 0.15);
         }
         .expiry-pass:hover {
             background: linear-gradient(135deg, #d6ff66 0%, #a4e403 100%);
             box-shadow: 0 4px 10px rgba(137, 228, 3, 0.25);
         }
+
+        /* ❌ 失败 */
+        .expiry-fail {
+            background: linear-gradient(135deg, #f78e6d 0%, #e84118 100%);
+            box-shadow: 0 2px 6px rgba(232, 65, 24, 0.15);
+        }
         .expiry-fail:hover {
             background: linear-gradient(135deg, #ff3c00 0%, #a00000 100%);
-            box-shadow: 0 4px 10px rgba(160, 0, 0, 0.25)
+            box-shadow: 0 4px 10px rgba(160, 0, 0, 0.25);
+        }
+        
+        /* ⚠️ 警告 */
+        .expiry-warn {
+            background: linear-gradient(135deg, #ffe86f 0%, #f5c400 100%);
+            box-shadow: 0 2px 6px rgba(245, 196, 0, 0.15);
+            color: #5c4500;
+        }
+        .expiry-warn:hover {
+            background: linear-gradient(135deg, #ffef99 0%, #e0b200 100%);
+            box-shadow: 0 4px 10px rgba(200, 150, 0, 0.25);
+            color: #3f3200;
+        }
+
+        /* ⛔ 无效 */
+        .expiry-none {
+            background: linear-gradient(135deg, #999999 0%, #555555 100%);
+            box-shadow: 0 2px 6px rgba(50, 50, 50, 0.15);
+            color: #eeeeee;
+        }
+        .expiry-none:hover {
+            background: linear-gradient(135deg, #aaaaaa 0%, #444444 100%);
+            box-shadow: 0 4px 10px rgba(30, 30, 30, 0.2);
+            color: #ffffff;
         }
 
         /* 高亮 */
