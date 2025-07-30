@@ -179,13 +179,16 @@ class Reporter(object):
                 score_group[mode] = score
 
                 trend = score["trend"]
-                style = "expiry-fail" if trend.lower().startswith("up") else "baseline"
+                match trend[0]:
+                    case "I" | "F" | "A" | "C": trend_c = "expiry-none"
+                    case "U": trend_c = "expiry-fail"
+                    case _: trend_c = "baseline"
 
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
                     {
                         "fields": [
-                            {"text": f"{mode}: {trend}", "class": style},
+                            {"text": f"{mode}: {trend}", "class": trend_c},
                             {"text": f"{mode} Jitter: {score['jitter_index']:.2f}", "class": "baseline"}
                         ]
                     }
@@ -218,13 +221,16 @@ class Reporter(object):
             self.background_tasks.append(draw_leak_future)
 
             trend = score["trend"]
-            style = "expiry-fail" if trend.lower().startswith("up") else "leak"
+            match trend[0]:
+                case "I" | "F" | "A" | "C": trend_c = "expiry-none"
+                case "U": trend_c = "expiry-fail"
+                case _: trend_c = "leak"
 
             # 🟡 ==== 评价部分 ====
             evaluate = [
                 {
                     "fields": [
-                        {"text": trend, "class": style},
+                        {"text": trend, "class": trend_c},
                         {"text": score['poly_trend'], "class": "leak"},
                         {"text": f"Score: {score['trend_score']:.2f}", "class": "leak"}
                     ]
