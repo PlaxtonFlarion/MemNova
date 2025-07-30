@@ -492,7 +492,9 @@ class Memrix(object):
             gfx_task = asyncio.create_task(
                 self.gfx_alignment(self.sleek, db, now_time), name="gfx alignment task"
             )
-            pft_task = asyncio.create_task(perfetto.auto_pilot(), name="auto pilot task")
+            pft_task = asyncio.create_task(
+                perfetto.auto_pilot(self.memories), name="auto pilot task"
+            )
 
             watcher = asyncio.create_task(self.watcher())
             await self.track_collector(self.storm, device, db)
