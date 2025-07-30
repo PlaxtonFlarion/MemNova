@@ -56,13 +56,13 @@ class Reporter(object):
         self.db_file = os.path.join(self.total_dir, const.DB_FILE)
         self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{nodes}.log")
         self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{nodes}.yaml")
+        self.assemblage = os.path.join(self.group_dir, f"Report_{Path(self.group_dir).name}")
 
         logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
 
         self.background_tasks: list = []
 
-    @staticmethod
-    async def make_report(template: str, destination: str, *args, **kwargs) -> str:
+    async def make_report(self, template: str, *args, **kwargs) -> str:
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -72,7 +72,7 @@ class Reporter(object):
         salt: typing.Callable[[], str] = lambda: "".join(
             random.choices(string.ascii_uppercase + string.digits, k=5)
         )
-        html_file = os.path.join(destination, f"{const.APP_DESC}_Inform_{salt()}.html")
+        html_file = os.path.join(self.assemblage, f"{const.APP_DESC}_Inform_{salt()}.html")
 
         async with aiofiles.open(html_file, "w", encoding=const.CHARSET) as f:
             await f.write(html)
@@ -226,7 +226,6 @@ class Reporter(object):
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
-        templater: "Templater",
         memories: dict,
         start_time: float,
         data_dir: str,
@@ -234,7 +233,7 @@ class Reporter(object):
     ) -> typing.Optional[dict]:
 
         os.makedirs(
-            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
+            group := os.path.join(self.assemblage, const.SUMMARY, data_dir), exist_ok=True
         )
 
         # 🟡 ==== 数据查询 ====
@@ -357,9 +356,9 @@ class Reporter(object):
             ]
 
         # 🟡 ==== MEM 渲染 ====
-        plot = await templater.plot_mem_analysis(df)
+        plot = await Templater.plot_mem_analysis(df)
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
+        viewer_div = Templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file))
         save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
 
         # 🟡 ==== MEM 进度 ====
@@ -385,14 +384,13 @@ class Reporter(object):
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
-        templater: "Templater",
         memories: dict,
         start_time: float,
         data_dir: str,
     ) -> typing.Optional[dict]:
 
         os.makedirs(
-            group := os.path.join(templater.download, const.SUMMARY, data_dir), exist_ok=True
+            group := os.path.join(self.assemblage, const.SUMMARY, data_dir), exist_ok=True
         )
 
         # 🟢 ==== 数据查询 ====
@@ -407,7 +405,7 @@ class Reporter(object):
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        trace_loc = Path(templater.download).parent / const.TRACES_DIR / data_dir
+        trace_loc = Path(self.assemblage).parent / const.TRACES_DIR / data_dir
         leak_loc = None
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
@@ -465,11 +463,11 @@ class Reporter(object):
 
         # 🟢 ==== GFX 渲染 ====
         plots = await asyncio.gather(
-            *(templater.plot_gfx_analysis(segment, roll, drag, jank)
+            *(Templater.plot_gfx_analysis(segment, roll, drag, jank)
               for segment, roll, drag, jank, *_ in segments)
         )
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc)
+        viewer_div = Templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file))
         save(column(viewer_div, *plots, Spacer(height=10), sizing_mode="stretch_width"))
 
         # 🟢 ==== GFX 进度 ====
@@ -497,7 +495,6 @@ class Reporter(object):
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
-        templater: "Templater",
         memories: dict,
         start_time: float,
         team_data: dict,
@@ -509,7 +506,7 @@ class Reporter(object):
         cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
-            *(self.__mem_rendering(db, loop, executor, templater, memories, start_time, d, baseline)
+            *(self.__mem_rendering(db, loop, executor, memories, start_time, d, baseline)
               for d in cur_data)
         )
         if not (compilation := [c for c in compilation if c]):
@@ -587,7 +584,6 @@ class Reporter(object):
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
-        templater: "Templater",
         memories: dict,
         start_time: float,
         team_data: dict,
@@ -598,7 +594,7 @@ class Reporter(object):
         cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
-            *(self.__gfx_rendering(db, loop, executor, templater, memories, start_time, d)
+            *(self.__gfx_rendering(db, loop, executor, memories, start_time, d)
               for d in cur_data)
         )
         if not (compilation := [c for c in compilation if c]):

@@ -46,7 +46,6 @@ from memcore.cubicle import Cubicle
 from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
-from memnova.templater import Templater
 from memnova.reporter import Reporter
 from memnova.tracer import GfxAnalyzer
 from memnova import const
@@ -554,22 +553,20 @@ class Memrix(object):
             self.design.lab_detonation(self.memories, self.task_close_event), name="animation task"
         )
 
-        start_time, loop, templater = time.time(), asyncio.get_running_loop(), Templater(
-            os.path.join(reporter.group_dir, f"Report_{Path(reporter.group_dir).name}")
-        )
+        start_time, loop = time.time(), asyncio.get_running_loop()
 
         async with aiosqlite.connect(reporter.db_file) as db:
             with ProcessPoolExecutor(initializer=Active.active, initargs=(const.SHOW_LEVEL,)) as executor:
                 self.memories.update({"MSG": f"Rendering {total} tasks"})
                 if not (rendition := await getattr(reporter, render)(
-                    db, loop, executor, templater, self.memories, start_time, team_data, self.layer
+                    db, loop, executor, self.memories, start_time, team_data, self.layer
                 )):
                     self.task_close_event.set()
                     await self.animation_task
                     raise MemrixError(f"Rendering tasks failed")
 
         self.memories.update({"MSG": f"Polymerization"})
-        html_file = await reporter.make_report(self.unity_template, templater.download, **rendition)
+        html_file = await reporter.make_report(self.unity_template, **rendition)
         self.memories.update({
             "MSG": f"Done", "TMS": f"{time.time() - start_time:.1f} s"
         })

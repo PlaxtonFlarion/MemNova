@@ -12,40 +12,20 @@
 import typing
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from bokeh.io import curdoc
 from bokeh.plotting import figure
 from bokeh.models import (
     ColumnDataSource, Span, Div,
     DatetimeTickFormatter, Range1d, HoverTool
 )
-from memnova.scores import Scores
 
 
 class Templater(object):
     """Templater"""
 
-    def __init__(self, download: str):
-        self.download = download
-
-    def generate_viewers(
-        self,
-        trace_path: typing.Optional["Path"] = None,
-        leak_path: typing.Optional["Path"] = None,
-        gfx_path: typing.Optional["Path"] = None,
-        io_path: typing.Optional["Path"] = None
-    ) -> "Div":
-
-        log_list = [f for f in Path(self.download).parent.resolve().glob("*.log") if f.is_file()]
-
-        """
-        Traces      #38BDF8 亮天蓝
-        Leak        #F472B6 亮粉
-        Gfx         #A78BFA 淡紫
-        I/O         #34D399 鲜绿色
-        日志         #6366F1 靛蓝
-        Perfetto UI #FB923C 橙色
-        """
+    @staticmethod
+    def generate_viewers(*args, **__) -> "Div":
+        trace_path, leak_path, gfx_path, io_path, log_path, *_ = args
 
         viewers = [
             {**({
@@ -70,9 +50,9 @@ class Templater(object):
                 } if io_path else {})},
             {**({
                      "label": "➤ 📄日志 查看",
-                     "url": f"file:///{log_list[0].as_posix()}",
+                     "url": f"file:///{log_path.as_posix()}",
                      "color": "#6366F1"
-                 } if log_list else {})},
+                 } if log_path else {})},
             {
                 "label": "➤ 🌐UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
