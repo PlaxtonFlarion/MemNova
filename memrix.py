@@ -161,7 +161,7 @@ class Memrix(object):
         else:
             scene = {
                 "time": format_before_time,
-                "mark": device.device_info,
+                "mark": device.device_info | {"serial": device.serial},
                 "type": prefix,
                 "file": [self.file_folder]
             }
@@ -187,6 +187,8 @@ class Memrix(object):
                     await task
                 except asyncio.CancelledError:
                     logger.info(f"Cancelled: {task.get_name()}")
+
+        await self.data_queue.join()
 
         msg = f"{self.file_insert} records. Zero point."
         self.memories.update(
@@ -480,7 +482,7 @@ class Memrix(object):
         # Workflow: ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.initialize_tables(
-                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info
+                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info | {"serial": device.serial}
             )
             self.animation_task = asyncio.create_task(
                 self.design.mem_wave(self.memories, self.task_close_event)
@@ -498,16 +500,10 @@ class Memrix(object):
             await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
-            try:
-                pft_task.cancel()
-                await pft_task
-            except asyncio.CancelledError:
-                logger.info(f"Cancelled: {task.get_name()}")
-            await self.data_queue.join()
 
             # Workflow: ========== 结束采样 ==========
             await asyncio.gather(
-                watcher, self.sample_stop(reporter, gfx_task)
+                watcher, self.sample_stop(reporter, pft_task, gfx_task)
             )
 
     # """真相快照"""
