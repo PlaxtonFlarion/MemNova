@@ -106,7 +106,7 @@ class Reporter(object):
         ]
         return round(float(np.mean(vals)), 2) if vals else None
 
-    def build_minor_items(self, compilation: list[dict], key_tuples: list, groups: list) -> list:
+    def __build_minor_items(self, compilation: list[dict], key_tuples: list, groups: list) -> list:
         grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
     
         minor_items = []
@@ -304,14 +304,6 @@ class Reporter(object):
         if baseline:
             headline = self.align.get_headline("mem", "base")
 
-            key_tuples = [
-                ("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg"), ("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")
-            ]
-
-            grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
-            fg = {k: grouped[k] for k in ["FG-MAX", "FG-AVG"]}
-            bg = {k: grouped[k] for k in ["BG-MAX", "BG-AVG"]}
-
             # 🟡 ==== 主要容器 ====
             assemble = [
                 f"{k} HIGH" for k, v in grouped.items()
@@ -325,18 +317,18 @@ class Reporter(object):
             major_summary_items += self.align.get_sections("mem", "base")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += [
-                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in fg.items() if v], "class": "fg-copy"},
-                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in bg.items() if v], "class": "bg-copy"}
+            key_tuples = [
+                ("FG-MAX", "FG", "max"), ("FG-AVG", "FG", "avg"), ("BG-MAX", "BG", "max"), ("BG-AVG", "BG", "avg")
             ]
-
+            groups = [
+                {"name": "FG", "unit": "MB", "class": "fg-copy"},
+                {"name": "BG", "unit": "MB", "class": "bg-copy"},
+            ]   
+            minor_summary_items += self.__build_minor_item(compilation, key_tuples, groups)
+            
         # 🟡 ==== 内存泄漏 ====
         else:
             headline = self.align.get_headline("mem", "leak")
-
-            key_tuples = [
-                ("MAX", "MEM", "max"), ("AVG", "MEM", "avg")
-            ]
 
             grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
             union = {k: grouped[k] for k in ["MAX", "AVG"]}
@@ -345,9 +337,13 @@ class Reporter(object):
             major_summary_items += self.align.get_sections("mem", "leak")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += [
-                {"value": [f"MEAN-{k}: {v:.2f} MB" for k, v in union.items() if v]}
+            key_tuples = [
+                ("MAX", "MEM", "max"), ("AVG", "MEM", "avg")
             ]
+            groups = [
+                {"name": "MEM", "unit": "MB", "class": None},
+            ]
+            minor_summary_items += self.__build_minor_item(compilation, key_tuples, groups)
 
         await self.final_render(memories, start_time)
 
@@ -577,22 +573,22 @@ class Reporter(object):
 
         headline = self.align.get_headline("gfx", "base")
 
-        key_tuples = [
-            ("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")
-        ]
-
-        grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
-        union = {k: grouped[k] for k in ["MIN", "AVG"]}
-
         major_summary_items = [
             {"title": "基础信息", "class": "general", "value": cur_mark}
         ] if cur_mark else []
         minor_summary_items = []
 
+        # 🟢 ==== 主要容器 ====
         major_summary_items += self.align.get_sections("gfx", "base")
-        minor_summary_items += [
-            {"value": [f"MEAN-{k}: {v:.2f} FPS" for k, v in union.items() if v]}
+        
+        # 🟢 ==== 次要容器 ====
+        key_tuples = [
+            ("MIN", "GFX", "min_fps"), ("AVG", "GFX", "avg_fps")
         ]
+        groups = [
+            {"name": "GFX", "unit": "FPS", "class": None},
+        ]
+        minor_summary_items += self.__build_minor_item(compilation, key_tuples, groups)
 
         await self.final_render(memories, start_time)
 
