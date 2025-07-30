@@ -215,10 +215,10 @@ class Scores(object):
         result["min_frame_time"] = min(frame_times)
 
         # 🟩 ==== 掉帧指标 ====
-        result["jank_ratio"] = sum(1 for f in frames if f.get("is_jank")) / total_frames * 100
+        result["jank_ratio"] = sum(1 for f in frames if f.get("is_jank")) / total_frames
         ideal_frame_time = 1000 / 60
         over_threshold = sum(1 for f in frames if f["duration_ms"] > ideal_frame_time)
-        result["high_latency_ratio"] = over_threshold / total_frames * 100
+        result["high_latency_ratio"] = over_threshold / total_frames
 
         # 🟩 ==== 连续低FPS最长段 ====
         low_fps_threshold, longest, cur = 30, 0, 0
@@ -238,7 +238,7 @@ class Scores(object):
             roll_fps = [f.get(fps_key) for f in roll_frames if f.get(fps_key) is not None]
             roll_jnk = [f.get("is_jank", 0) for f in roll_frames]
             result["roll_avg_fps"] = float(np.mean(roll_fps)) if roll_fps else None
-            result["roll_jnk_ratio"] = sum(roll_jnk) / len(roll_jnk) * 100 if roll_jnk else None
+            result["roll_jnk_ratio"] = sum(roll_jnk) / len(roll_jnk) if roll_jnk else None
 
         # 🟩 ==== 拖拽区指标 ====
         drag_frames = []
@@ -248,7 +248,7 @@ class Scores(object):
             drag_fps = [f.get(fps_key) for f in drag_frames if f.get(fps_key) is not None]
             drag_jnk = [f.get("is_jank", 0) for f in drag_frames]
             result["drag_avg_fps"] = float(np.mean(drag_fps)) if drag_fps else None
-            result["drag_jnk_ratio"] = sum(drag_jnk) / len(drag_jnk) * 100 if drag_jnk else None
+            result["drag_jnk_ratio"] = sum(drag_jnk) / len(drag_jnk) if drag_jnk else None
 
         # 🟩 ==== 评分组成 ====
         jank_total = sum(r["end_ts"] - r["start_ts"] for r in jank_ranges)
