@@ -591,7 +591,7 @@ class Perfetto(object):
         traces_dir: "Path",
         trace_loc: "Path",
         trace_conv: str
-    ) -> None:
+    ):
 
         self.track_enabled = track_enabled
         self.track_event = track_event
