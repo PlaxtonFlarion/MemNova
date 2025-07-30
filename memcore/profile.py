@@ -28,10 +28,10 @@ class Align(object):
             "base": {
                 "headline": "内存基线",
                 "standard": {
-                    "fg-max": 0.00,
-                    "fg-avg": 0.00,
-                    "bg-max": 0.00,
-                    "bg-avg": 0.00,
+                    "fg-max": {"threshold": 0.00, "direction": "gt"},
+                    "fg-avg": {"threshold": 0.00, "direction": "gt"},
+                    "bg-max": {"threshold": 0.00, "direction": "gt"},
+                    "bg-avg": {"threshold": 0.00, "direction": "gt"}
                 },
                 "sections": [
                     {
@@ -80,12 +80,12 @@ class Align(object):
             "base": {
                 "headline": "流畅度",
                 "standard": {
-                    "avg-fps": 55.0,
-                    "std-fps": 5.0,
-                    "jnk": 0.03,
-                    "hi-lat": 0.02,
-                    "roll-fps": 50.0,
-                    "low-fps-max": 2.0
+                    "avg-fps": {"threshold": 55.0, "direction": "lt"},
+                    "std-fps": {"threshold": 5.0, "direction": "gt"},
+                    "jnk": {"threshold": 0.03, "direction": "lt"},
+                    "hi-lat": {"threshold": 0.02, "direction": "lt"},
+                    "roll-fps": {"threshold": 50.0, "direction": "lt"},
+                    "low-fps-max": {"threshold": 2.0, "direction": "gt"}
                 },
                 "sections": [
                     {
@@ -144,22 +144,21 @@ class Align(object):
 
         return self.aligns.get(section, {}).get(primary_key, "")
 
-    # ✅ 获取某个测试项的 headline 字符
+    # ✅ 获取某个测试项的 standard 字典
     def get_standard(self, section: str, subfield: str = None) -> dict:
         primary_key = "standard"
         if subfield:
-            value = self.aligns.get(section, {}).get(subfield, {}).get(primary_key, "")
+            value = self.aligns.get(section, {}).get(subfield, {}).get(primary_key, {})
         else:
-            value = self.aligns.get(section, {}).get(primary_key, "")
+            value = self.aligns.get(section, {}).get(primary_key, {})
 
         if isinstance(value, dict):
-            try:
-                return {
-                    k: round(float(v), 2) for k, v in value.items() if isinstance(v, str | int | float)
-                }
-            except (TypeError, ValueError):
-                return {}
-
+            # 强制校验每个值都是 dict，并包含 threshold/direction
+            filtered = {}
+            for k, v in value.items():
+                if isinstance(v, dict) and "threshold" in v and "direction" in v:
+                    filtered[k] = v
+            return filtered
         return {}
 
     # ✅ 获取某个测试项的 sections 列表
