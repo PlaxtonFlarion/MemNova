@@ -347,12 +347,12 @@ class Reporter(object):
             ]   
             grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
 
+            standard = self.align.get_standard("mem", "base")
+            classes = self.__calc_score_classes(grouped, standard, "expiry-pass", "expiry-fail")
+            
             # 🟡 ==== 主要容器 ====
             assemble = [
-                f"{k} HIGH" for k, v in grouped.items()
-                if v is not None and (
-                    standard := self.align.get_standard("mem", "base").get(k.lower())
-                ) is not None and v > standard
+                f"{k} HIGH" for k, v in grouped.items() if score_classes.get(k.lower()) == "expiry-fail"
             ]
             if assemble:
                 major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
