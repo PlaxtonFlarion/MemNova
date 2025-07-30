@@ -166,7 +166,7 @@ class Reporter(object):
                 score_group[mode] = score
 
                 trend = score["trend"]
-                style = "expiry-fail" if trend.lower().startwith("up") else "baseline"
+                style = "expiry-fail" if trend.lower().startswith("up") else "baseline"
 
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
@@ -205,7 +205,7 @@ class Reporter(object):
             self.background_tasks.append(draw_leak_future)
 
             trend = score["trend"]
-            style = "expiry-fail" if trend.lower().startwith("up") else "leak"
+            style = "expiry-fail" if trend.lower().startswith("up") else "leak"
 
             # 🟡 ==== 评价部分 ====
             evaluate = [
