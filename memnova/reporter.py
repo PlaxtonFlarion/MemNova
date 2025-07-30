@@ -487,10 +487,16 @@ class Reporter(object):
         roll_avg_fps = score["roll_avg_fps"]
         is_scroll = f"Roll FPS: {roll_avg_fps:.2f} FPS" if roll_avg_fps else score["level"]
 
-        standard_std = self.align.get_standard("gfx", "std-fps")
-        std_class = "fluency" if standard_std and score["fps_std"] <= standard_std else "expiry-fail"
-        standard_jnk = self.align.get_standard("gfx", "jnk")
-        jnk_class = "fluency" if standard_jnk and score["jank_ratio"] <= standard_jnk else "expiry-fail"
+        standard = self.align.get_standard("gfx", "base")
+        standard_std = standard.get("std-fps")
+        standard_jnk = standard.get("jnk")
+        
+        std_class = (
+            "fluency" if score["fps_std"] <= standard_std else "expiry-fail"
+        ) if standard_std else "fluency"
+        jnk_class = (
+            "fluency" if score["jank_ratio"] <= standard_jnk else "expiry-fail"
+        ) if standard_jnk else "fluency"
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
