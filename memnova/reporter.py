@@ -131,13 +131,13 @@ class Reporter(object):
         }
         result = {}
         for key, cfg in standard.items():
-            if not isinstance(cfg, dict):
-                continue
             value = score.get(key)
             threshold = cfg.get("threshold")
             direction = cfg.get("direction", "ge")
             op = op_map.get(direction, op_map["ge"])
-            result[key] = pass_class if (value is not None and threshold is not None and op(value, threshold)) else fail_class
+            result[key] = pass_class if (
+                value is not None and threshold is not None and op(value, threshold)
+            ) else fail_class
         return result
 
     # Workflow: ======================== MEM & I/O ========================
