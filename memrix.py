@@ -272,7 +272,7 @@ class Memrix(object):
             finally:
                 self.data_queue.task_done()
 
-    async def track_collector(
+    async def mix_collector(
         self,
         track_enabled: bool,
         device: "Device",
@@ -501,7 +501,7 @@ class Memrix(object):
             )
 
             watcher = asyncio.create_task(self.watcher())
-            await self.track_collector(self.storm, device, db)
+            await self.mix_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
 
