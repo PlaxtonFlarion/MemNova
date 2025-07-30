@@ -145,7 +145,7 @@ class Align(object):
         return self.aligns.get(section, {}).get(primary_key, "")
 
     # ✅ 获取某个测试项的 headline 字符
-    def get_standard(self, section: str, subfield: str = None) -> typing.Optional[float]:
+    def get_standard(self, section: str, subfield: str = None) -> typing.Any:
         primary_key = "standard"
         if subfield:
             value = self.aligns.get(section, {}).get(subfield, {}).get(primary_key, "")
