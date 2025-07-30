@@ -45,7 +45,7 @@ class Cubicle(object):
             brand TEXT,
             model TEXT,
             release TEXT,
-            serial TEXT)''')
+            serialno TEXT)''')
         await db.commit()
 
     @staticmethod
@@ -63,14 +63,14 @@ class Cubicle(object):
             brand,
             model,
             release,
-            serial) VALUES (?, ?, ?, ?, ?, ?, ?)''', (
+            serialno) VALUES (?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 title,
                 timestamp,
                 payload["brand"],
                 payload["model"],
                 payload["release"],
-                payload["serial"]
+                payload["serialno"]
             )
         )
         await db.commit()
@@ -84,7 +84,7 @@ class Cubicle(object):
                 brand,
                 model,
                 release,
-                serial
+                serialno
             FROM {Cubicle.__joint_table}
             WHERE data_dir = ?
         """
