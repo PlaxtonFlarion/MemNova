@@ -120,7 +120,14 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def __calc_score_classes(score: dict, standard: dict, pass_class: str, fail_class: str) -> dict:
+    def __calc_score_classes(
+        score: dict, 
+        standard: dict, 
+        pass_class: str, 
+        fail_class: str,
+        default_class: str = None
+    ) -> dict:
+        
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x <  y,
@@ -129,7 +136,8 @@ class Reporter(object):
             "eq": lambda x, y: x == y,
             "ne": lambda x, y: x != y,
         }
-        result = {}
+
+        result = {k: default_class or pass_class for k in score.keys()}
         for key, cfg in standard.items():
             value = score.get(key)
             threshold = cfg.get("threshold")
