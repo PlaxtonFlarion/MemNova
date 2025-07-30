@@ -31,7 +31,6 @@ class Scores(object):
 
         # 🟨 ==== 默认结果 ====
         result = {
-            "trend": "",
             "trend_score": 0.0,
             "jitter_index": 0.0,
             "r_squared": 0.0,
@@ -165,7 +164,6 @@ class Scores(object):
 
         # 🟩 ==== 默认结果 ====
         result = {
-            "label": "",
             "level": "N/A",
             "score": 0.0,
             "color": "#BBBBBB",
