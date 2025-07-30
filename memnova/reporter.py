@@ -510,12 +510,9 @@ class Reporter(object):
             raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
         )
         self.background_tasks.append(draw_future)
-
-        roll_avg_fps = score["roll_avg_fps"]
-        is_scroll = f"Roll FPS: {roll_avg_fps:.2f} FPS" if roll_avg_fps else score["level"]
-
+        
         standard = self.align.get_standard("gfx", "base")
-        classes = __calc_score_classes(score, standard, "fluency", "expiry-fail")
+        classes = self.__calc_score_classes(score, standard, "fluency", "expiry-fail")
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
@@ -528,7 +525,7 @@ class Reporter(object):
             },
             {
                 "fields": [
-                    {"text": is_scroll, "class": "fluency"},
+                    {"text": f"Roll FPS: {score['roll_avg_fps']:.2f} FPS", "class": classes["roll_avg_fps"]},
                     {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": classes["high_latency_ratio"]},
                     {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]}
                 ]
