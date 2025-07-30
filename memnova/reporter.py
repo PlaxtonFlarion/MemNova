@@ -120,7 +120,7 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def calc_score_classes(score: dict, standard: dict, pass_class: str, fail_class: str) -> dict:
+    def __calc_score_classes(score: dict, standard: dict, pass_class: str, fail_class: str) -> dict:
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x <  y,
@@ -515,30 +515,22 @@ class Reporter(object):
         is_scroll = f"Roll FPS: {roll_avg_fps:.2f} FPS" if roll_avg_fps else score["level"]
 
         standard = self.align.get_standard("gfx", "base")
-        standard_std = standard.get("std-fps")
-        standard_jnk = standard.get("jnk")
-        
-        std_class = (
-            "fluency" if score["fps_std"] <= standard_std else "expiry-fail"
-        ) if standard_std else "fluency"
-        jnk_class = (
-            "fluency" if score["jank_ratio"] <= standard_jnk else "expiry-fail"
-        ) if standard_jnk else "fluency"
+        classes = __calc_score_classes(score, standard, "fluency", "expiry-fail")
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
             {
                 "fields": [
-                    {"text": f"STD: {score['fps_std']:.2f}", "class": std_class},
-                    {"text": f"JNK: {score['jank_ratio']:.2f} %", "class": jnk_class},
+                    {"text": f"STD: {score['fps_std']:.2f}", "class": classes["fps_std"]},
+                    {"text": f"JNK: {score['jank_ratio']:.2f} %", "class": classes["jank_ratio"]},
                     {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"}
                 ]
             },
             {
                 "fields": [
                     {"text": is_scroll, "class": "fluency"},
-                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": "fluency"},
-                    {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": "fluency"}
+                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]},
+                    {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": classes["high_latency_ratio"]}
                 ]
             }
         ]
