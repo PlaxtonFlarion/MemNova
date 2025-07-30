@@ -325,7 +325,7 @@ class Reporter(object):
             major_summary_items += self.align.get_sections("mem", "base")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_item(key_tuples, groups, grouped)
+            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
             
         # 🟡 ==== 内存泄漏 ====
         else:
@@ -337,14 +337,13 @@ class Reporter(object):
             groups = [
                 {"name": "MEM", "unit": "MB", "class": None},
             ]
-
             grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
 
             # 🟡 ==== 主要容器 ====
             major_summary_items += self.align.get_sections("mem", "leak")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_item(key_tuples, groups, grouped)
+            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
 
         await self.final_render(memories, start_time)
 
@@ -580,6 +579,7 @@ class Reporter(object):
         groups = [
             {"name": "GFX", "unit": "FPS", "class": None},
         ]
+        grouped = {k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples}
 
         major_summary_items = [
             {"title": "基础信息", "class": "general", "value": cur_mark}
@@ -590,7 +590,7 @@ class Reporter(object):
         major_summary_items += self.align.get_sections("gfx", "base")
         
         # 🟢 ==== 次要容器 ====
-        minor_summary_items += self.__build_minor_item(key_tuples, groups, grouped)
+        minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
 
         await self.final_render(memories, start_time)
 
