@@ -222,19 +222,6 @@ class Memrix(object):
         Design.console.print()
         await self.design.system_disintegrate()
 
-    async def mem_alignment(
-        self,
-        db: "aiosqlite.Connection"
-    ) -> None:
-
-        while True:
-            data = await self.data_queue.get()
-            final_map = data.get("final_map")
-            try:
-                await Cubicle.insert_mem_data(db, self.file_folder, self.align.app_label, final_map)
-            finally:
-                self.data_queue.task_done()
-
     async def gfx_alignment(
         self,
         track_enabled: bool,
@@ -285,7 +272,7 @@ class Memrix(object):
         track_enabled: bool,
         device: "Device",
         db: "aiosqlite.Connection"
-    ) -> typing.Optional["asyncio.Task"]:
+    ) -> None:
 
         async def mem_analyze() -> dict:
             meminfo_map, summary_map = {}, {}
@@ -418,7 +405,9 @@ class Memrix(object):
                 return self.dumped.set()
 
             if final_map := mark_map | muster:
-                await self.data_queue.put({"final_map": final_map})
+                await Cubicle.insert_mem_data(
+                    db, self.file_folder, self.align.app_label, final_map
+                )
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
@@ -445,16 +434,10 @@ class Memrix(object):
         if not track_enabled:
             return None
 
-        mem_alignment_task = asyncio.create_task(
-            self.mem_alignment(db), name="mem alignment task"
-        )
-
         self.dumped = asyncio.Event()
         while not self.task_close_event.is_set():
             await track_launcher()
             await asyncio.sleep(self.align.mem_speed)
-
-        return mem_alignment_task
 
     # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
     async def track_core_task(self, device: "Device") -> None:
@@ -512,16 +495,20 @@ class Memrix(object):
             pft_task = asyncio.create_task(perfetto.auto_pilot(), name="auto pilot task")
 
             watcher = asyncio.create_task(self.watcher())
-            mem_task = await self.track_collector(self.storm, device, db)
+            await self.track_collector(self.storm, device, db)
 
             await self.task_close_event.wait()
-            await pft_task
+            try:
+                pft_task.cancel()
+                await pft_task
+            except asyncio.CancelledError:
+                logger.info(f"Cancelled: {task.get_name()}")
             await self.data_queue.join()
 
-        # Workflow: ========== 结束采样 ==========
-        await asyncio.gather(
-            watcher, self.sample_stop(reporter, gfx_task, mem_task)
-        )
+            # Workflow: ========== 结束采样 ==========
+            await asyncio.gather(
+                watcher, self.sample_stop(reporter, gfx_task)
+            )
 
     # """真相快照"""
     async def observation(self) -> None:
