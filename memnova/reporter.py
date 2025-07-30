@@ -521,16 +521,16 @@ class Reporter(object):
         evaluate = [
             {
                 "fields": [
+                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"},
                     {"text": f"STD: {score['fps_std']:.2f}", "class": classes["fps_std"]},
-                    {"text": f"JNK: {score['jank_ratio']:.2f} %", "class": classes["jank_ratio"]},
-                    {"text": f"Score: {score['score'] * 100:.2f}", "class": "fluency"}
+                    {"text": f"JNK: {score['jank_ratio']:.2f} %", "class": classes["jank_ratio"]}
                 ]
             },
             {
                 "fields": [
                     {"text": is_scroll, "class": "fluency"},
-                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]},
-                    {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": classes["high_latency_ratio"]}
+                    {"text": f"Hi-Lat: {score['high_latency_ratio']:.2f} %", "class": classes["high_latency_ratio"]},
+                    {"text": f"Low-FPS MAX: {score['longest_low_fps']:.2f} s", "class": classes["longest_low_fps"]}
                 ]
             }
         ]
