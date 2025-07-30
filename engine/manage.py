@@ -34,7 +34,9 @@ class Manage(object):
             *(Terminal.cmd_line(cmd + [key]) for key in keys.values())
         )
 
-        return {k: v or "N/A" for k, v in zip(keys, response)}
+        return {
+            k: v or "N/A" for k, v in zip(keys, response)
+        } | {"serialno": serial}
 
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
         try_again, max_try_again = 0, 20
