@@ -161,7 +161,7 @@ class Memrix(object):
         else:
             scene = {
                 "time": format_before_time,
-                "mark": device.device_info | {"serial": device.serial},
+                "mark": device.device_info,
                 "type": prefix,
                 "file": [self.file_folder]
             }
@@ -480,7 +480,7 @@ class Memrix(object):
         async with aiosqlite.connect(reporter.db_file) as db:
             # Workflow: ========== 开始采样 ==========
             await Cubicle.initialize_tables(
-                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info | {"serial": device.serial}
+                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info
             )
             self.animation_task = asyncio.create_task(
                 self.design.mem_wave(self.memories, self.task_close_event)
