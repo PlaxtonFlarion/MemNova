@@ -389,8 +389,5 @@ class Cubicle(object):
             return [dict(row) for row in rows]
 
 
-
-
-
 if __name__ == '__main__':
     pass
