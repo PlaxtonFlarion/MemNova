@@ -359,14 +359,14 @@ class Cubicle(object):
                 data_dir,
                 label,
                 timestamp,
-                payload["io"]["swap"],
-                payload["io"]["rchar"],
-                payload["io"]["wchar"],
-                payload["io"]["syscr"],
-                payload["io"]["syscw"],
-                payload["io"]["read_bytes"],
-                payload["io"]["write_bytes"],
-                payload["io"]["cancelled_write_bytes"]
+                payload["swap"],
+                payload["rchar"],
+                payload["wchar"],
+                payload["syscr"],
+                payload["syscw"],
+                payload["read_bytes"],
+                payload["write_bytes"],
+                payload["cancelled_write_bytes"]
             )
         )
         await db.commit()
