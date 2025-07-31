@@ -438,7 +438,7 @@ class Reporter(object):
                     {
                         "text": f"Score: {score['score'] * 100:.2f}", 
                         "class": "fluency",
-                        "tooltip": standard.get("score", {}).get("tooltip", "")
+                        "tooltip": standard.get("score", {}).get("tooltip", score["label"])
                     },
                     {
                         "text": f"STD: {score['fps_std']:.2f}", 
