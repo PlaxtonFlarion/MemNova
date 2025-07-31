@@ -413,7 +413,7 @@ class Memrix(object):
             logger.info(muster)
 
             try:
-                timestamp_fmt, io_final_map = mark_map["mark"]["tms"], {"io": muster.pop("io")}
+                timestamp_fmt, io_final_map = mark_map["mark"]["tms"], {"io": muster.pop("io") | {"swap": muster["summary"]["swap"]}
                 mem_final_map = mark_map | muster
                 await asyncio.gather(
                     Cubicle.insert_mem_data(
