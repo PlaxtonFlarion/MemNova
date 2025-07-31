@@ -240,8 +240,10 @@ class Reporter(object):
         )
 
         # 🟡 ==== 数据查询 ====
-        mem_data, (joint, *_) = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+        mem_data, (joint, *_), io_data = await asyncio.gather(
+            Cubicle.query_mem_data(db, data_dir), 
+            Cubicle.query_joint_data(db, data_dir), 
+            Cubicle.query_io_data(db, data_dir)
         )
         if not mem_data:
             return logger.info(f"MEM data not found for {data_dir}")
@@ -257,7 +259,7 @@ class Reporter(object):
 
         # 🔵 ==== I/O 绘图 ====
         draw_io_future = loop.run_in_executor(
-            executor, Painter.draw_io_metrics, mem_data, str(io_loc)
+            executor, Painter.draw_io_metrics, io_data, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
 
