@@ -323,6 +323,9 @@ class Reporter(object):
             )
             self.background_tasks.append(draw_leak_future)
 
+            # 🟡 ==== 定制评价 ====
+            standard = self.align.get_standard("mem", "leak")
+
             # 🟡 ==== 趋势标签 ====
             trend = score["trend"]
             match trend[0]:
@@ -334,16 +337,40 @@ class Reporter(object):
             evaluate = [
                 {
                     "fields": [
-                        {"text": trend, "class": trend_c},
-                        {"text": score['poly_trend'], "class": "leak"},
-                        {"text": f"Score: {score['trend_score']:.2f}", "class": "leak"}
+                        {
+                            "text": trend, 
+                            "class": trend_c,
+                            **standard.get("trend", {})
+                        },
+                        {
+                            "text": score['poly_trend'], 
+                            "class": "leak",
+                            **standard.get("poly_trend", {})
+                        },
+                        {
+                            "text": f"Score: {score['trend_score']:.2f}", 
+                            "class": "leak",
+                            **standard.get("trend_score", {})
+                        }
                     ]
                 },
                 {
                     "fields": [
-                        {"text": f"Jitter: {score['jitter_index']:.2f}", "class": "leak"},
-                        {"text": f"Slope: {score['slope']:.2f}", "class": "leak"},
-                        {"text": f"R²: {score['r_squared']:.2f}", "class": "leak"}
+                        {
+                            "text": f"Jitter: {score['jitter_index']:.2f}", 
+                            "class": "leak",
+                            **standard.get("jitter_index", {})
+                        },
+                        {
+                            "text": f"Slope: {score['slope']:.2f}", 
+                            "class": "leak",
+                            **standard.get("slope", {})
+                        },
+                        {
+                            "text": f"R²: {score['r_squared']:.2f}", 
+                            "class": "leak",
+                            **standard.get("r_squared", {})
+                        }
                     ]
                 }
             ]
