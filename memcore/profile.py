@@ -182,18 +182,20 @@ class Align(object):
         else:
             value = self.aligns.get(section, {}).get(primary_key, {})
 
-        if isinstance(value, dict):
-            filtered = {}
-            for k, v in value.items():
-                if isinstance(v, dict):
-                    try:
-                        filtered[k.lower()] = {
-                            "threshold": float(v["threshold"]), "direction": str(v["direction"]), **v
-                        }
-                    except (TypeError, KeyError, ValueError):
-                        continue
-            return filtered
-        return {}
+        if not isinstance(value, dict):
+            return {}
+        
+        filtered, kwd = {}, "threshold"
+        for k, v in value.items():
+            key = k.lower()
+            if isinstance(v, dict) and kwd in v:
+                try:
+                    filtered[key] = {kwd: float(v[kwd]), **v}
+                except (TypeError, KeyError, ValueError):
+                    continue
+            else:
+                filtered[key] = v
+        return filtered
 
     # ✅ 获取某个测试项的 sections 列表
     def get_sections(self, section: str, subfield: str = None) -> list:
