@@ -510,7 +510,7 @@ class Design(object):
                     line += char
             return Text(line, style=f"bold {color}")
 
-        with Live(console=self.console, refresh_per_second=30) as live:
+        with Live(console=self.console, refresh_per_second=30, transient=transient) as live:
             # 打字机 + 光标效果
             current = ""
             for i, c in enumerate(base_line):
@@ -551,7 +551,7 @@ class Design(object):
                 live.update(Text(ghost_line, style=f"bold dim {color}"))
                 await asyncio.sleep(0.01)
 
-    async def mem_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+    async def mem_wave(self, memories: dict, transient: bool, task_close_event: "asyncio.Event") -> None:
         """
         动态内存波动动画，支持状态切换、LOGO淡入淡出、呼吸灯探针。
         """
@@ -818,7 +818,7 @@ class Design(object):
             f"\n[bold #00FF5F]>>> {const.APP_DESC} :: {random.choice(close_banner)} <<<\n"
         )
 
-    async def gfx_wave(self, memories: dict, task_close_event: "asyncio.Event") -> None:
+    async def gfx_wave(self, memories: dict, transient: bool, task_close_event: "asyncio.Event") -> None:
 
         if self.design_level != const.SHOW_LEVEL:
             return None
@@ -978,7 +978,7 @@ class Design(object):
         index, phase_sequence = 0, generate_phase_sequence(rows, cols)
         letter = insert_letters(phase_sequence)
 
-        with Live(console=self.console, refresh_per_second=fps) as live:
+        with Live(console=self.console, refresh_per_second=fps, transient=transient) as live:
             while not task_close_event.is_set():
                 live.update(render_frame(index, phase_sequence, letter))
                 index += 1
