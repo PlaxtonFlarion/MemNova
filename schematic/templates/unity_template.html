@@ -756,7 +756,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 {% if eva.fields %}
                     <div class="seal-wrapper">
                         {% for field in eva.fields %}
-                            <p class="seal {{ field.class }}" data-title="{{ field.title | default('') }}">{{ field.text }}</p>
+                            <p class="seal {{ field.class }}" data-tooltip="{{ field.tooltip | default('') }}">{{ field.text }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
