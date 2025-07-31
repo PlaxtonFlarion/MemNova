@@ -309,7 +309,9 @@ class Memrix(object):
                 ]:
                     summary_map[i] = ToolKit.fit_mem(i, summary_c)
 
-            return {"meminfo": meminfo_map} | {"summary": summary_map}
+            return {"meminfo": meminfo_map} | {
+                "summary": summary_map
+            } if meminfo_map and summary_map else {}
 
         async def io_analyze(pid: str) -> dict:
             io_map = {}
@@ -324,11 +326,11 @@ class Memrix(object):
                 for j in ["syscr", "syscw"]:
                     io_map[j] = ToolKit.fit_io_count(j, app_io_c)
 
-            return {"io": io_map}
+            return {"io": io_map} if io_map else {}
 
         async def union_analyze(pid: str) -> dict:
             mem_map, io_map = await asyncio.gather(*(mem_analyze(), io_analyze(pid)))
-            return mem_map | io_map if all((mem_map, io_map)) else {}
+            return {**mem_map, **io_map}
 
         async def track_launcher() -> None:
             self.dumped.clear()
@@ -408,12 +410,9 @@ class Memrix(object):
                 })
                 return logger.info(f"Resp -> {result}\n")
 
-            try:
-                logger.info(muster)
-            except KeyError:
-                return self.dumped.set()
+            logger.info(muster)
 
-            if final_map := mark_map | muster:
+            try:
                 await Cubicle.insert_mem_data(
                     db, self.file_folder, self.align.app_label, final_map
                 )
@@ -425,8 +424,8 @@ class Memrix(object):
                     "MSG": f"[bold #87D700]{msg}",
                     "PSS": f"{final_map.get('summary', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
-
-            else:
+                logger.info(msg)
+            except KeyError:
                 msg = f"Data insert skipped"
                 self.memories.update({
                     "MSG": f"[bold #FF5F5F]{msg}",
@@ -434,8 +433,8 @@ class Memrix(object):
                     "ACT": "*",
                     "PSS": "*"
                 })
-
-            logger.info(msg)
+                logger.info(msg)
+                return self.dumped.set()
 
             self.dumped.set()
             return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
