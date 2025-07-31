@@ -80,12 +80,36 @@ class Align(object):
             "base": {
                 "headline": "流畅度",
                 "standard": {
-                    "avg_fps": {"threshold": 55.0, "direction": "ge"},
-                    "fps_std": {"threshold": 5.0, "direction": "le"},
-                    "jank_ratio": {"threshold": 0.03, "direction": "le"},
-                    "roll_avg_fps": {"threshold": 50.0, "direction": "ge"},
-                    "high_latency_ratio": {"threshold": 0.02, "direction": "le"},
-                    "longest_low_fps": {"threshold": 2.0, "direction": "le"}
+                    "avg_fps": {
+                        "threshold": 55.0, 
+                        "direction": "ge",
+                        "tooltip": "平均帧率（Average FPS）：衡量全流程渲染性能的核心指标。该数值反映整体流畅度，越高表示渲染管线稳定高效。≥55为旗舰水平。"
+                    },
+                    "fps_std": {
+                        "threshold": 5.0, 
+                        "direction": "le",
+                        "tooltip": "帧率波动标准差（FPS Std）：评估帧率稳定性的关键度量。数值越低，说明帧率分布越集中，用户视觉体验越顺滑。≤5代表优秀稳定性。"
+                    },
+                    "jank_ratio": {
+                        "threshold": 0.03, 
+                        "direction": "le",
+                        "tooltip": "卡顿帧占比（Jank Ratio）：表示出现明显卡顿的帧在总帧数中的占比。此指标直观反映异常渲染事件频次，数值越低越佳。≤3%为流畅体验标准。"
+                    },
+                    "roll_avg_fps": {
+                        "threshold": 50.0, 
+                        "direction": "ge",
+                        "tooltip": "滑动区间平均帧率（Scroll Avg FPS）：仅统计滚动场景下的平均帧率，专用于交互性能评估。≥50为一流触感保障。"
+                    },
+                    "high_latency_ratio": {
+                        "threshold": 0.02, 
+                        "direction": "le",
+                        "tooltip": "高延迟帧比例（High Latency Ratio）：统计单帧耗时超过32ms的占比，用于评估极端性能抖动。≤2%为优质区间。"
+                    },
+                    "longest_low_fps": {
+                        "threshold": 2.0, 
+                        "direction": "le",
+                        "tooltip": "最长低帧率持续时长（Longest Low FPS Span）：反映连续低于阈值帧率的最长时间（秒）。数值越短，说明极端性能退化事件越少。≤2s为卓越体验。"
+                    }
                 },
                 "sections": [
                     {
