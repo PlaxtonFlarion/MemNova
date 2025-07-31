@@ -414,7 +414,7 @@ class Memrix(object):
 
             try:
                 await Cubicle.insert_mem_data(
-                    db, self.file_folder, self.align.app_label, final_map
+                    db, self.file_folder, self.align.app_label, final_map := mark_map | muster
                 )
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
