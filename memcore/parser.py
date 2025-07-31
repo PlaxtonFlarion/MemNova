@@ -143,6 +143,16 @@ class Parser(object):
             ''')
         )
         minor_group.add_argument(
+            "--atlas", action="store_true",
+            help=textwrap.dedent(f'''\
+                \033[1;36m^*涟漪视界*^\033[0m
+                -------------------------
+                - 涟漪视界
+
+            ''')
+        )
+
+        minor_group.add_argument(
             "--layer", action="store_true",
             help=textwrap.dedent(f'''\
                 \033[1;36m^*极昼极夜*^\033[0m
