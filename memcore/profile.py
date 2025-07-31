@@ -28,10 +28,30 @@ class Align(object):
             "base": {
                 "headline": "内存基线",
                 "standard": {
-                    "fg-max": {"threshold": 0.00, "direction": "le"},
-                    "fg-avg": {"threshold": 0.00, "direction": "le"},
-                    "bg-max": {"threshold": 0.00, "direction": "le"},
-                    "bg-avg": {"threshold": 0.00, "direction": "le"}
+                    "fg-max": {
+                        "threshold": 0.00, 
+                        "direction": "le"
+                    },
+                    "fg-avg": {
+                        "threshold": 0.00, 
+                        "direction": "le"
+                    },
+                    "bg-max": {
+                        "threshold": 0.00, 
+                        "direction": "le"
+                    },
+                    "bg-avg": {
+                        "threshold": 0.00, 
+                        "direction": "le"
+                    },
+                    "trend": {
+                        "desc": "趋势判定",
+                        "tooltip": "对内存曲线整体形态进行自动分类，包括线性增长（泄漏）、平稳（正常）、波动（无泄漏特征）、U型/∩型（业务波动）等。主要参考 Slope 斜率与 R² 拟合优度，结合趋势类型（如 Upward、Stable、U-shape 等），辅助泄漏诊断。"
+                    },
+                    "jitter_index": {
+                         "desc": "抖动指数",
+                         "tooltip": "衡量曲线短周期内波动幅度。值越小，代表数据更平稳。"
+                    }
                 },
                 "sections": [
                     {
