@@ -437,18 +437,18 @@ class Reporter(object):
                 "fields": [
                     {
                         "text": f"Score: {score['score'] * 100:.2f}", 
-                        "class": "fluency",
-                        "tooltip": standard.get("score", {}).get("tooltip", score["label"])
+                        "class": classes["score"],
+                        **standard.get("score", {"tooltip": score["label"]})
                     },
                     {
                         "text": f"STD: {score['fps_std']:.2f}", 
                         "class": classes["fps_std"],
-                        "tooltip": standard.get("fps_std", {}).get("tooltip", "")
+                        **standard.get("fps_std", {})
                     },
                     {
                         "text": f"JNK: {score['jank_ratio'] * 100:.2f} %", 
                         "class": classes["jank_ratio"],
-                        "tooltip": standard.get("jank_ratio", {}).get("tooltip", "")
+                        **standard.get("jank_ratio", {})
                     }
                 ]
             },
@@ -457,17 +457,17 @@ class Reporter(object):
                     {
                         "text": f"Roll FPS: {raf:.2f} FPS" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -",
                         "class": classes.get("roll_avg_fps", "fluency"),
-                        "tooltip": standard.get("roll_avg_fps", {}).get("tooltip", "")
+                        **standard.get("roll_avg_fps", {})
                     },
                     {
                         "text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %", 
                         "class": classes["high_latency_ratio"],
-                        "tooltip": standard.get("high_latency_ratio", {}).get("tooltip", "") 
+                        **standard.get("high_latency_ratio", {}) 
                     },
                     {
                         "text": f"LMax: {score['longest_low_fps']:.2f} s", 
                         "class": classes["longest_low_fps"],
-                        "tooltip": standard.get("longest_low_fps", {}).get("tooltip", "")
+                        **standard.get("longest_low_fps", {})
                     }                
                 ]
             }
