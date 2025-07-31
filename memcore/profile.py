@@ -184,18 +184,13 @@ class Align(object):
 
         if not isinstance(value, dict):
             return {}
+
+        kwd = "threshold"
         
-        filtered, kwd = {}, "threshold"
-        for k, v in value.items():
-            key = k.lower()
-            if isinstance(v, dict) and kwd in v:
-                try:
-                    filtered[key] = {kwd: float(v[kwd]), **v}
-                except (TypeError, KeyError, ValueError):
-                    continue
-            else:
-                filtered[key] = v
-        return filtered
+        return {
+            k.lower(): {**v, kwd: float(v[kwd])} if kwd in v else v
+            for k, v in value.items() if isinstance(v, dict)
+        }
 
     # ✅ 获取某个测试项的 sections 列表
     def get_sections(self, section: str, subfield: str = None) -> list:
