@@ -67,7 +67,7 @@ class Memrix(object):
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.nodes, self.title, self.layer, *_ = args
+        _, _, _, self.focus, self.nodes, self.title, self.atlas, self.layer, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -222,8 +222,12 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
         )
 
+        if self.atlas:
+            self.forge = self.file_folder
+            return await self.observation()
+
         Design.console.print()
-        await self.design.system_disintegrate()
+        return await self.design.system_disintegrate()
 
     async def gfx_alignment(
         self,
@@ -488,7 +492,7 @@ class Memrix(object):
             )
             self.animation_task = asyncio.create_task(
                 getattr(self.design, "mem_wave" if self.storm else "gfx_wave")(
-                    self.memories, animation_event := asyncio.Event()
+                    self.memories, self.atlas, animation_event := asyncio.Event()
                 ), name="animation task"
             )
 
@@ -873,7 +877,7 @@ async def main() -> typing.Any:
 
     positions = (
         cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.layer,
+        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.atlas, cmd_lines.layer,
     )
     keywords = {
         "src_opera_place": src_opera_place,
