@@ -325,6 +325,7 @@ class Cubicle(object):
             data_dir TEXT,
             label TEXT,
             timestamp TEXT,
+            swap REAL,
             rchar INTEGER,
             wchar INTEGER,
             syscr INTEGER,
@@ -347,16 +348,18 @@ class Cubicle(object):
             data_dir,
             label,
             timestamp,
+            swap,
             rchar,
             wchar,
             syscr,
             syscw,
             read_bytes,
             write_bytes,
-            cancelled_write_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            cancelled_write_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
                 timestamp,
+                payload["io"]["swap"],
                 payload["io"]["rchar"],
                 payload["io"]["wchar"],
                 payload["io"]["syscr"],
@@ -373,6 +376,7 @@ class Cubicle(object):
         sql = f"""
             SELECT
                 timestamp,
+                swap,
                 rchar,
                 wchar,
                 syscr,
