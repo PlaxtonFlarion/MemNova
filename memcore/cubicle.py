@@ -20,18 +20,22 @@ class Cubicle(object):
     __joint_table = "joint_table"
     __mem_data_table = "mem_data"
     __gfx_data_table = "gfx_data"
+    __io_data_table = "io_data"
 
     @staticmethod
     async def initialize_tables(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            title: str,
-            timestamp: str,
-            payload: dict
+        db: "aiosqlite.Connection",
+        data_dir: str,
+        title: str,
+        timestamp: str,
+        payload: dict
     ) -> typing.Any:
 
         await asyncio.gather(
-            Cubicle.__create_joint_table(db), Cubicle.__create_mem_table(db), Cubicle.__create_gfx_table(db)
+            Cubicle.__create_joint_table(db), 
+            Cubicle.__create_mem_table(db), 
+            Cubicle.__create_gfx_table(db),
+            Cubicle.__create_io_table(db)
         )
         return await Cubicle.insert_joint_data(db, data_dir, title, timestamp, payload)
 
@@ -50,11 +54,11 @@ class Cubicle(object):
 
     @staticmethod
     async def insert_joint_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            title: str,
-            timestamp: str,
-            payload: dict,
+        db: "aiosqlite.Connection",
+        data_dir: str,
+        title: str,
+        timestamp: str,
+        payload: dict,
     ):
         await db.execute(f'''INSERT INTO {Cubicle.__joint_table} (
             data_dir,
@@ -128,22 +132,15 @@ class Cubicle(object):
             other_mmap REAL,
             egl_mtrack REAL,
             gl_mtrack REAL,
-            unknown REAL,
-            rchar INTEGER,
-            wchar INTEGER,
-            syscr INTEGER,
-            syscw INTEGER,
-            read_bytes INTEGER,
-            write_bytes INTEGER,
-            cancelled_write_bytes INTEGER)''')
+            unknown REAL)''')
         await db.commit()
 
     @staticmethod
     async def insert_mem_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            label: str,
-            payload: dict
+        db: "aiosqlite.Connection",
+        data_dir: str,
+        label: str,
+        payload: dict
     ) -> None:
 
         await db.execute(f'''INSERT INTO {Cubicle.__mem_data_table} (
@@ -176,14 +173,7 @@ class Cubicle(object):
             art_mmap,
             other_mmap,
             gl_mtrack,
-            unknown,
-            rchar,
-            wchar,
-            syscr,
-            syscw,
-            read_bytes,
-            write_bytes,
-            cancelled_write_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+            unknown) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
                 data_dir,
                 label,
 
@@ -216,15 +206,7 @@ class Cubicle(object):
                 payload["meminfo"][".art mmap"],
                 payload["meminfo"]["Other mmap"],
                 payload["meminfo"]["GL mtrack"],
-                payload["meminfo"]["Unknown"],
-
-                payload["io"]["rchar"],
-                payload["io"]["wchar"],
-                payload["io"]["syscr"],
-                payload["io"]["syscw"],
-                payload["io"]["read_bytes"],
-                payload["io"]["write_bytes"],
-                payload["io"]["cancelled_write_bytes"]
+                payload["meminfo"]["Unknown"]
             )
         )
         await db.commit()
@@ -243,13 +225,7 @@ class Cubicle(object):
                 pss,
                 rss,
                 uss,
-                swap,
-                rchar,
-                wchar,
-                syscr,
-                syscw,
-                read_bytes,
-                write_bytes
+                swap
             FROM {Cubicle.__mem_data_table}
             WHERE data_dir = ? AND pss != ''
             ORDER BY timestamp ASC
@@ -279,11 +255,11 @@ class Cubicle(object):
 
     @staticmethod
     async def insert_gfx_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            label: str,
-            timestamp: str,
-            payload: dict
+        db: "aiosqlite.Connection",
+        data_dir: str,
+        label: str,
+        timestamp: str,
+        payload: dict
     ) -> None:
 
         await db.execute(f'''INSERT INTO {Cubicle.__gfx_data_table} (
@@ -339,6 +315,81 @@ class Cubicle(object):
                 }
                 for md, rf, vs, va, rr, dr, jr in rows
             ]
+
+        # Notes: ======================== I/O ========================
+
+        @staticmethod
+        async def __create_io_table(db: "aiosqlite.Connection") -> None:
+            await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__io_data_table} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data_dir TEXT,
+                label TEXT,
+                timestamp TEXT,
+                rchar INTEGER,
+                wchar INTEGER,
+                syscr INTEGER,
+                syscw INTEGER,
+                read_bytes INTEGER,
+                write_bytes INTEGER,
+                cancelled_write_bytes INTEGER)''')
+            await db.commit()
+
+        @staticmethod
+        async def insert_io_data(
+            db: "aiosqlite.Connection",
+            data_dir: str,
+            label: str,
+            timestamp: str,
+            payload: dict
+       ) -> None:
+
+        await db.execute(f'''INSERT INTO {Cubicle.__io_data_table} (
+            data_dir,
+            label,
+            timestamp,
+            rchar,
+            wchar,
+            syscr,
+            syscw,
+            read_bytes,
+            write_bytes,
+            cancelled_write_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+                data_dir,
+                label,
+                timestamp,
+                payload["io"]["rchar"],
+                payload["io"]["wchar"],
+                payload["io"]["syscr"],
+                payload["io"]["syscw"],
+                payload["io"]["read_bytes"],
+                payload["io"]["write_bytes"],
+                payload["io"]["cancelled_write_bytes"]
+            )
+        )
+        await db.commit()
+
+    @staticmethod
+    async def query_io_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+        sql = f"""
+            SELECT
+                timestamp,
+                rchar,
+                wchar,
+                syscr,
+                syscw,
+                read_bytes,
+                write_bytes
+            FROM {Cubicle.__mem_data_table}
+            WHERE data_dir = ?
+            ORDER BY timestamp ASC
+        """
+        db.row_factory = aiosqlite.Row
+        async with db.execute(sql, (data_dir,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+
+
 
 
 if __name__ == '__main__':
