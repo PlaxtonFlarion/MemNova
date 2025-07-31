@@ -413,16 +413,23 @@ class Memrix(object):
             logger.info(muster)
 
             try:
-                await Cubicle.insert_mem_data(
-                    db, self.file_folder, self.align.app_label, final_map := mark_map | muster
+                timestamp_fmt, io_final_map = mark_map["mark"]["tms"], muster.pop("io")
+                await asyncio.gather(
+                    Cubicle.insert_mem_data(
+                        db, self.file_folder, self.align.app_label, mem_final_map
+                    ),
+                    Cubicle.insert_mem_data(
+                        db, self.file_folder, self.align.app_label, timestamp_fmt, io_final_map
+                    )
                 )
+                
                 self.file_insert += 1
                 msg = f"Article {self.file_insert} data insert success"
 
                 self.memories[state] += 1
                 self.memories.update({
                     "MSG": f"[bold #87D700]{msg}",
-                    "PSS": f"{final_map.get('summary', {}).get('TOTAL PSS', 0):.2f} MB"
+                    "PSS": f"{mem_final_map.get('summary', {}).get('TOTAL PSS', 0):.2f} MB"
                 })
                 logger.info(msg)
             except KeyError:
