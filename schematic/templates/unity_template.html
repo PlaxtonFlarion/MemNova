@@ -515,6 +515,47 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             width: 25%;
             margin: 5px;
         }
+        
+        /* tooltip 本体 */
+        .seal::after {
+            content: attr(data-title);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.9);
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: normal;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            z-index: 999;
+        }
+
+        /* tooltip 小箭头 */
+        .seal::before {
+            content: '';
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: rgba(30, 30, 30, 0.9) transparent transparent transparent;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+            z-index: 998;
+        }
+
+        /* 悬浮时显示 tooltip */
+        .seal:hover::after, .seal:hover::before {
+            opacity: 1;
+        }
 
         .details {
             width: 35%;
@@ -715,7 +756,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 {% if eva.fields %}
                     <div class="seal-wrapper">
                         {% for field in eva.fields %}
-                            <p class="seal {{ field.class }}">{{ field.text }}</p>
+                            <p class="seal {{ field.class }}" data-title="{{ field.title | default('') }}>{{ field.text }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
