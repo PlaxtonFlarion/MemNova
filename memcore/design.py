@@ -510,7 +510,7 @@ class Design(object):
                     line += char
             return Text(line, style=f"bold {color}")
 
-        with Live(console=self.console, refresh_per_second=30, transient=transient) as live:
+        with Live(console=self.console, refresh_per_second=30) as live:
             # 打字机 + 光标效果
             current = ""
             for i, c in enumerate(base_line):
@@ -783,7 +783,7 @@ class Design(object):
                 d_ = abs(r_ - center_r) + abs(c_ - center_c)
                 layers[d_].append((r_, c_))
 
-        with Live(console=self.console, refresh_per_second=30) as live:
+        with Live(console=self.console, refresh_per_second=30, transient=transient) as live:
             depth, direction, depth_max = 0, 1, center_r + center_c
             while not task_close_event.is_set():
                 fade = direction == -1
