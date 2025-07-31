@@ -93,15 +93,20 @@ class Reporter(object):
 
         return cur_time, cur_mark, cur_data
 
-    async def final_render(self, memories: dict, start_time: float) -> None:
-        memories.update({"MSG": f"Wait background tasks"})
+    async def final_render(self, memories: dict) -> None:
+        memories.update({
+            "MSG": (msg := f"Wait background tasks")
+        })
+        logger.info(msg)
         await asyncio.gather(*self.background_tasks)
-        memories.update({"TMS": f"{time.time() - start_time:.1f} s"})
+        memories.update({
+            "TMS": f"{time.time() - self.before_time:.1f} s"
+        })
 
     # Workflow: ======================== MEM / GFX ========================
 
     @staticmethod
-    def __mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
+    def mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
         vals = [
             float(c[group][field]) for c in compilation
             if group in c and c[group] not in (None, "", "nan")
@@ -109,7 +114,7 @@ class Reporter(object):
         return round(float(np.mean(vals)), 2) if vals else None
 
     @staticmethod
-    def __build_minor_items(key_tuples: list, groups: list, grouped: dict) -> list:
+    def build_minor_items(key_tuples: list, groups: list, grouped: dict) -> list:
         minor_items = []
         for group_cfg in groups:
             keys = [k for k, g, f in key_tuples if g == group_cfg["name"]]
@@ -122,7 +127,7 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def __score_classes(score: dict, standard: dict, d_cls: str, f_cls: str, i_cls: str) -> dict:
+    def score_classes(score: dict, standard: dict, d_cls: str, f_cls: str, i_cls: str) -> dict:
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x < y,
@@ -147,7 +152,7 @@ class Reporter(object):
         return result
 
     @staticmethod
-    def __split_ranges(frames: list[dict], *args, **kwargs) -> list[tuple]:
+    def split_ranges(frames: list[dict], *args, **kwargs) -> list[tuple]:
 
         (roll_ranges, drag_ranges, jank_ranges, *_), segment_ms = args, kwargs.get("segment_ms", 60000)
 
@@ -178,7 +183,7 @@ class Reporter(object):
         return segment_list
 
     @staticmethod
-    def __merge_alignment_frames(frames: list[dict]) -> dict:
+    def merge_alignment_frames(frames: list[dict]) -> dict:
         # ==== 先提取所有 normalize ====
         normalize_list = [
             record.get("metadata", {}).get("normalize", 0) for record in frames
@@ -224,13 +229,12 @@ class Reporter(object):
 
     # Workflow: ======================== Rendering ========================
 
-    async def __mem_rendering(
+    async def mem_rendering(
         self,
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
         memories: dict,
-        start_time: float,
         data_dir: str,
         baseline: bool,
     ) -> typing.Optional[dict]:
@@ -240,10 +244,8 @@ class Reporter(object):
         )
 
         # 🟡 ==== 数据查询 ====
-        mem_data, (joint, *_), io_data = await asyncio.gather(
-            Cubicle.query_mem_data(db, data_dir), 
-            Cubicle.query_joint_data(db, data_dir), 
-            Cubicle.query_io_data(db, data_dir)
+        mem_data, io_data, (joint, *_) = await asyncio.gather(
+            Cubicle.query_mem(db, data_dir), Cubicle.query_io(db, data_dir), Cubicle.query_joint(db, data_dir)
         )
         if not mem_data:
             return logger.info(f"MEM data not found for {data_dir}")
@@ -340,17 +342,17 @@ class Reporter(object):
                 {
                     "fields": [
                         {
-                            "text": trend, 
+                            "text": trend,
                             "class": trend_c,
                             **standard.get("trend", {})
                         },
                         {
-                            "text": score['poly_trend'], 
+                            "text": score['poly_trend'],
                             "class": "leak",
                             **standard.get("poly_trend", {})
                         },
                         {
-                            "text": f"Score: {score['trend_score']:.2f}", 
+                            "text": f"Score: {score['trend_score']:.2f}",
                             "class": "leak",
                             **standard.get("trend_score", {})
                         }
@@ -359,17 +361,17 @@ class Reporter(object):
                 {
                     "fields": [
                         {
-                            "text": f"Jitter: {score['jitter_index']:.2f}", 
+                            "text": f"Jitter: {score['jitter_index']:.2f}",
                             "class": "leak",
                             **standard.get("jitter_index", {})
                         },
                         {
-                            "text": f"Slope: {score['slope']:.2f}", 
+                            "text": f"Slope: {score['slope']:.2f}",
                             "class": "leak",
                             **standard.get("slope", {})
                         },
                         {
-                            "text": f"R²: {score['r_squared']:.2f}", 
+                            "text": f"R²: {score['r_squared']:.2f}",
                             "class": "leak",
                             **standard.get("r_squared", {})
                         }
@@ -397,7 +399,7 @@ class Reporter(object):
         memories.update({
             "MSG": (msg := f"{data_dir} Handler Done ..."),
             "CUR": memories.get("CUR", 0) + 1,
-            "TMS": f"{time.time() - start_time:.1f} s"
+            "TMS": f"{time.time() - self.before_time:.1f} s"
         })
         logger.info(msg)
 
@@ -411,13 +413,12 @@ class Reporter(object):
             "tags": tag_lines
         }
 
-    async def __gfx_rendering(
+    async def gfx_rendering(
         self,
         db: "aiosqlite.Connection",
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
         memories: dict,
-        start_time: float,
         data_dir: str,
     ) -> typing.Optional[dict]:
 
@@ -427,13 +428,13 @@ class Reporter(object):
 
         # 🟢 ==== 数据查询 ====
         gfx_data, (joint, *_) = await asyncio.gather(
-            Cubicle.query_gfx_data(db, data_dir), Cubicle.query_joint_data(db, data_dir)
+            Cubicle.query_gfx(db, data_dir), Cubicle.query_joint(db, data_dir)
         )
         if not gfx_data:
             return logger.info(f"GFX data not found for {data_dir}")
         title, timestamp, *_ = joint
 
-        frame_merged = self.__merge_alignment_frames(gfx_data)
+        frame_merged = self.merge_alignment_frames(gfx_data)
         _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
@@ -457,26 +458,24 @@ class Reporter(object):
 
         # 🟢 ==== 定制评价 ====
         standard = self.align.get_standard("gfx", "base")
-        classes = self.__score_classes(
-            score, standard, "fluency", "expiry-fail", "expiry-none"
-        )
+        classes = self.score_classes(score, standard, "fluency", "expiry-fail", "expiry-none")
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
             {
                 "fields": [
                     {
-                        "text": f"Score: {score['score'] * 100:.2f}", 
+                        "text": f"Score: {score['score'] * 100:.2f}",
                         "class": classes["score"],
                         **standard.get("score", {"desc": "评分", "tooltip": score["label"]})
                     },
                     {
-                        "text": f"STD: {score['fps_std']:.2f}", 
+                        "text": f"STD: {score['fps_std']:.2f}",
                         "class": classes["fps_std"],
                         **standard.get("fps_std", {})
                     },
                     {
-                        "text": f"JNK: {score['jank_ratio'] * 100:.2f} %", 
+                        "text": f"JNK: {score['jank_ratio'] * 100:.2f} %",
                         "class": classes["jank_ratio"],
                         **standard.get("jank_ratio", {})
                     }
@@ -490,15 +489,15 @@ class Reporter(object):
                         **standard.get("roll_avg_fps", {})
                     },
                     {
-                        "text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %", 
+                        "text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %",
                         "class": classes["high_latency_ratio"],
-                        **standard.get("high_latency_ratio", {}) 
+                        **standard.get("high_latency_ratio", {})
                     },
                     {
-                        "text": f"LMax: {score['longest_low_fps']:.2f} s", 
+                        "text": f"LMax: {score['longest_low_fps']:.2f} s",
                         "class": classes["longest_low_fps"],
                         **standard.get("longest_low_fps", {})
-                    }                
+                    }
                 ]
             }
         ]
@@ -514,7 +513,7 @@ class Reporter(object):
         ]
 
         # 🟢 ==== 分段切割 ====
-        segments = self.__split_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
+        segments = self.split_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
 
         # 🟢 ==== GFX 渲染 ====
         plots = await asyncio.gather(
@@ -529,7 +528,7 @@ class Reporter(object):
         memories.update({
             "MSG": (msg := f"{data_dir} Handler Done ..."),
             "CUR": memories.get("CUR", 0) + 1,
-            "TMS": f"{time.time() - start_time:.1f} s"
+            "TMS": f"{time.time() - self.before_time:.1f} s"
         })
         logger.info(msg)
 
@@ -551,7 +550,6 @@ class Reporter(object):
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
         memories: dict,
-        start_time: float,
         team_data: dict,
         baseline: bool,
         *_,
@@ -561,7 +559,7 @@ class Reporter(object):
         cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
-            *(self.__mem_rendering(db, loop, executor, memories, start_time, d, baseline)
+            *(self.mem_rendering(db, loop, executor, memories, d, baseline)
               for d in cur_data)
         )
         if not (compilation := [c for c in compilation if c]):
@@ -585,15 +583,13 @@ class Reporter(object):
                 {"name": "BG", "unit": "MB", "class": "bg-copy"}
             ]
             grouped = {
-                k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+                k: self.mean_of_field(compilation, group, field) for k, group, field in key_tuples
             }
             sync_layout = {k.lower(): v for k, v in grouped.items() if v is not None}
 
             # 🟡 ==== 定制评价 ====
             standard = self.align.get_standard("mem", "base")
-            classes = self.__score_classes(
-                sync_layout, standard, "expiry-pass", "expiry-fail", "expiry-none"
-            )
+            classes = self.score_classes(sync_layout, standard, "expiry-pass", "expiry-fail", "expiry-none")
 
             # 🟡 ==== 主要容器 ====
             assemble = [
@@ -604,7 +600,7 @@ class Reporter(object):
             major_summary_items += self.align.get_sections("mem", "base")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
+            minor_summary_items += self.build_minor_items(key_tuples, groups, grouped)
 
         # 🟡 ==== 内存泄漏 ====
         else:
@@ -617,16 +613,16 @@ class Reporter(object):
                 {"name": "MEM", "unit": "MB", "class": None}
             ]
             grouped = {
-                k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+                k: self.mean_of_field(compilation, group, field) for k, group, field in key_tuples
             }
 
             # 🟡 ==== 主要容器 ====
             major_summary_items += self.align.get_sections("mem", "leak")
 
             # 🟡 ==== 次要容器 ====
-            minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
+            minor_summary_items += self.build_minor_items(key_tuples, groups, grouped)
 
-        await self.final_render(memories, start_time)
+        await self.final_render(memories)
 
         return {
             "report_list": compilation,
@@ -643,7 +639,6 @@ class Reporter(object):
         loop: "asyncio.events.AbstractEventLoop",
         executor: "ProcessPoolExecutor",
         memories: dict,
-        start_time: float,
         team_data: dict,
         *_,
         **__
@@ -652,7 +647,7 @@ class Reporter(object):
         cur_time, cur_mark, cur_data = await self.begin_render(team_data)
 
         compilation = await asyncio.gather(
-            *(self.__gfx_rendering(db, loop, executor, memories, start_time, d)
+            *(self.gfx_rendering(db, loop, executor, memories, d)
               for d in cur_data)
         )
         if not (compilation := [c for c in compilation if c]):
@@ -667,7 +662,7 @@ class Reporter(object):
             {"name": "GFX", "unit": "FPS", "class": None}
         ]
         grouped = {
-            k: self.__mean_of_field(compilation, group, field) for k, group, field in key_tuples
+            k: self.mean_of_field(compilation, group, field) for k, group, field in key_tuples
         }
 
         # 🟢 ==== 定义容器 ====
@@ -680,9 +675,9 @@ class Reporter(object):
         major_summary_items += self.align.get_sections("gfx", "base")
 
         # 🟢 ==== 次要容器 ====
-        minor_summary_items += self.__build_minor_items(key_tuples, groups, grouped)
+        minor_summary_items += self.build_minor_items(key_tuples, groups, grouped)
 
-        await self.final_render(memories, start_time)
+        await self.final_render(memories)
 
         return {
             "report_list": compilation,

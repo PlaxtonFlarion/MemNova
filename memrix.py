@@ -92,6 +92,7 @@ class Memrix(object):
         self.task_close_event: typing.Optional["asyncio.Event"] = asyncio.Event()
         self.dumped: typing.Optional["asyncio.Event"] = None
 
+        self.background: list["asyncio.Task"] = []
         self.data_queue: "asyncio.Queue" = asyncio.Queue()
 
     @property
@@ -171,11 +172,16 @@ class Memrix(object):
     async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
         # ⛔️ ==== 等待 MEM 单轮采集结束 ====
         if self.dumped and not self.dumped.is_set():
-            logger.info(f"Awaiting final sync ...")
+            logger.info(f"Awaiting dumped sync ...")
             try:
                 await asyncio.wait_for(self.dumped.wait(), timeout=3)
             except asyncio.TimeoutError:
                 pass
+
+        # ⛔️ ==== 等待 MEM 数据存储完毕 ====
+        if self.background:
+            logger.info(f"Awaiting background sync ...")
+            await asyncio.gather(*self.background)
 
         # ⛔️ ==== 结束 Perfetto采集 / 队列 / 动画 ====
         for arg in args:
@@ -256,7 +262,7 @@ class Memrix(object):
                     gfx_analyzer.extract_metrics, trace_file, self.tp_shell, self.focus
                 ))
 
-                await Cubicle.insert_gfx_data(
+                await Cubicle.insert_gfx(
                     db, self.file_folder, self.align.app_label, Period.convert_time(now_time), gfx_fmt_data
                 )
 
@@ -269,9 +275,7 @@ class Memrix(object):
 
             except Exception as e:
                 self.memories.update({
-                    "MSG": "*",
-                    "ANA": "*",
-                    "ERR": f"[bold #FF5F5F]{e}",
+                    "MSG": "*", "ANA": "*", "ERR": f"[bold #FF5F5F]{e}",
                 })
             finally:
                 self.data_queue.task_done()
@@ -283,10 +287,10 @@ class Memrix(object):
         db: "aiosqlite.Connection"
     ) -> None:
 
-        async def mem_analyze() -> dict:
+        async def mem_analyze(pname: str) -> dict:
             meminfo_map, summary_map = {}, {}
 
-            if not (mem_info := await device.mem_info(self.focus)):
+            if not (mem_info := await device.mem_info(pname)):
                 return {}
 
             if not re.search(r"====MEM====.*?====EOF====", mem_info, re.S):
@@ -328,22 +332,26 @@ class Memrix(object):
 
             return {"io": io_map} if io_map else {}
 
-        async def union_analyze(pid: str) -> dict:
-            mem_map, io_map = await asyncio.gather(*(mem_analyze(), io_analyze(pid)))
-            return {**mem_map, **io_map}
+        async def union_analyzer(pid: str, pname: str) -> dict:
+            mem_map, io_map = await asyncio.gather(
+                *(io_analyze(pid), mem_analyze(pname))
+            )
+            io_multiplex = io_map | {
+                "swap": mem_map.get("summary", {}).get("TOTAL SWAP", 0.0)
+            }
+
+            return {**mem_map, **io_multiplex}
 
         async def track_launcher() -> None:
             self.dumped.clear()
 
             dump_start_time = time.time()
 
+            # 🟡 ==== 进程查询 ====
             if not (app_pid := await device.pid_value(self.focus)):
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": f"[bold #FF5F5F]Process -> {app_pid}",
-                    "MOD": "*",
-                    "ACT": "*",
-                    "PSS": "*",
+                    "MSG": f"[bold #FF5F5F]Process -> {app_pid}", "MOD": "*", "ACT": "*", "PSS": "*",
                 })
                 return logger.info(f"Process -> {app_pid}\n")
 
@@ -358,19 +366,18 @@ class Memrix(object):
             except (KeyError, IndexError) as e:
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": f"[bold #FF5F5F]Pid -> {e}",
-                    "MOD": "*",
-                    "ACT": "*",
-                    "PSS": "*",
+                    "MSG": f"[bold #FF5F5F]Pid -> {e}", "MOD": "*", "ACT": "*", "PSS": "*",
                 })
                 return logger.info(f"Pid -> {e}\n")
 
+            # 🟡 ==== 图层查询 ====
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
             mark_map = {
                 "mark": {"tms": (tms := time.strftime("%Y-%m-%d %H:%M:%S")), "act": activity}
             }
 
+            # 🟡 ==== 图层判定 ====
             if self.focus in activity:
                 mode = "FG"
             else:
@@ -381,8 +388,7 @@ class Memrix(object):
             state = "FOREGROUND" if mark_map["mark"]["mode"] == "FG" else "BACKGROUND"
             color = "#00B5D8" if state.startswith("F") else "#F29E4C"
             self.memories.update({
-                "MOD": f"[bold {color}]{state}",
-                "ACT": activity
+                "MOD": f"[bold {color}]{state}", "ACT": activity
             })
 
             logger.info(f"TMS: {mark_map['mark']['tms']}")
@@ -392,60 +398,60 @@ class Memrix(object):
 
             mark_map["mark"]["pid"] = json.dumps(app_pid.member)
 
-            if all(result := await asyncio.gather(*(union_analyze(pid) for pid in list(app_pid.member.keys())))):
-                muster = defaultdict(lambda: defaultdict(float))
-                for r in result:
-                    for key, value in r.items():
-                        for k, v in value.items():
-                            muster[key][k] += v
-                muster = {k: dict(v) for k, v in muster.items()}
-
-            else:
+            # 🟡 ==== 信息查询 ====
+            if not (result := await asyncio.gather(
+                *(union_analyzer(pid, pname) for pid, pname in list(app_pid.member.items())))
+            ):
                 self.dumped.set()
                 self.memories.update({
-                    "MSG": f"[bold #FF5F5F]Resp -> {result}",
-                    "MOD": "*",
-                    "ACT": "*",
-                    "PSS": "*",
+                    "MSG": f"[bold #FF5F5F]Resp -> {result}", "MOD": "*", "ACT": "*", "PSS": "*",
                 })
                 return logger.info(f"Resp -> {result}\n")
 
-            logger.info(muster)
+            # 🟡 ==== 叠加结果 ====
+            muster = defaultdict(lambda: defaultdict(float))
+            for r in result:
+                for key, value in r.items():
+                    for k, v in value.items():
+                        muster[key][k] += v
+            muster = {k: dict(v) for k, v in muster.items()}
 
+            logger.info(f"Muster: {muster}")
+
+            # 🟡 ==== 数据存储 ====
             try:
-                io_final_map = muster.pop("io") | {"swap": muster["summary"]["TOTAL SWAP"]}
-                mem_final_map = mark_map | muster
-                await asyncio.gather(
-                    Cubicle.insert_mem_data(
-                        db, self.file_folder, self.align.app_label, mem_final_map
-                    ),
-                    Cubicle.insert_io_data(
-                        db, self.file_folder, self.align.app_label, tms, io_final_map
+                io_map, mem_map = muster.pop("io", {}), mark_map | muster
+
+                if muster:
+                    self.background.append(asyncio.create_task(
+                        Cubicle.insert_mem(db, self.file_folder, self.align.app_label, mem_map))
                     )
-                )
-                
+                    logger.info(f"Stick MEM: {mem_map.get('summary', {})}")
+                if io_map:
+                    self.background.append(asyncio.create_task(
+                        Cubicle.insert_io(db, self.file_folder, self.align.app_label, tms, io_map))
+                    )
+                    logger.info(f"Stick I/O: {io_map}")
+
                 self.file_insert += 1
-                msg = f"Article {self.file_insert} data insert success"
+                msg, pss = f"Article: {self.file_insert}", mem_map.get("summary", {}).get("TOTAL PSS", 0)
 
                 self.memories[state] += 1
                 self.memories.update({
-                    "MSG": f"[bold #87D700]{msg}",
-                    "PSS": f"{mem_final_map.get('summary', {}).get('TOTAL PSS', 0):.2f} MB"
+                    "MSG": f"[bold #87D700]{msg}", "PSS": f"{pss:.2f} MB"
                 })
                 logger.info(msg)
-            except KeyError:
-                msg = f"Data insert skipped"
-                self.memories.update({
-                    "MSG": f"[bold #FF5F5F]{msg}",
-                    "MOD": "*",
-                    "ACT": "*",
-                    "PSS": "*"
-                })
-                logger.info(msg)
-                return self.dumped.set()
 
-            self.dumped.set()
-            return logger.info(f"{time.time() - dump_start_time:.2f} s\n")
+            except (TypeError, KeyError, ValueError) as e:
+                msg = f"Skipped: {e}"
+                self.memories.update({
+                    "MSG": f"[bold #FF5F5F]{msg}", "MOD": "*", "ACT": "*", "PSS": "*"
+                })
+                logger.info(msg)
+
+            finally:
+                self.dumped.set()
+                logger.info(f"{time.time() - dump_start_time:.2f} s\n")
 
         if not track_enabled:
             return None
@@ -526,6 +532,9 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self) -> None:
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Report Start {self.padding}*^"
+        )
 
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
         if not (target_dir := original / self.forge).exists():
@@ -562,33 +571,43 @@ class Memrix(object):
             "MSG": "*", "MAX": (total := len(data_list)), "CUR": 0, "TMS": "0.0 s",
         }
         self.animation_task = asyncio.create_task(
-            self.design.lab_detonation(self.memories, self.task_close_event), name="animation task"
+            self.design.lab_detonation(self.memories, animation_event := asyncio.Event()),
+            name="animation task"
         )
-
-        start_time, loop = time.time(), asyncio.get_running_loop()
 
         async with aiosqlite.connect(reporter.db_file) as db:
             with ProcessPoolExecutor(initializer=Active.active, initargs=(const.SHOW_LEVEL,)) as executor:
-                self.memories.update({"MSG": f"Rendering {total} tasks"})
-                if not (rendition := await getattr(reporter, render)(
-                    db, loop, executor, self.memories, start_time, team_data, self.layer
-                )):
-                    self.task_close_event.set()
+                self.memories.update({
+                    "MSG": f"Rendering {total} tasks",
+                    "TMS": f"{time.time() - reporter.before_time:.1f} s"
+                })
+                func, loop = getattr(reporter, render), asyncio.get_running_loop()
+                if not (resp := func(db, loop, executor, self.memories, team_data, self.layer)):
+                    animation_event.set()
                     await self.animation_task
                     raise MemrixError(f"Rendering tasks failed")
 
-        self.memories.update({"MSG": f"Polymerization"})
-        html_file = await reporter.make_report(self.unity_template, **rendition)
         self.memories.update({
-            "MSG": f"Done", "TMS": f"{time.time() - start_time:.1f} s"
+            "MSG": (msg := f"Polymerization"),
+            "TMS": f"{time.time() - reporter.before_time:.1f} s"
         })
-        self.task_close_event.set()
+        logger.info(msg)
+        html_file = await reporter.make_report(self.unity_template, **resp)
+        self.memories.update({
+            "MSG": (msg := f"Polymerization Done"),
+            "TMS": f"{time.time() - reporter.before_time:.1f} s"
+        })
+        logger.info(msg)
+
+        animation_event.set()
         await self.animation_task
 
         Design.console.print()
         Design.build_file_tree(html_file)
         Design.console.print()
-
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Report Close {self.padding}*^"
+        )
         return await self.design.system_disintegrate()
 
 

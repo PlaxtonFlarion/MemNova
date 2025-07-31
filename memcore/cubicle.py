@@ -17,10 +17,10 @@ import aiosqlite
 class Cubicle(object):
     """Cubicle"""
 
-    __joint_table = "joint_table"
-    __mem_data_table = "mem_data"
-    __gfx_data_table = "gfx_data"
-    __io_data_table = "io_data"
+    joint_data_table = "joint_data"
+    mem_data_table = "mem_data"
+    gfx_data_table = "gfx_data"
+    io_data_table = "io_data"
 
     @staticmethod
     async def initialize_tables(
@@ -32,16 +32,13 @@ class Cubicle(object):
     ) -> typing.Any:
 
         await asyncio.gather(
-            Cubicle.__create_joint_table(db), 
-            Cubicle.__create_mem_table(db), 
-            Cubicle.__create_gfx_table(db),
-            Cubicle.__create_io_table(db)
+            Cubicle.joint_table(db), Cubicle.mem_table(db), Cubicle.gfx_table(db), Cubicle.io_table(db)
         )
-        return await Cubicle.insert_joint_data(db, data_dir, title, timestamp, payload)
+        return await Cubicle.insert_joint(db, data_dir, title, timestamp, payload)
 
     @staticmethod
-    async def __create_joint_table(db: "aiosqlite.Connection") -> typing.Any:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__joint_table} (
+    async def joint_table(db: "aiosqlite.Connection") -> typing.Any:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.joint_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             title TEXT,
@@ -53,14 +50,14 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def insert_joint_data(
+    async def insert_joint(
         db: "aiosqlite.Connection",
         data_dir: str,
         title: str,
         timestamp: str,
         payload: dict,
     ):
-        await db.execute(f'''INSERT INTO {Cubicle.__joint_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.joint_data_table} (
             data_dir,
             title,
             timestamp,
@@ -80,7 +77,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_joint_data(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
+    async def query_joint(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
         sql = f"""
             SELECT
                 title,
@@ -89,7 +86,7 @@ class Cubicle(object):
                 model,
                 release,
                 serialno
-            FROM {Cubicle.__joint_table}
+            FROM {Cubicle.joint_data_table}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:
@@ -98,8 +95,8 @@ class Cubicle(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def __create_mem_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__mem_data_table} (
+    async def mem_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.mem_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -136,14 +133,14 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def insert_mem_data(
+    async def insert_mem(
         db: "aiosqlite.Connection",
         data_dir: str,
         label: str,
         payload: dict
     ) -> None:
 
-        await db.execute(f'''INSERT INTO {Cubicle.__mem_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.mem_data_table} (
             data_dir,
             label,
             timestamp,
@@ -212,7 +209,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_mem_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+    async def query_mem(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
                 timestamp,
@@ -226,7 +223,7 @@ class Cubicle(object):
                 rss,
                 uss,
                 swap
-            FROM {Cubicle.__mem_data_table}
+            FROM {Cubicle.mem_data_table}
             WHERE data_dir = ? AND pss != ''
             ORDER BY timestamp ASC
         """
@@ -238,8 +235,8 @@ class Cubicle(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def __create_gfx_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__gfx_data_table} (
+    async def gfx_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -254,7 +251,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def insert_gfx_data(
+    async def insert_gfx(
         db: "aiosqlite.Connection",
         data_dir: str,
         label: str,
@@ -262,7 +259,7 @@ class Cubicle(object):
         payload: dict
     ) -> None:
 
-        await db.execute(f'''INSERT INTO {Cubicle.__gfx_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
             data_dir,
             label,
             timestamp,
@@ -288,7 +285,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_gfx_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+    async def query_gfx(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
                 metadata,
@@ -298,7 +295,7 @@ class Cubicle(object):
                 roll_ranges,
                 drag_ranges,
                 jank_ranges
-            FROM {Cubicle.__gfx_data_table}
+            FROM {Cubicle.gfx_data_table}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:
@@ -319,8 +316,8 @@ class Cubicle(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def __create_io_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__io_data_table} (
+    async def io_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.io_data_table} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -336,7 +333,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def insert_io_data(
+    async def insert_io(
         db: "aiosqlite.Connection",
         data_dir: str,
         label: str,
@@ -344,7 +341,7 @@ class Cubicle(object):
         payload: dict
     ) -> None:
 
-        await db.execute(f'''INSERT INTO {Cubicle.__io_data_table} (
+        await db.execute(f'''INSERT INTO {Cubicle.io_data_table} (
             data_dir,
             label,
             timestamp,
@@ -372,7 +369,7 @@ class Cubicle(object):
         await db.commit()
 
     @staticmethod
-    async def query_io_data(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+    async def query_io(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
         sql = f"""
             SELECT
                 timestamp,
@@ -383,7 +380,7 @@ class Cubicle(object):
                 syscw,
                 read_bytes,
                 write_bytes
-            FROM {Cubicle.__io_data_table}
+            FROM {Cubicle.io_data_table}
             WHERE data_dir = ?
             ORDER BY timestamp ASC
         """
