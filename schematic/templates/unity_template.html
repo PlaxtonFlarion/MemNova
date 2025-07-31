@@ -511,19 +511,20 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             display: flex;
             margin: 0 30px;
         }
-        .seal {
-            width: 100%;
-            margin: 5px;
-        }
-
         .seal-tip {
             width: 25%;
             position: relative;
             display: flex;
          } 
 
+        /* 评估标签 */
+        .seal {
+            width: 100%;
+            margin: 5px;
+        }
         /* 气泡提示 */
         .tooltip {
+            width: 100%;
             visibility: hidden;
             position: absolute;
             bottom: 120%;
@@ -533,14 +534,12 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             color: #ffffff;
             padding: 6px 10px;
             border-radius: 6px;
-            white-space: nowrap;
             font-size: 12px;
             z-index: 999;
             opacity: 0;
             transition: opacity 0.25s ease, transform 0.25s ease;
             pointer-events: none;
         }
-
         /* 小箭头 */
         .tooltip::after {
             content: '';
@@ -552,7 +551,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-style: solid;
             border-color: rgba(30, 30, 30, 0.9) transparent transparent transparent;
         }
-
         /* 悬浮时显示 */
         .seal-tip:hover .tooltip {
             visibility: visible;
