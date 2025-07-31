@@ -139,10 +139,11 @@ class Reporter(object):
         result = {k: d_cls for k in score.keys()}
         for key, cfg in standard.items():
             value = score.get(key)
-            threshold = cfg.get("threshold")
-            direction = cfg.get("direction", "ge")
-            op = op_map.get(direction, op_map["ge"])
-            result[key] = i_cls if value is None else (d_cls if calc(value, threshold) else f_cls)
+            if (threshold := cfg.get("threshold")) and (direction := cfg.get("direction", "ge")):
+                op = op_map.get(direction, op_map["ge"])
+                result[key] = i_cls if value is None else (d_cls if calc(value, threshold) else f_cls)
+            else:
+                result[key] = d_cls
         return result
 
     @staticmethod
