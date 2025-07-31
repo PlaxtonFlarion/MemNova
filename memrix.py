@@ -368,7 +368,7 @@ class Memrix(object):
             activity, adj = await asyncio.gather(device.activity(), device.adj(main_pid))
 
             mark_map = {
-                "mark": {"tms": time.strftime("%Y-%m-%d %H:%M:%S"), "act": activity}
+                "mark": {"tms": (tms := time.strftime("%Y-%m-%d %H:%M:%S")), "act": activity}
             }
 
             if self.focus in activity:
@@ -413,14 +413,14 @@ class Memrix(object):
             logger.info(muster)
 
             try:
-                timestamp_fmt, io_final_map = mark_map["mark"]["tms"], {"io": muster.pop("io") | {"swap": muster["summary"]["swap"]}}
+                io_final_map = {**muster.pop("io"), **muster["summary"]["TOTAL SWAP"]}
                 mem_final_map = mark_map | muster
                 await asyncio.gather(
                     Cubicle.insert_mem_data(
                         db, self.file_folder, self.align.app_label, mem_final_map
                     ),
                     Cubicle.insert_io_data(
-                        db, self.file_folder, self.align.app_label, timestamp_fmt, io_final_map
+                        db, self.file_folder, self.align.app_label, tms, io_final_map
                     )
                 )
                 
