@@ -157,7 +157,9 @@ class Align(object):
             for k, v in value.items():
                 if isinstance(v, dict) and "threshold" in v and "direction" in v:
                     try:
-                        filtered[k] = {"threshold": float(v["threshold"]), "direction": v["direction"]}
+                        filtered[k] = {
+                            "threshold": float(v["threshold"]), "direction": v["direction"], **v
+                        }
                     except (TypeError, ValueError):
                         continue
             return filtered
