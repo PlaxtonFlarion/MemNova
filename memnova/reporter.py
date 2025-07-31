@@ -540,7 +540,7 @@ class Reporter(object):
 
             # 🟡 ==== 主要容器 ====
             assemble = [
-                f"{k} HIGH" for k, v in sync_layout.items() if classes.get(k) == "expiry-fail"
+                f"{k.upper()} HIGH" for k, v in sync_layout.items() if classes.get(k) == "expiry-fail"
             ]
             if assemble:
                 major_summary_items += [{"title": "特征信息", "class": "highlight", "value": assemble}]
