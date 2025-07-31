@@ -757,35 +757,39 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
 
     <script>
         // 复制数据
-        function bindCopyButton(selector, labelKeyword, tagIndex) {
-            const buttons = document.querySelectorAll(selector);
-            const tagDetails = document.querySelectorAll('.tag-detail');
+        function bindCopyButton(selector, labelKeyword) {
+            const btn = document.querySelector(selector);
+            if (!btn) return;
+            // 按钮在 .results-info 内，找到距离最近的 .tag-detail
+            btn.addEventListener('click', function () {
+                // 找到本按钮所在 .results-info 在整个页面的索引
+                const allResultInfos = [...document.querySelectorAll('.results-info button')];
+                const idx = allResultInfos.indexOf(btn);
+                // 按照渲染顺序匹配 .tag-detail
+                const tagDetails = document.querySelectorAll('.tag-detail');
+                const container = tagDetails[idx];
+                if (!container) return;
 
-            buttons.forEach((btn, idx) => {
-                btn.addEventListener('click', function () {
-                    const container = tagDetails[tagIndex ?? idx];  // 对应 tag-detail 区块
-                    if (!container) return;
+                const fields = [...container.querySelectorAll('.tag-line')];
+                const max = fields.find(p =>
+                    p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("MAX")
+                );
+                const avg = fields.find(p =>
+                    p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("AVG")
+                );
 
-                    const fields = [...container.querySelectorAll('.tag-line')];
-                    const max = fields.find(p =>
-                        p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("MAX")
-                    );
-                    const avg = fields.find(p =>
-                        p.dataset.label?.includes(labelKeyword) && p.dataset.label.toUpperCase().includes("AVG")
-                    );
-
-                    if (max && avg) {
-                        const formatted = `${max.dataset.value}\t${avg.dataset.value}`;
-                        navigator.clipboard.writeText(formatted).then(() => {
-                            showNotification(labelKeyword + ' 数据已复制到剪贴板');
-                        }).catch(err => console.error('复制失败', err));
-                    }
-                });
+                if (max && avg) {
+                    const formatted = `${max.dataset.value}\t${avg.dataset.value}`;
+                    navigator.clipboard.writeText(formatted).then(() => {
+                        showNotification(labelKeyword + ' 数据已复制到剪贴板');
+                    }).catch(err => console.error('复制失败', err));
+                }
             });
         }
 
-        bindCopyButton('.fg-copy', 'FG', 0);  // 第一个 tag-detail 是前台
-        bindCopyButton('.bg-copy', 'BG', 1);  // 第二个 tag-detail 是后台
+        // 按钮和关键字配对
+        bindCopyButton('.fg-copy', 'FG');
+        bindCopyButton('.bg-copy', 'BG');
 
         function showNotification(msg) {
             const note = document.getElementById('notification');
