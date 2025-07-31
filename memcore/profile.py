@@ -166,7 +166,7 @@ class Align(object):
     def gfx_speed(self):
         return self.aligns["common"]["gfx_speed"]
 
-    # ✅ 获取某个测试项的 headline 字符
+    # ✅ ==== headline 字符 ====
     def get_headline(self, section: str, subfield: str = None) -> str:
         primary_key = "headline"
         if subfield:
@@ -174,7 +174,7 @@ class Align(object):
 
         return self.aligns.get(section, {}).get(primary_key, "")
 
-    # ✅ 获取某个测试项的 standard 字典
+    # ✅ ==== standard 字典 ====
     def get_standard(self, section: str, subfield: str = None) -> dict:
         primary_key = "standard"
         if subfield:
@@ -184,15 +184,13 @@ class Align(object):
 
         if not isinstance(value, dict):
             return {}
-
-        kwd = "threshold"
         
         return {
-            k.lower(): {**v, kwd: float(v[kwd])} if kwd in v else v
+            k.lower(): {**v, kwd: float(v[kwd])} if (kwd := "threshold") in v else v
             for k, v in value.items() if isinstance(v, dict)
         }
 
-    # ✅ 获取某个测试项的 sections 列表
+    # ✅ ==== sections 列表 ====
     def get_sections(self, section: str, subfield: str = None) -> list:
         primary_key = "sections"
         if subfield:
