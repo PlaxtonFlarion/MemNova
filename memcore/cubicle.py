@@ -379,7 +379,7 @@ class Cubicle(object):
                 syscw,
                 read_bytes,
                 write_bytes
-            FROM {Cubicle.__mem_data_table}
+            FROM {Cubicle.__io_data_table}
             WHERE data_dir = ?
             ORDER BY timestamp ASC
         """
