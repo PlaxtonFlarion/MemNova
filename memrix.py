@@ -309,8 +309,8 @@ class Memrix(object):
                 ]:
                     summary_map[i] = ToolKit.fit_mem(i, summary_c)
 
-            return {"meminfo": meminfo_map} | {
-                "summary": summary_map
+            return {
+                "meminfo": meminfo_map, "summary": summary_map
             } if meminfo_map and summary_map else {}
 
         async def io_analyze(pid: str) -> dict:
