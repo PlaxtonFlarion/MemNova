@@ -217,15 +217,16 @@ class Memrix(object):
                 f"Usage: [bold #00D787]{const.APP_NAME} --forge [{fc}]{Path(reporter.group_dir).name}[/]"
             )
 
-        # ⛔️ ==== 收尾动画 ====
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
         )
 
+        # ⛔️ ==== 生成报告 ====
         if self.atlas:
-            self.forge = self.file_folder
+            self.forge = Path(reporter.group_dir).name
             return await self.observation()
 
+        # ⛔️ ==== 收尾动画 ====
         Design.console.print()
         return await self.design.system_disintegrate()
 
