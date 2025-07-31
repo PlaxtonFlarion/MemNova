@@ -515,10 +515,10 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             width: 25%;
             margin: 5px;
         }
-        
-        /* tooltip 本体 */
-        .seal::after {
-            content: attr(data-tooltip);
+
+        /* 气泡提示 */
+        .tooltip {
+            visibility: hidden;
             position: absolute;
             bottom: 120%;
             left: 50%;
@@ -529,32 +529,29 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             border-radius: 6px;
             white-space: nowrap;
             font-size: 12px;
-            font-weight: normal;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease, transform 0.25s ease;
             z-index: 999;
+            opacity: 0;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            pointer-events: none;
         }
 
-        /* tooltip 小箭头 */
-        .seal::before {
+        /* 小箭头 */
+        .tooltip::after {
             content: '';
             position: absolute;
-            bottom: calc(120% - 4px);
+            top: 100%;
             left: 50%;
             transform: translateX(-50%);
             border-width: 6px;
             border-style: solid;
             border-color: rgba(30, 30, 30, 0.9) transparent transparent transparent;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-            pointer-events: none;
-            z-index: 998;
         }
 
-        /* 悬浮时显示 tooltip */
-        .seal:hover::after, .seal:hover::before {
+        /* 悬浮时显示 */
+        .seal:hover .tooltip {
+            visibility: visible;
             opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
         }
 
         .details {
@@ -756,10 +753,9 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 {% if eva.fields %}
                     <div class="seal-wrapper">
                         {% for field in eva.fields %}
+                            <p class="seal {{ field.class }}">{{ field.text }}</p>
                             {% if field.tooltip %}
-                                <p class="seal {{ field.class }}" data-tooltip="{{ field.tooltip }}">{{ field.text }}</p>
-                            {% else %}
-                                <p class="seal {{ field.class }}">{{ field.text }}</p>
+                                <span class="tooltip">{{ field.tooltip }}</span>
                             {% endif %}
                         {% endfor %}
                     </div>
