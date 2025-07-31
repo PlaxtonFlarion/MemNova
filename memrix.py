@@ -414,11 +414,12 @@ class Memrix(object):
 
             try:
                 timestamp_fmt, io_final_map = mark_map["mark"]["tms"], muster.pop("io")
+                mem_final_map = mark_map | muster
                 await asyncio.gather(
                     Cubicle.insert_mem_data(
                         db, self.file_folder, self.align.app_label, mem_final_map
                     ),
-                    Cubicle.insert_mem_data(
+                    Cubicle.insert_io_data(
                         db, self.file_folder, self.align.app_label, timestamp_fmt, io_final_map
                     )
                 )
