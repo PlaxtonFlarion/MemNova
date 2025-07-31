@@ -516,6 +516,12 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             margin: 5px;
         }
 
+        .seal-container {
+            position: relative;
+            display: inline-block;
+            margin: 4px;
+         } 
+
         /* 气泡提示 */
         .tooltip {
             visibility: hidden;
@@ -548,7 +554,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
         }
 
         /* 悬浮时显示 */
-        .seal:hover .tooltip {
+        .seal-container:hover .tooltip {
             visibility: visible;
             opacity: 1;
             transform: translateX(-50%) translateY(-4px);
@@ -753,10 +759,12 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 {% if eva.fields %}
                     <div class="seal-wrapper">
                         {% for field in eva.fields %}
+                        <div class="seal-container">
                             <p class="seal {{ field.class }}">{{ field.text }}</p>
                             {% if field.tooltip %}
                                 <span class="tooltip">{{ field.tooltip }}</span>
                             {% endif %}
+                        </div>
                         {% endfor %}
                     </div>
                 {% endif %}
