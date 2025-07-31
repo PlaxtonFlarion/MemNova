@@ -320,11 +320,11 @@ class Painter(object):
 
     @staticmethod
     def draw_io_metrics(
-        mem_data: list[dict],
+        io_data: list[dict],
         output_path: str
     ) -> str:
 
-        df = pd.DataFrame(mem_data)
+        df = pd.DataFrame(io_data)
 
         # 🔵 ==== 获取评分 ====
         score = Scores.analyze_io_score(df)
