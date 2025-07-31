@@ -316,32 +316,32 @@ class Cubicle(object):
                 for md, rf, vs, va, rr, dr, jr in rows
             ]
 
-        # Notes: ======================== I/O ========================
+    # Notes: ======================== I/O ========================
 
-        @staticmethod
-        async def __create_io_table(db: "aiosqlite.Connection") -> None:
-            await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__io_data_table} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                data_dir TEXT,
-                label TEXT,
-                timestamp TEXT,
-                rchar INTEGER,
-                wchar INTEGER,
-                syscr INTEGER,
-                syscw INTEGER,
-                read_bytes INTEGER,
-                write_bytes INTEGER,
-                cancelled_write_bytes INTEGER)''')
-            await db.commit()
+    @staticmethod
+    async def __create_io_table(db: "aiosqlite.Connection") -> None:
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.__io_data_table} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_dir TEXT,
+            label TEXT,
+            timestamp TEXT,
+            rchar INTEGER,
+            wchar INTEGER,
+            syscr INTEGER,
+            syscw INTEGER,
+            read_bytes INTEGER,
+            write_bytes INTEGER,
+            cancelled_write_bytes INTEGER)''')
+        await db.commit()
 
-        @staticmethod
-        async def insert_io_data(
-            db: "aiosqlite.Connection",
-            data_dir: str,
-            label: str,
-            timestamp: str,
-            payload: dict
-       ) -> None:
+    @staticmethod
+    async def insert_io_data(
+        db: "aiosqlite.Connection",
+        data_dir: str,
+        label: str,
+        timestamp: str,
+        payload: dict
+    ) -> None:
 
         await db.execute(f'''INSERT INTO {Cubicle.__io_data_table} (
             data_dir,
