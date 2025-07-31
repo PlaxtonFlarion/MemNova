@@ -455,7 +455,7 @@ class Reporter(object):
             {
                 "fields": [
                     {
-                        "text": f"Roll FPS: {raf:.2f} FPS" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -",
+                        "text": f"Roll FPS: {raf:.2f}" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -",
                         "class": classes.get("roll_avg_fps", "fluency"),
                         **standard.get("roll_avg_fps", {})
                     },
