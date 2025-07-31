@@ -122,7 +122,7 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def __score_classes(score: dict, standard: dict, p_class: str, f_class: str, d_class: str = None) -> dict:
+    def __score_classes(score: dict, standard: dict, d_cls: str, f_cls: str, i_cls: str) -> dict:
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x < y,
@@ -132,15 +132,17 @@ class Reporter(object):
             "ne": lambda x, y: x != y
         }
 
-        result = {k: d_class or p_class for k in score.keys()}
+        calc: typing.Callable[
+            [float, float], bool
+        ] = lambda x, y: x is not None and y is not None and op(x, y)
+
+        result = {k: d_cls for k in score.keys()}
         for key, cfg in standard.items():
             value = score.get(key)
             threshold = cfg.get("threshold")
             direction = cfg.get("direction", "ge")
             op = op_map.get(direction, op_map["ge"])
-            result[key] = p_class if (
-                value is not None and threshold is not None and op(value, threshold)
-            ) else f_class
+            result[key] = i_cls if value is None else (d_cls if calc(value, threshold) else f_cls)
         return result
 
     @staticmethod
@@ -425,7 +427,9 @@ class Reporter(object):
 
         # 🟢 ==== 定制评价 ====
         standard = self.align.get_standard("gfx", "base")
-        classes = self.__score_classes(score, standard, "fluency", "expiry-fail")
+        classes = self.__score_classes(
+            score, standard, "fluency", "expiry-fail", "expiry-none"
+        )
 
         # 🟢 ==== 评价部分 ====
         evaluate = [
@@ -536,7 +540,9 @@ class Reporter(object):
 
             # 🟡 ==== 定制评价 ====
             standard = self.align.get_standard("mem", "base")
-            classes = self.__score_classes(sync_layout, standard, "expiry-pass", "expiry-fail")
+            classes = self.__score_classes(
+                sync_layout, standard, "expiry-pass", "expiry-fail", "expiry-none"
+            )
 
             # 🟡 ==== 主要容器 ====
             assemble = [
