@@ -144,7 +144,7 @@ class Align(object):
                         "desc": "滑动区间平均帧率",
                         "tooltip": "仅统计滚动场景下的平均帧率，专用于交互性能评估。≥50为一流触感保障。"
                     },
-                    "high_latency_ratio": {
+                    "severe_latency_ratio": {
                         "threshold": 0.02, 
                         "direction": "le",
                         "desc": "高延迟帧比例",
