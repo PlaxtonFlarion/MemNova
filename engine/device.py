@@ -18,11 +18,7 @@ from engine.terminal import Terminal
 
 
 class Device(object):
-    """
-    Android 设备操作封装类，提供设备级数据采集与控制接口。
-
-    该类用于连接并操作指定序列号的 Android 设备，提供基于 ADB 与 uiautomator2 的高层封装。
-    """
+    """Device"""
 
     __facilities: typing.Optional[typing.Union["u2.Device", "u2.UiObject"]] = None
 
@@ -44,16 +40,10 @@ class Device(object):
 
     @property
     def facilities(self) -> typing.Optional[typing.Union["u2.Device", "u2.UiObject"]]:
-        """
-        属性方法 `facilities`，用于获取当前实例的设施属性，可能为设备对象或 UI 控件对象。
-        """
         return self.__facilities
 
     @facilities.setter
     def facilities(self, value: typing.Optional[typing.Union["u2.Device", "u2.UiObject"]]) -> None:
-        """
-        设置方法 `facilities`，用于将设备对象或 UI 控件对象赋值给设施属性。
-        """
         self.__facilities = value
 
     @staticmethod
@@ -73,23 +63,38 @@ class Device(object):
         return await Terminal.cmd_line(cmd)
 
     async def dump_heap(self, package: str, dst: str, *_, **__) -> typing.Any:
+        """
+        触发指定包的 Java 堆快照生成到目标路径。
+        """
         cmd = self.__initial + ["shell", "am", "dumpheap", package, dst]
         return await Terminal.cmd_line(cmd)
 
     async def remove(self, dst: str, *_, **__) -> typing.Any:
+        """
+        删除设备上的目标文件。
+        """
         cmd = self.__initial + ["shell", "rm", dst]
         return await Terminal.cmd_line(cmd)
 
     async def change_mode(self, mode: str | int, dst: str, *_, **__) -> typing.Any:
+        """
+        修改设备上目标文件的权限（chmod）。
+        """
         cmd = self.__initial + ["shell", "chmod", str(mode), dst]
         return await Terminal.cmd_line(cmd)
 
     async def perfetto_start(self, src: str, dst: str, *_, **__) -> "asyncio.subprocess.Process":
+        """
+        以后台方式启动 perfetto 采样任务，将 src 配置输出到 dst。
+        """
         cmd = self.__initial + ["shell", "perfetto", "--txt", "-c", src, "-o", dst, "--background"]
         # cmd = self.__initial + ["shell", "-tt", f"cat {src} | perfetto --txt -c - -o {dst}"]
         return await Terminal.cmd_link(cmd)
 
     async def perfetto_close(self, *_, **__) -> typing.Any:
+        """
+        发送 SIGINT 信号终止设备上正在运行的 perfetto 进程。
+        """
         cmd = self.__initial + ["shell", "pkill", "-l", "SIGINT", "perfetto"]
         return await Terminal.cmd_line(cmd)
 
@@ -136,10 +141,16 @@ class Device(object):
         return await Terminal.cmd_line(cmd)
 
     async def io_info(self, pid: str, *_, **__) -> typing.Any:
+        """
+        获取指定进程的 /proc/[pid]/io 信息。
+        """
         cmd = self.__initial + ["shell", f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF===="]
         return await Terminal.cmd_line(cmd)
 
     async def union_dump(self, pid: str, package: str, *_, **__) -> typing.Any:
+        """
+        联合输出进程的 I/O 信息与内存使用情况（meminfo）。
+        """
         cmd = self.__initial + [
             "shell",
             f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; dumpsys meminfo {package}; echo ====EOF===="
