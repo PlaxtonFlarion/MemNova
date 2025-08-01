@@ -64,9 +64,11 @@ class Painter(object):
         # 🟡 ==== 判断内存趋势 ====
         summary_text = (
             f"Trend: {kwargs['trend']}\n"
+            f"Poly Trend: {kwargs['poly_trend']}\n"
             f"Score: {kwargs['trend_score']:.2f}\n"
-            f"Shake: {kwargs['jitter_index']:.4f}\n"
-            f"Slope: {kwargs['slope']:.4f}"
+            f"Jitter: {kwargs['jitter_index']:.4f}\n"
+            f"Slope: {kwargs['slope']:.4f}\n"
+            f"R²: {kwargs['r_squared']}"
         )
 
         # 🟡 ==== 配色与视觉分区 ====
