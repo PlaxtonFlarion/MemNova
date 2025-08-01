@@ -231,10 +231,11 @@ class Reporter(object):
     @staticmethod
     def format_score(score: dict, standard: dict, classes: dict, fields_cfg: dict) -> list:
         formatted = []
-        for k in standard:  # 按 standard 顺序
+        for k in standard:
             if k in score and k in fields_cfg:
                 field = fields_cfg[k]
                 prefix = field.get("prefix", k)
+                head = f"{prefix}: " if prefix else ""
                 val = score[k]
                 fmt = field.get("format", "{}")
                 unit = field.get("unit", "")
