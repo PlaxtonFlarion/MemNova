@@ -581,8 +581,10 @@ class Memrix(object):
                     "MSG": f"Rendering {total} tasks",
                     "TMS": f"{time.time() - reporter.before_time:.1f} s"
                 })
+                
                 func, loop = getattr(reporter, render), asyncio.get_running_loop()
-                if not (resp := func(db, loop, executor, self.memories, team_data, self.layer)):
+                
+                if not (resp := await func(db, loop, executor, self.memories, team_data, self.layer)):
                     animation_event.set()
                     await self.animation_task
                     raise MemrixError(f"Rendering tasks failed")
