@@ -126,12 +126,6 @@ class Align(object):
             "base": {
                 "headline": "流畅度",
                 "standard": {
-                    "avg_fps": {
-                        "threshold": 55.0, 
-                        "direction": "ge",
-                        "desc": "平均帧率",
-                        "tooltip": "衡量全流程渲染性能的核心指标。该数值反映整体流畅度，越高表示渲染管线稳定高效。≥55为旗舰水平。"
-                    },
                     "fps_std": {
                         "threshold": 5.0, 
                         "direction": "le",
