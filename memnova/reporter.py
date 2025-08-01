@@ -229,42 +229,12 @@ class Reporter(object):
         return merged
 
     @staticmethod
-    def format_gfx_score(score: dict, standard: dict, classes: dict) -> list:
-        fields_cfg = [
-            {"key": "level",                "prefix": "Level",      "format": "{}",      "unit": ""},
-            {"key": "score",                "prefix": "Score",      "format": "{:.2f}",  "unit": "%"},
-            {"key": "color",                "prefix": "Color",      "format": "{}",      "unit": ""},
-            {"key": "frame_count",          "prefix": "Count",      "format": "{:.0f}",  "unit": ""},
-            {"key": "duration_s",           "prefix": "Dur",        "format": "{:.2f}",  "unit": "s"},
-            {"key": "min_fps",              "prefix": "Min FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "avg_fps",              "prefix": "Avg FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "max_fps",              "prefix": "Max FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "p95_fps",              "prefix": "P95 FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "p99_fps",              "prefix": "P99 FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "fps_std",              "prefix": "STD",        "format": "{:.2f}",  "unit": ""},
-            {"key": "jank_ratio",           "prefix": "JNK",        "format": "{:.2f}",  "unit": "%"},
-            {"key": "high_latency_ratio",   "prefix": "Hi-Lat",     "format": "{:.2f}",  "unit": "%"},
-            {"key": "severe_latency_ratio", "prefix": "Sev-Lat",    "format": "{:.2f}",  "unit": "%"},
-            {"key": "max_frame_time",       "prefix": "MaxDur",     "format": "{:.2f}",  "unit": "ms"},
-            {"key": "min_frame_time",       "prefix": "MinDur",     "format": "{:.2f}",  "unit": "ms"},
-            {"key": "roll_avg_fps",         "prefix": "Roll FPS",   "format": "{:.2f}",  "unit": ""},
-            {"key": "roll_jnk_ratio",       "prefix": "Roll JNK",   "format": "{:.2f}",  "unit": "%"},
-            {"key": "drag_avg_fps",         "prefix": "Drag FPS",   "format": "{:.2f}",  "unit": ""},
-            {"key": "drag_jnk_ratio",       "prefix": "Drag JNK",   "format": "{:.2f}",  "unit": "%"},
-            {"key": "longest_low_fps",      "prefix": "LMax",       "format": "{:.2f}",  "unit": "s"},
-            {"key": "score_jank",           "prefix": "JNK Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_latency",        "prefix": "Lat Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_fps_var",        "prefix": "Var Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_motion",         "prefix": "Mot Score",  "format": "{:.2f}",  "unit": ""},
-        ]
-        
+    def format_score(score: dict, standard: dict, classes: dict, fields_cfg: list) -> list:       
         formatted = []
         for field in fields_cfg:
             if (k := field["key"]) in score:
                 prefix = field.get("prefix", k)
-                val = score[k]
-                fmt = field.get("format", "{}")
-                unit = field.get("unit", "")
+                val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "") 
                 text_val = "-" if val is None else fmt.format(val)
                 formatted.append({
                     "text": f"{prefix}: {text_val}{unit if val is not None else ''}",
