@@ -249,9 +249,16 @@ class Reporter(object):
         return formatted
 
     @staticmethod
-    def build_evaluate(formatted: list) -> list:
-        field_groups = [formatted[i:i+3] for i in range(0, len(formatted), 3)]
-        evaluate = [{"fields": group} for group in field_groups[:2]]
+    def build_evaluate(formatted: list, g_limit: int = 2, f_limit: int = 3, pg: list = None, sg: list = None) -> list:
+        # 按 f_limit 切分
+        field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
+        # 保留 g_limit 组
+        evaluate = [{"fields": group} for group in field_groups[:g_limit]]
+        # 前后插入
+        if prefix_groups:
+            evaluate = list(pg) + evaluate
+        if suffix_groups:
+            evaluate = evaluate + list(sg)
         return evaluate
 
     # Workflow: ======================== Rendering ========================
