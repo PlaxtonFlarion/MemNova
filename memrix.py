@@ -333,14 +333,14 @@ class Memrix(object):
             return {"io": io_map} if io_map else {}
 
         async def union_analyzer(pid: str, pname: str) -> dict:
-            mem_map, io_map = await asyncio.gather(
+            io_map, mem_map = await asyncio.gather(
                 *(io_analyze(pid), mem_analyze(pname))
             )
-            io_multiplex = io_map | {
+            io_multiplex = io_map.get("io", {}) | {
                 "swap": mem_map.get("summary", {}).get("TOTAL SWAP", 0.0)
             }
 
-            return {**mem_map, **io_multiplex}
+            return {**mem_map, **{"io": io_multiplex}}
 
         async def track_launcher() -> None:
             self.dumped.clear()
