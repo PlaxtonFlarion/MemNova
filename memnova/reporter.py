@@ -235,21 +235,16 @@ class Reporter(object):
         formatted = []
         for k in standard:
             if k in exclude:
-                logger.info(f"{k} is default key, skipped ...")
+                logger.info(f"{k} is default key, skipped cfg ...")
                 continue
             if k in score and k in cfg:
                 field = cfg[k]
-                prefix = field.get("prefix", k)
-                head = f"{prefix}: " if prefix else ""
-                val = score[k]
-                fmt = field.get("format", "{}")
-                unit = field.get("unit", "")
+                prefix = f"{prefix}: " if field.get("prefix", k) else ""
+                val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "")
                 factor = field.get("factor", 1)
-                text_val = "-" if val is None else fmt.format(val * factor)
+                text_val = f"{prefix}-" if val is None else fmt.format(val * factor)
                 formatted.append({
-                    "text": f"{head}{text_val}{unit if val is not None else ''}",
-                    "class": classes.get(k, ""),
-                    **standard[k]
+                    "text": f"{prefix}{text_val}{unit}", "class": classes.get(k, ""), **standard[k]
                 })
         return formatted
 
@@ -331,31 +326,22 @@ class Reporter(object):
                 # 🟡 ==== 趋势标签 ====
                 trend = score["trend"]
                 match trend[0]:
-                    case "I" | "F" | "A" | "C": trend_c = "expiry-none"
-                    case "U": trend_c = "expiry-fail"
-                    case _: trend_c = "baseline"
+                    case "I" | "F" | "A" | "C": trend_cls = "expiry-none"
+                    case "U": trend_cls = "expiry-fail"
+                    case _: trend_cls = "baseline"
 
-                td = [{"text": trend, "class": trend_c, **standard.get("trend", {})}]
-                formatted = self.format_score(score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"})
-                evaluate = self.build_evaluate(td + formatted, 1, 3)
+                td = [{
+                    "text": trend, "class": trend_cls, **standard.get("trend", {
+                        "desc": "趋势判定",
+                        "tooltip": "自动识别内存趋势类型（如泄漏、平稳、波动、U型等），结合斜率和拟合优度辅助泄漏判断。"
+                    })
+                }]
 
                 # 🟡 ==== 评价部分 ====
-                evaluate += [
-                    {
-                        "fields": [
-                            {
-                                "text": f"{mode}: {trend}", 
-                                "class": trend_c,
-                                **standard.get("trend", {})
-                            },
-                            {
-                                "text": f"{mode} Jitter: {score['jitter_index']:.2f}", 
-                                "class": "baseline",
-                                **standard.get("jitter_index", {})
-                            }
-                        ]
-                    }
-                ]
+                formatted = self.format_score(
+                    score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"}
+                )
+                evaluate += self.build_evaluate(td + formatted, 1, 3)
 
                 # 🟡 ==== 指标部分 ====
                 tag_lines += [
@@ -390,55 +376,22 @@ class Reporter(object):
             # 🟡 ==== 趋势标签 ====
             trend = score["trend"]
             match trend[0]:
-                case "I" | "F" | "A" | "C": trend_c = "expiry-none"
-                case "U": trend_c = "expiry-fail"
-                case _: trend_c = "leak"
+                case "I" | "F" | "A" | "C": trend_cls = "expiry-none"
+                case "U": trend_cls = "expiry-fail"
+                case _: trend_cls = "leak"
 
-            td = [{"text": trend, "class": trend_c, **standard.get("trend", {})}]
-            formatted = self.format_score(score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"})
-            evaluate = self.build_evaluate(td + formatted, 2, 3)
+            td = [{
+                "text": trend, "class": trend_cls, **standard.get("trend", {
+                    "desc": "趋势判定",
+                    "tooltip": "自动识别内存趋势类型（如泄漏、平稳、波动、U型等），结合斜率和拟合优度辅助泄漏判断。"
+                })
+            }]
             
             # 🟡 ==== 评价部分 ====
-            evaluate = [
-                {
-                    "fields": [
-                        {
-                            "text": trend,
-                            "class": trend_c,
-                            **standard.get("trend", {})
-                        },
-                        {
-                            "text": score['poly_trend'],
-                            "class": "leak",
-                            **standard.get("poly_trend", {})
-                        },
-                        {
-                            "text": f"Score: {score['trend_score']:.2f}",
-                            "class": "leak",
-                            **standard.get("trend_score", {})
-                        }
-                    ]
-                },
-                {
-                    "fields": [
-                        {
-                            "text": f"Jitter: {score['jitter_index']:.2f}",
-                            "class": "leak",
-                            **standard.get("jitter_index", {})
-                        },
-                        {
-                            "text": f"Slope: {score['slope']:.2f}",
-                            "class": "leak",
-                            **standard.get("slope", {})
-                        },
-                        {
-                            "text": f"R²: {score['r_squared']:.2f}",
-                            "class": "leak",
-                            **standard.get("r_squared", {})
-                        }
-                    ]
-                }
-            ]
+            formatted = self.format_score(
+                score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"}
+            )
+            evaluate = self.build_evaluate(td + formatted, 2, 3)
 
             # 🟡 ==== 指标部分 ====
             tag_lines = [
@@ -612,7 +565,7 @@ class Reporter(object):
 
             # 🟡 ==== 定制评价 ====
             standard = self.align.get_standard("mem", "base")
-            classes = self.score_classes(sync_layout, standard, "expiry-pass", "expiry-fail", "expiry-none")
+            classes = self.score_classes(sync_layout, standard, "expiry-pass")
 
             # 🟡 ==== 主要容器 ====
             assemble = [
