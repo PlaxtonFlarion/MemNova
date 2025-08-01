@@ -44,10 +44,6 @@ class Align(object):
                         "threshold": 0.00, 
                         "direction": "le"
                     },
-                    "trend": {
-                        "desc": "趋势判定",
-                        "tooltip": "对内存曲线整体形态进行自动分类，包括线性增长（泄漏）、平稳（正常）、波动（无泄漏特征）、U型/∩型（业务波动）等。主要参考 Slope 斜率与 R² 拟合优度，结合趋势类型（如 Upward、Stable、U-shape 等），辅助泄漏诊断。"
-                    },
                     "jitter_index": {
                          "desc": "抖动指数",
                          "tooltip": "衡量曲线短周期内波动幅度。值越小，代表数据更平稳。"
@@ -77,10 +73,6 @@ class Align(object):
             "leak": {
                 "headline": "内存泄露",
                 "standard": {
-                    "trend": {
-                        "desc": "趋势判定",
-                        "tooltip": "对内存曲线整体形态进行自动分类，包括线性增长（泄漏）、平稳（正常）、波动（无泄漏特征）、U型/∩型（业务波动）等。主要参考 Slope 斜率与 R² 拟合优度，结合趋势类型（如 Upward、Stable、U-shape 等），辅助泄漏诊断。"
-                    },
                     "poly_trend": {
                         "desc": "多项式趋势判定",
                         "tooltip": "通过二阶多项式拟合内存曲线，自动识别非线性趋势类型：U-shape（先降后升）、∩-shape（先升后降）、Linear（近似直线）等。辅助识别业务活动导致的内存波动，避免误判正常回收为泄漏。"
@@ -172,7 +164,7 @@ class Align(object):
                             "FPS STD ≤ 5",
                             "JNK % ≤ 3%",
                             "Roll FPS ≥ 50",
-                            "Hi-Lat % ≤ 2%",
+                            "Sev-Lat % ≤ 2%",
                             "LMax ≤ 2s"
                         ]
                     },
