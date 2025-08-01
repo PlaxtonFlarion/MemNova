@@ -244,6 +244,12 @@ class Reporter(object):
                 })
         return formatted
 
+    @staticmethod
+    def build_evaluate(formatted: list) -> list:
+        field_groups = [formatted[i:i+3] for i in range(0, len(formatted), 3)]
+        evaluate = [{"fields": group} for group in field_groups[:2]]
+        return evaluate
+
     # Workflow: ======================== Rendering ========================
 
     async def mem_rendering(
