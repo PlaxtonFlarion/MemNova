@@ -127,7 +127,7 @@ class Align(object):
                 "headline": "流畅度",
                 "standard": {
                     "score": {
-                        "threshold": 80.0,
+                        "threshold": 0.8,
                         "direction": "ge",
                         "desc": "综合评分",
                         "tooltip": "根据多项核心指标自动加权生成的总分。数值越高，代表整体性能越优秀。≥80为优质体验。"
