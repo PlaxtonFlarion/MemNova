@@ -20,6 +20,27 @@ class Scores(object):
     # Workflow: ======================== MEM ========================
 
     @staticmethod
+    def mem_fields_cfg() -> list:
+        return [
+            {"key": "trend",           "prefix": "",         "format": "{}",     "unit": ""},
+            {"key": "trend_score",     "prefix": "Score",    "format": "{:.2f}", "unit": ""},
+            {"key": "jitter_index",    "prefix": "Jitter",   "format": "{:.2f}", "unit": ""},
+            {"key": "r_squared",       "prefix": "R²",       "format": "{:.2f}", "unit": ""},
+            {"key": "slope",           "prefix": "Slope",    "format": "{:.2f}", "unit": ""},
+            {"key": "avg",             "prefix": "Avg",      "format": "{:.2f}", "unit": ""},
+            {"key": "max",             "prefix": "Max",      "format": "{:.2f}", "unit": ""},
+            {"key": "min",             "prefix": "Min",      "format": "{:.2f}", "unit": ""},
+            {"key": "color",           "prefix": "Color",    "format": "{}",     "unit": ""},
+            {"key": "poly_trend",      "prefix": "PolyTr",   "format": "{}",     "unit": ""},
+            {"key": "poly_r2",         "prefix": "PolyR²",   "format": "{:.2f}", "unit": ""},
+            {"key": "poly_coef",       "prefix": "PolyC",    "format": "{}",     "unit": ""},
+            {"key": "window_slope",    "prefix": "WinSlp",   "format": "{:.2f}", "unit": ""},
+            {"key": "window_slope_max","prefix": "WinMax",   "format": "{:.2f}", "unit": ""},
+            {"key": "window_slope_min","prefix": "WinMin",   "format": "{:.2f}", "unit": ""},
+            {"key": "outlier_count",   "prefix": "Outlier",  "format": "{:.0f}", "unit": ""},
+        ]
+
+    @staticmethod
     def analyze_mem_score(
         df: "pd.DataFrame",
         column: str = "pss",
