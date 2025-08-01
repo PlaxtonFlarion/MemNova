@@ -44,7 +44,9 @@ class Painter(object):
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 🟡 ==== 前后台区块分组 ====
-        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
+        mode_series = df["mode"]
+        changed = mode_series.ne(mode_series.shift())
+        df["block_id"] = changed.cumsum()
 
         # 🟡 ==== 全局统计 ====
         avg_val = kwargs.get("avg", df["pss"].mean())
