@@ -217,6 +217,7 @@ class Memrix(object):
 
         # ⛔️ ==== 存储位置 ====
         if self.file_insert:
+            Design.console.print()
             fc = Design.build_file_tree(reporter.group_dir)
             Design.console.print()
             Design.Doc.log(
