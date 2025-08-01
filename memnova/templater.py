@@ -107,7 +107,9 @@ class Templater(object):
         df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 🟡 ==== 区块分组 ====
-        df["block_id"] = (df["mode"] != df["mode"].shift()).cumsum()
+        mode_series = df["mode"]
+        changed = mode_series.ne(mode_series.shift())
+        df["block_id"] = changed.cumsum()
 
         # 🟡 ==== 主统计 ====
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
