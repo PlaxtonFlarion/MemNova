@@ -232,7 +232,7 @@ class Reporter(object):
 
     @staticmethod
     def format_score(score: dict, standard: dict, classes: dict, cfg: dict, exclude: set = None) -> list:
-        formatted = []
+        formatted, exclude = [], exclude or set()
         for k in standard:
             if k in exclude:
                 logger.info(f"{k} is default key, skipped cfg ...")
