@@ -127,7 +127,9 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def score_classes(score: dict, standard: dict, d_cls: str, f_cls: str, i_cls: str) -> dict:
+    def score_classes(score: dict, standard: dict, d_cls: str) -> dict:
+        fail_cls, invalid_cls = "expiry-fail", "expiry-none"
+        
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x < y,
@@ -147,7 +149,7 @@ class Reporter(object):
             threshold, direction = cfg.get("threshold"), cfg.get("direction", "ge")
             if threshold is not None and direction is not None:
                 op = op_map.get(direction, op_map["ge"])
-                result[key] = i_cls if value is None else (d_cls if calc(value, threshold) else f_cls)
+                result[key] = invalid_cls if value is None else (d_cls if calc(value, threshold) else fail_cls)
             else:
                 result[key] = d_cls
         return result
@@ -229,11 +231,14 @@ class Reporter(object):
         return merged
 
     @staticmethod
-    def format_score(score: dict, standard: dict, classes: dict, fields_cfg: dict) -> list:
+    def format_score(score: dict, standard: dict, classes: dict, cfg: dict, exclude: set = None) -> list:
         formatted = []
         for k in standard:
-            if k in score and k in fields_cfg:
-                field = fields_cfg[k]
+            if k in exclude:
+                logger.info(f"{k} is default key, skipped ...")
+                continue
+            if k in score and k in cfg:
+                field = cfg[k]
                 prefix = field.get("prefix", k)
                 head = f"{prefix}: " if prefix else ""
                 val = score[k]
@@ -250,15 +255,16 @@ class Reporter(object):
 
     @staticmethod
     def build_evaluate(formatted: list, g_limit: int = 2, f_limit: int = 3, pg: list = None, sg: list = None) -> list:
+        if pg:
+            formatted = pg + formatted
+        if sg:
+            formatted = formatted + sg
+        
         # 按 f_limit 切分
         field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
         # 保留 g_limit 组
         evaluate = [{"fields": group} for group in field_groups[:g_limit]]
-        # 前后插入
-        if pg:
-            evaluate = list(pg) + evaluate
-        if sg:
-            evaluate = evaluate + list(sg)
+
         return evaluate
 
     # Workflow: ======================== Rendering ========================
@@ -320,6 +326,7 @@ class Reporter(object):
 
                 # 🟡 ==== 定制评价 ====
                 standard = self.align.get_standard("mem", "base")
+                classes = self.score_classes(score, standard, "baseline")
 
                 # 🟡 ==== 趋势标签 ====
                 trend = score["trend"]
@@ -327,6 +334,10 @@ class Reporter(object):
                     case "I" | "F" | "A" | "C": trend_c = "expiry-none"
                     case "U": trend_c = "expiry-fail"
                     case _: trend_c = "baseline"
+
+                td = [{"text": trend, "class": trend_c, **standard.get("trend", {})}]
+                formatted = self.format_score(score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"})
+                evaluate = self.build_evaluate(td + formatted, 1, 3)
 
                 # 🟡 ==== 评价部分 ====
                 evaluate += [
@@ -374,6 +385,7 @@ class Reporter(object):
 
             # 🟡 ==== 定制评价 ====
             standard = self.align.get_standard("mem", "leak")
+            classes = self.score_classes(score, standard, "leak")
 
             # 🟡 ==== 趋势标签 ====
             trend = score["trend"]
@@ -382,6 +394,10 @@ class Reporter(object):
                 case "U": trend_c = "expiry-fail"
                 case _: trend_c = "leak"
 
+            td = [{"text": trend, "class": trend_c, **standard.get("trend", {})}]
+            formatted = self.format_score(score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"})
+            evaluate = self.build_evaluate(td + formatted, 2, 3)
+            
             # 🟡 ==== 评价部分 ====
             evaluate = [
                 {
@@ -503,11 +519,11 @@ class Reporter(object):
 
         # 🟢 ==== 定制评价 ====
         standard = self.align.get_standard("gfx", "base")
-        classes = self.score_classes(score, standard, "fluency", "expiry-fail", "expiry-none")
+        classes = self.score_classes(score, standard, "fluency")
 
         # 🟢 ==== 评价部分 ====
         formatted = self.format_score(score, standard, classes, Scores.gfx_fields_cfg())
-        evaluate = self.build_evaluate(formatted)
+        evaluate = self.build_evaluate(formatted, 2, 3)
 
         # 🟢 ==== 指标部分 ====
         tag_lines = [
