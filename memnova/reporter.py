@@ -516,7 +516,7 @@ class Reporter(object):
                         **standard.get("roll_avg_fps", {})
                     },
                     {
-                        "text": f"Hi-Lat: {score['high_latency_ratio'] * 100:.2f} %",
+                        "text": f"Sev-Lat: {score['severe_latency_ratio'] * 100:.2f} %",
                         "class": classes["high_latency_ratio"],
                         **standard.get("high_latency_ratio", {})
                     },
