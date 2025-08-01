@@ -392,10 +392,6 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
             display: flex;
             align-items: center;
         }
-        .results-tip {
-            position: relative;
-            display: flex;
-         }
         .results-info p {
             width: 240px;
             font-weight: 600;
@@ -735,17 +731,7 @@ This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.
                 {% if item.value %}
                     <div class="results-info">
                         {% for i in item.value %}
-                            <div>
-                                <p>{{ i }}</p>
-                                {% if item.tooltip %}
-                                    <span class="tooltip">
-                                    {% if item.desc %}
-                                        <strong>{{ item.desc }}<br>----------</strong><br>
-                                    {% endif %}
-                                    {{ item.tooltip }}
-                                    </span>
-                                {% endif %}
-                            </div>  
+                            <p>{{ i }}</p>    
                         {% endfor %}
                         {% if item.class %}
                             <button class="{{ item.class }}">Copy</button>
