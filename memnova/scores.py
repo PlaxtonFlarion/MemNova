@@ -22,22 +22,22 @@ class Scores(object):
     @staticmethod
     def mem_fields_cfg() -> list:
         return [
-            {"key": "trend",           "prefix": "",         "format": "{}",     "unit": ""},
-            {"key": "trend_score",     "prefix": "Score",    "format": "{:.2f}", "unit": ""},
-            {"key": "jitter_index",    "prefix": "Jitter",   "format": "{:.2f}", "unit": ""},
-            {"key": "r_squared",       "prefix": "R²",       "format": "{:.2f}", "unit": ""},
-            {"key": "slope",           "prefix": "Slope",    "format": "{:.2f}", "unit": ""},
-            {"key": "avg",             "prefix": "Avg",      "format": "{:.2f}", "unit": ""},
-            {"key": "max",             "prefix": "Max",      "format": "{:.2f}", "unit": ""},
-            {"key": "min",             "prefix": "Min",      "format": "{:.2f}", "unit": ""},
-            {"key": "color",           "prefix": "Color",    "format": "{}",     "unit": ""},
-            {"key": "poly_trend",      "prefix": "",         "format": "{}",     "unit": ""},
-            {"key": "poly_r2",         "prefix": "PolyR²",   "format": "{:.2f}", "unit": ""},
-            {"key": "poly_coef",       "prefix": "PolyC",    "format": "{}",     "unit": ""},
-            {"key": "window_slope",    "prefix": "WinSlp",   "format": "{:.2f}", "unit": ""},
-            {"key": "window_slope_max","prefix": "WinMax",   "format": "{:.2f}", "unit": ""},
-            {"key": "window_slope_min","prefix": "WinMin",   "format": "{:.2f}", "unit": ""},
-            {"key": "outlier_count",   "prefix": "Outlier",  "format": "{:.0f}", "unit": ""},
+            {"key": "trend",           "prefix": "",         "format": "{}",     "factor": 1, "unit": ""},
+            {"key": "trend_score",     "prefix": "Score",    "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "jitter_index",    "prefix": "Jitter",   "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "r_squared",       "prefix": "R²",       "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "slope",           "prefix": "Slope",    "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "avg",             "prefix": "Avg",      "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "max",             "prefix": "Max",      "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "min",             "prefix": "Min",      "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "color",           "prefix": "Color",    "format": "{}",     "factor": 1, "unit": ""},
+            {"key": "poly_trend",      "prefix": "",         "format": "{}",     "factor": 1, "unit": ""},
+            {"key": "poly_r2",         "prefix": "PolyR²",   "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "poly_coef",       "prefix": "PolyC",    "format": "{}",     "factor": 1, "unit": ""},
+            {"key": "window_slope",    "prefix": "WinSlp",   "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "window_slope_max","prefix": "WinMax",   "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "window_slope_min","prefix": "WinMin",   "format": "{:.2f}", "factor": 1, "unit": ""},
+            {"key": "outlier_count",   "prefix": "Outlier",  "format": "{:.0f}", "factor": 1, "unit": ""},
         ]
 
     @staticmethod
@@ -177,31 +177,31 @@ class Scores(object):
     @staticmethod
     def gfx_fields_cfg() -> list:
         return [
-            {"key": "level",                "prefix": "Level",      "format": "{}",      "unit": ""},
-            {"key": "score",                "prefix": "Score",      "format": "{:.2f}",  "unit": "%"},
-            {"key": "color",                "prefix": "Color",      "format": "{}",      "unit": ""},
-            {"key": "frame_count",          "prefix": "Count",      "format": "{:.0f}",  "unit": ""},
-            {"key": "duration_s",           "prefix": "Dur",        "format": "{:.2f}",  "unit": "s"},
-            {"key": "min_fps",              "prefix": "Min FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "avg_fps",              "prefix": "Avg FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "max_fps",              "prefix": "Max FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "p95_fps",              "prefix": "P95 FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "p99_fps",              "prefix": "P99 FPS",    "format": "{:.2f}",  "unit": ""},
-            {"key": "fps_std",              "prefix": "STD",        "format": "{:.2f}",  "unit": ""},
-            {"key": "jank_ratio",           "prefix": "JNK",        "format": "{:.2f}",  "unit": "%"},
-            {"key": "high_latency_ratio",   "prefix": "Hi-Lat",     "format": "{:.2f}",  "unit": "%"},
-            {"key": "severe_latency_ratio", "prefix": "Sev-Lat",    "format": "{:.2f}",  "unit": "%"},
-            {"key": "max_frame_time",       "prefix": "MaxDur",     "format": "{:.2f}",  "unit": "ms"},
-            {"key": "min_frame_time",       "prefix": "MinDur",     "format": "{:.2f}",  "unit": "ms"},
-            {"key": "roll_avg_fps",         "prefix": "Roll FPS",   "format": "{:.2f}",  "unit": ""},
-            {"key": "roll_jnk_ratio",       "prefix": "Roll JNK",   "format": "{:.2f}",  "unit": "%"},
-            {"key": "drag_avg_fps",         "prefix": "Drag FPS",   "format": "{:.2f}",  "unit": ""},
-            {"key": "drag_jnk_ratio",       "prefix": "Drag JNK",   "format": "{:.2f}",  "unit": "%"},
-            {"key": "longest_low_fps",      "prefix": "LMax",       "format": "{:.2f}",  "unit": "s"},
-            {"key": "score_jank",           "prefix": "JNK Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_latency",        "prefix": "Lat Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_fps_var",        "prefix": "Var Score",  "format": "{:.2f}",  "unit": ""},
-            {"key": "score_motion",         "prefix": "Mot Score",  "format": "{:.2f}",  "unit": ""},
+            {"key": "level",                "prefix": "Level",      "format": "{}",      "factor": 1,   "unit": ""},
+            {"key": "score",                "prefix": "Score",      "format": "{:.2f}",  "factor": 100, "unit": ""},
+            {"key": "color",                "prefix": "Color",      "format": "{}",      "factor": 1,   "unit": ""},
+            {"key": "frame_count",          "prefix": "Count",      "format": "{:.0f}",  "factor": 1,   "unit": ""},
+            {"key": "duration_s",           "prefix": "Dur",        "format": "{:.2f}",  "factor": 1,   "unit": "s"},
+            {"key": "min_fps",              "prefix": "Min FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "avg_fps",              "prefix": "Avg FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "max_fps",              "prefix": "Max FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "p95_fps",              "prefix": "P95 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "p99_fps",              "prefix": "P99 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "fps_std",              "prefix": "STD",        "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "jank_ratio",           "prefix": "JNK",        "format": "{:.2f}",  "factor": 1,   "unit": "%"},
+            {"key": "high_latency_ratio",   "prefix": "Hi-Lat",     "format": "{:.2f}",  "factor": 1,   "unit": "%"},
+            {"key": "severe_latency_ratio", "prefix": "Sev-Lat",    "format": "{:.2f}",  "factor": 1,   "unit": "%"},
+            {"key": "max_frame_time",       "prefix": "MaxDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
+            {"key": "min_frame_time",       "prefix": "MinDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
+            {"key": "roll_avg_fps",         "prefix": "Roll FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "roll_jnk_ratio",       "prefix": "Roll JNK",   "format": "{:.2f}",  "factor": 1,   "unit": "%"},
+            {"key": "drag_avg_fps",         "prefix": "Drag FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "drag_jnk_ratio",       "prefix": "Drag JNK",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            {"key": "longest_low_fps",      "prefix": "LMax",       "format": "{:.2f}",  "factor": 1,   "unit": "s"},
+            {"key": "score_jank",           "prefix": "JNK Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "score_latency",        "prefix": "Lat Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "score_fps_var",        "prefix": "Var Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            {"key": "score_motion",         "prefix": "Mot Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
         ]
 
     @staticmethod
@@ -363,6 +363,23 @@ class Scores(object):
         return result
 
     # Workflow: ======================== I/O ========================
+
+    @staticmethod
+    def io_fields_cfg() -> list:
+        return [
+            {"key": "swap_status",        "prefix": "Swap",      "format": "{}",      "unit": "",   "factor": 1},
+            {"key": "swap_max_kb",        "prefix": "SwapMax",   "format": "{:.0f}",  "unit": "KB", "factor": 1},
+            {"key": "swap_burst_ratio",   "prefix": "SwpBurst",  "format": "{:.2f}",  "unit": "%",  "factor": 100},
+            {"key": "swap_burst_count",   "prefix": "SwpBurst#", "format": "{:.2f}",  "unit": "",   "factor": 1},
+            {"key": "rw_peak_kb",         "prefix": "RWPeak",    "format": "{:.2f}",  "unit": "KB", "factor": 1},
+            {"key": "rw_std_kb",          "prefix": "RWStd",     "format": "{:.2f}",  "unit": "KB", "factor": 1},
+            {"key": "rw_burst_ratio",     "prefix": "RW Burst",  "format": "{:.2f}",  "unit": "%",  "factor": 100},
+            {"key": "rw_idle_ratio",      "prefix": "RW Idle",   "format": "{:.2f}",  "unit": "%",  "factor": 100},
+            {"key": "sys_burst",          "prefix": "SysBurst",  "format": "{:.2f}",  "unit": "",   "factor": 1},
+            {"key": "sys_burst_events",   "prefix": "BurstEvt",  "format": "{:.2f}",  "unit": "",   "factor": 1},
+            {"key": "score",              "prefix": "Score",     "format": "{:.2f}",  "unit": "",   "factor": 1},
+            {"key": "grade",              "prefix": "Grade",     "format": "{}",      "unit": "",   "factor": 1},
+        ]
 
     @staticmethod
     def analyze_io_score(
