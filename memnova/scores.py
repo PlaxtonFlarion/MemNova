@@ -431,7 +431,8 @@ class Scores(object):
 
         # 🟦 ==== 爆发段 ====
         rw_burst_threshold = rw_vals.mean() + rw_vals.std()
-        rw_burst_ratio = (rw_vals > rw_burst_threshold).mean()
+        rw_burst_mask = rw_vals > rw_burst_threshold
+        rw_burst_ratio = rw_burst_mask.sum() / len(rw_vals)
         result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
         if rw_burst_ratio > 0.1:
             penalties.append(10)
