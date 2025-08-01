@@ -499,46 +499,8 @@ class Reporter(object):
         classes = self.score_classes(score, standard, "fluency", "expiry-fail", "expiry-none")
 
         # 🟢 ==== 评价部分 ====
-        evaluate = [
-            {
-                "fields": [
-                    {
-                        "text": f"Score: {score['score'] * 100:.2f}",
-                        "class": classes["score"],
-                        **standard.get("score", {"desc": "评分", "tooltip": score["label"]})
-                    },
-                    {
-                        "text": f"STD: {score['fps_std']:.2f}",
-                        "class": classes["fps_std"],
-                        **standard.get("fps_std", {})
-                    },
-                    {
-                        "text": f"JNK: {score['jank_ratio'] * 100:.2f} %",
-                        "class": classes["jank_ratio"],
-                        **standard.get("jank_ratio", {})
-                    }
-                ]
-            },
-            {
-                "fields": [
-                    {
-                        "text": f"Roll FPS: {raf:.2f}" if (raf := score['roll_avg_fps']) is not None else "Roll FPS: -",
-                        "class": classes.get("roll_avg_fps", "fluency"),
-                        **standard.get("roll_avg_fps", {})
-                    },
-                    {
-                        "text": f"Sev-Lat: {score['severe_latency_ratio'] * 100:.2f} %",
-                        "class": classes["high_latency_ratio"],
-                        **standard.get("high_latency_ratio", {})
-                    },
-                    {
-                        "text": f"LMax: {score['longest_low_fps']:.2f} s",
-                        "class": classes["longest_low_fps"],
-                        **standard.get("longest_low_fps", {})
-                    }
-                ]
-            }
-        ]
+        formatted = self.format_score(score, standard, classes, Scores.gfx_fields_cfg())
+        evaluate = self.build_evaluate(formatted)
 
         # 🟢 ==== 指标部分 ====
         tag_lines = [
