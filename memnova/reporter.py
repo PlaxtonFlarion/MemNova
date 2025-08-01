@@ -255,9 +255,9 @@ class Reporter(object):
         # 保留 g_limit 组
         evaluate = [{"fields": group} for group in field_groups[:g_limit]]
         # 前后插入
-        if prefix_groups:
+        if pg:
             evaluate = list(pg) + evaluate
-        if suffix_groups:
+        if sg:
             evaluate = evaluate + list(sg)
         return evaluate
 
