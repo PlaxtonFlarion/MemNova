@@ -31,7 +31,7 @@ class Scores(object):
             {"key": "max",             "prefix": "Max",      "format": "{:.2f}", "unit": ""},
             {"key": "min",             "prefix": "Min",      "format": "{:.2f}", "unit": ""},
             {"key": "color",           "prefix": "Color",    "format": "{}",     "unit": ""},
-            {"key": "poly_trend",      "prefix": "PolyTr",   "format": "{}",     "unit": ""},
+            {"key": "poly_trend",      "prefix": "",         "format": "{}",     "unit": ""},
             {"key": "poly_r2",         "prefix": "PolyR²",   "format": "{:.2f}", "unit": ""},
             {"key": "poly_coef",       "prefix": "PolyC",    "format": "{}",     "unit": ""},
             {"key": "window_slope",    "prefix": "WinSlp",   "format": "{:.2f}", "unit": ""},
