@@ -228,6 +228,23 @@ class Reporter(object):
 
         return merged
 
+    @staticmethod
+    def format_gfx_score(score: dict, standard: dict, classes: dict, fields_cfg: list) -> list:
+        formatted = []
+        for field in fields_cfg:
+            if (k := field["key"]) in score:
+                prefix = field.get("prefix", k)
+                val = score[k]
+                fmt = field.get("format", "{}")
+                unit = field.get("unit", "")
+                text_val = "-" if val is None else fmt.format(val)
+                formatted.append({
+                    "text": f"{prefix}: {text_val}{unit if val is not None else ''}",
+                    "class": classes.get(k, ""),
+                    **standard.get(k, {})
+                })
+        return formatted
+
     # Workflow: ======================== Rendering ========================
 
     async def mem_rendering(
