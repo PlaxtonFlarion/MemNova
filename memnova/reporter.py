@@ -242,7 +242,7 @@ class Reporter(object):
                 factor = field.get("factor", 1)
                 text_val = "-" if val is None else fmt.format(val * factor)
                 formatted.append({
-                    "text": f"{prefix}: {text_val}{unit if val is not None else ''}",
+                    "text": f"{head}{text_val}{unit if val is not None else ''}",
                     "class": classes.get(k, ""),
                     **standard[k]
                 })
