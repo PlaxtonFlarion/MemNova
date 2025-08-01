@@ -144,7 +144,8 @@ class Reporter(object):
         result = {k: d_cls for k in score.keys()}
         for key, cfg in standard.items():
             value = score.get(key)
-            if (threshold := cfg.get("threshold")) and (direction := cfg.get("direction", "ge")):
+            threshold, direction = cfg.get("threshold"), cfg.get("direction", "ge")
+            if threshold is not None and direction is not None:
                 op = op_map.get(direction, op_map["ge"])
                 result[key] = i_cls if value is None else (d_cls if calc(value, threshold) else f_cls)
             else:
@@ -284,6 +285,9 @@ class Reporter(object):
                     continue
                 score_group[mode] = score
 
+                # 🟡 ==== 定制评价 ====
+                standard = self.align.get_standard("mem", "base")
+
                 # 🟡 ==== 趋势标签 ====
                 trend = score["trend"]
                 match trend[0]:
@@ -295,8 +299,16 @@ class Reporter(object):
                 evaluate += [
                     {
                         "fields": [
-                            {"text": f"{mode}: {trend}", "class": trend_c},
-                            {"text": f"{mode} Jitter: {score['jitter_index']:.2f}", "class": "baseline"}
+                            {
+                                "text": f"{mode}: {trend}", 
+                                "class": trend_c,
+                                **standard.get("trend", {})
+                            },
+                            {
+                                "text": f"{mode} Jitter: {score['jitter_index']:.2f}", 
+                                "class": "baseline",
+                                **standard.get("jitter_index", {})
+                            }
                         ]
                     }
                 ]
