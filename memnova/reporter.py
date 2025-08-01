@@ -229,18 +229,21 @@ class Reporter(object):
         return merged
 
     @staticmethod
-    def format_score(score: dict, standard: dict, classes: dict, fields_cfg: list) -> list:       
+    def format_score(score: dict, standard: dict, classes: dict, fields_cfg: dict) -> list:
         formatted = []
-        for field in fields_cfg:
-            if (k := field["key"]) in score and k in standard:
+        for k in standard:  # 按 standard 顺序
+            if k in score and k in fields_cfg:
+                field = fields_cfg[k]
                 prefix = field.get("prefix", k)
-                val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "") 
+                val = score[k]
+                fmt = field.get("format", "{}")
+                unit = field.get("unit", "")
                 factor = field.get("factor", 1)
                 text_val = "-" if val is None else fmt.format(val * factor)
                 formatted.append({
                     "text": f"{prefix}: {text_val}{unit if val is not None else ''}",
                     "class": classes.get(k, ""),
-                    **standard.get(k, {})
+                    **standard[k]
                 })
         return formatted
 
