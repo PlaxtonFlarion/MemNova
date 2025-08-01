@@ -331,7 +331,7 @@ class Reporter(object):
                     case _: trend_cls = "baseline"
 
                 td = [{
-                    "text": trend, "class": trend_cls, **standard.get("trend", {
+                    "text": f"{mode}: {trend}", "class": trend_cls, **standard.get("trend", {
                         "desc": "趋势判定",
                         "tooltip": "自动识别内存趋势类型（如泄漏、平稳、波动、U型等），结合斜率和拟合优度辅助泄漏判断。"
                     })
