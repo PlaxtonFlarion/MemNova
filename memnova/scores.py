@@ -177,6 +177,7 @@ class Scores(object):
             "fps_std": 0.0,
             "jank_ratio": 0.0,
             "high_latency_ratio": 0.0,
+            "severe_latency_ratio": 0.0,
             "max_frame_time": 0.0,
             "min_frame_time": 0.0,
             "roll_avg_fps": None,
@@ -214,12 +215,17 @@ class Scores(object):
         result["max_frame_time"] = max(frame_times)
         result["min_frame_time"] = min(frame_times)
 
-        # 🟩 ==== 掉帧指标 ====
+        # 🟩 ==== 16.67ms 掉帧指标 ====
         result["jank_ratio"] = sum(1 for f in frames if f.get("is_jank")) / total_frames
         ideal_frame_time = 1000 / 60
         over_threshold = sum(1 for f in frames if f["duration_ms"] > ideal_frame_time)
         result["high_latency_ratio"] = over_threshold / total_frames
 
+        # 🟩 ==== 32ms 严重卡顿指标 ====
+        severe_frame_time = 32
+        severe_over_threshold = sum(1 for f in frames if f["duration_ms"] > severe_frame_time)
+        result["severe_latency_ratio"] = severe_over_threshold / total_frames
+        
         # 🟩 ==== 连续低FPS最长段 ====
         low_fps_threshold, longest, cur = 30, 0, 0
         for fps in fps_values:
