@@ -232,7 +232,7 @@ class Reporter(object):
     def format_score(score: dict, standard: dict, classes: dict, fields_cfg: list) -> list:       
         formatted = []
         for field in fields_cfg:
-            if (k := field["key"]) in score:
+            if (k := field["key"]) in score and k in standard:
                 prefix = field.get("prefix", k)
                 val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "") 
                 text_val = "-" if val is None else fmt.format(val)
