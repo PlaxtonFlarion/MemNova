@@ -1,9 +1,9 @@
-#   ____                       _
-#  |  _ \ ___ _ __   ___  _ __| |_ ___ _ __
-#  | |_) / _ \ '_ \ / _ \| '__| __/ _ \ '__|
-#  |  _ <  __/ |_) | (_) | |  | ||  __/ |
-#  |_| \_\___| .__/ \___/|_|   \__\___|_|
-#            |_|
+#  ____                       _
+# |  _ \ ___ _ __   ___  _ __| |_ ___ _ __
+# | |_) / _ \ '_ \ / _ \| '__| __/ _ \ '__|
+# |  _ <  __/ |_) | (_) | |  | ||  __/ |
+# |_| \_\___| .__/ \___/|_|   \__\___|_|
+#           |_|
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -33,13 +33,14 @@ from concurrent.futures import ProcessPoolExecutor
 from engine.tinker import Period
 from memcore.cubicle import Cubicle
 from memcore.profile import Align
-from memnova.painter import Painter
-from memnova.scores import Scores
+from memnova.lumix import Lumix
+from memnova.orbis import Orbis
 from memnova.templater import Templater
 from memnova import const
 
 
 class Reporter(object):
+    """Reporter"""
 
     def __init__(self, src_total_place: str, nodes: str, classify_type: str, align: "Align"):
         self.total_dir = os.path.join(src_total_place, const.TOTAL_DIR)
@@ -129,7 +130,7 @@ class Reporter(object):
     @staticmethod
     def score_classes(score: dict, standard: dict, d_cls: str) -> dict:
         fail_cls, invalid_cls = "expiry-fail", "expiry-none"
-        
+
         op_map = {
             "le": lambda x, y: x <= y,
             "lt": lambda x, y: x < y,
@@ -249,12 +250,12 @@ class Reporter(object):
         return formatted
 
     @staticmethod
-    def build_evaluate(formatted: list, g_limit: int = 2, f_limit: int = 3, pg: list = None, sg: list = None) -> list:
+    def build_evaluate(formatted: list, g_limit: int, f_limit: int, pg: list = None, sg: list = None) -> list:
         if pg:
             formatted = pg + formatted
         if sg:
             formatted = formatted + sg
-        
+
         # 按 f_limit 切分
         field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
         # 保留 g_limit 组
@@ -296,7 +297,7 @@ class Reporter(object):
 
         # 🔵 ==== I/O 绘图 ====
         draw_io_future = loop.run_in_executor(
-            executor, Painter.draw_io_metrics, io_data, str(io_loc)
+            executor, Lumix.draw_io_metrics, io_data, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
 
@@ -311,7 +312,7 @@ class Reporter(object):
             score_group = {}
             for _, row in group_stats.iterrows():
                 part_df = df[df["mode"] == (mode := row["mode"])]
-                score = Scores.analyze_mem_score(part_df, column="pss")
+                score = Orbis.analyze_mem_score(part_df, column="pss")
                 logger.info(f"{mode}-Score: {score}")
 
                 # 🟡 ==== 数据校验 ====
@@ -339,7 +340,7 @@ class Reporter(object):
 
                 # 🟡 ==== 评价部分 ====
                 formatted = self.format_score(
-                    score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"}
+                    score, standard, classes, Orbis.mem_fields_cfg(), exclude={"trend"}
                 )
                 evaluate += self.build_evaluate(td + formatted, 1, 3)
 
@@ -358,12 +359,12 @@ class Reporter(object):
             leak_loc = Path(group) / f"{head}_leak.png"
 
             # 🟨 ==== MEM 评分 ====
-            score = Scores.analyze_mem_score(df, column="pss")
+            score = Orbis.analyze_mem_score(df, column="pss")
             logger.info(f"Score: {score}")
             score_group = {"MEM": score}
 
             # 🟡 ==== MEM 绘图 ====
-            paint_func = partial(Painter.draw_mem_metrics, **score)
+            paint_func = partial(Lumix.draw_mem_metrics, **score)
             draw_leak_future = loop.run_in_executor(
                 executor, paint_func, mem_data, str(leak_loc)
             )
@@ -386,10 +387,10 @@ class Reporter(object):
                     "tooltip": "自动识别内存趋势类型（如泄漏、平稳、波动、U型等），结合斜率和拟合优度辅助泄漏判断。"
                 })
             }]
-            
+
             # 🟡 ==== 评价部分 ====
             formatted = self.format_score(
-                score, standard, classes, Scores.mem_fields_cfg(), exclude={"trend"}
+                score, standard, classes, Orbis.mem_fields_cfg(), exclude={"trend"}
             )
             evaluate = self.build_evaluate(td + formatted, 2, 3)
 
@@ -458,12 +459,12 @@ class Reporter(object):
         io_loc = None
 
         # 🟩 ==== GFX 评分 ====
-        score = Scores.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        score = Orbis.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
         logger.info(f"Score: {score}")
         score_group = {"GFX": score}
 
         # 🟢 ==== GFX 绘图 ====
-        paint_func = partial(Painter.draw_gfx_metrics, **score)
+        paint_func = partial(Lumix.draw_gfx_metrics, **score)
         draw_future = loop.run_in_executor(
             executor, paint_func,
             raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges, str(gfx_loc)
@@ -475,7 +476,7 @@ class Reporter(object):
         classes = self.score_classes(score, standard, "fluency")
 
         # 🟢 ==== 评价部分 ====
-        formatted = self.format_score(score, standard, classes, Scores.gfx_fields_cfg())
+        formatted = self.format_score(score, standard, classes, Orbis.gfx_fields_cfg())
         evaluate = self.build_evaluate(formatted, 2, 3)
 
         # 🟢 ==== 指标部分 ====

@@ -1,8 +1,9 @@
-#   _____
-#  |_   _| __ __ _  ___ ___ _ __
-#    | || '__/ _` |/ __/ _ \ '__|
-#    | || | | (_| | (_|  __/ |
-#    |_||_|  \__,_|\___\___|_|
+#  _____                      _                _
+# |_   _| __ __ _  ___ ___   / \   _ __   __ _| |_   _ _______ _ __
+#   | || '__/ _` |/ __/ _ \ / _ \ | '_ \ / _` | | | | |_  / _ \ '__|
+#   | || | | (_| | (_|  __// ___ \| | | | (_| | | |_| |/ /  __/ |
+#   |_||_|  \__,_|\___\___/_/   \_\_| |_|\__,_|_|\__, /___\___|_|
+#                                                |___/
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -15,8 +16,8 @@ from perfetto.trace_processor import (
 )
 
 
-class _Tracer(object):
-    """Tracer"""
+class _TraceAnalyzer(object):
+    """_TraceAnalyzer"""
 
     normalize_start_ts: float = 0.0
 
@@ -258,14 +259,14 @@ class _Tracer(object):
         raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
 
 
-class MemAnalyzer(_Tracer):
+class MemAnalyzer(_TraceAnalyzer):
     """MEM"""
 
     def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:
         pass
 
 
-class GfxAnalyzer(_Tracer):
+class GfxAnalyzer(_TraceAnalyzer):
     """GFX"""
 
     def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:

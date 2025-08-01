@@ -1,8 +1,8 @@
-#   ____       _       _
-#  |  _ \ __ _(_)_ __ | |_ ___ _ __
-#  | |_) / _` | | '_ \| __/ _ \ '__|
-#  |  __/ (_| | | | | | ||  __/ |
-#  |_|   \__,_|_|_| |_|\__\___|_|
+#  _                    _
+# | |   _   _ _ __ ___ (_)_  __
+# | |  | | | | '_ ` _ \| \ \/ /
+# | |__| |_| | | | | | | |>  <
+# |_____\__,_|_| |_| |_|_/_/\_\
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -15,11 +15,11 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from loguru import logger
-from memnova.scores import Scores
+from memnova.orbis import Orbis
 
 
-class Painter(object):
-    """Painter"""
+class Lumix(object):
+    """Lumix"""
 
     # Notes: ======================== MEM ========================
 
@@ -331,7 +331,7 @@ class Painter(object):
         df = pd.DataFrame(io_data)
 
         # 🔵 ==== 获取评分 ====
-        score = Scores.analyze_io_score(df)
+        score = Orbis.analyze_io_score(df)
 
         io_summary = (
             f"Grade: {score['grade']}\n"

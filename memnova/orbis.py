@@ -1,8 +1,8 @@
-#   ____
-#  / ___|  ___ ___  _ __ ___  ___
-#  \___ \ / __/ _ \| '__/ _ \/ __|
-#   ___) | (_| (_) | | |  __/\__ \
-#  |____/ \___\___/|_|  \___||___/
+#   ___       _     _
+#  / _ \ _ __| |__ (_)___
+# | | | | '__| '_ \| / __|
+# | |_| | |  | |_) | \__ \
+#  \___/|_|  |_.__/|_|___/
 #
 # ==== Notes: License ====
 # Copyright (c) 2024  Memrix :: 记忆星核
@@ -15,9 +15,10 @@ from scipy.stats import (
 )
 
 
-class Scores(object):
+class Orbis(object):
+    """Orbis"""
 
-    # Workflow: ======================== MEM ========================
+    # Workflow: ======================== CFG ========================
 
     @staticmethod
     def mem_fields_cfg() -> dict:
@@ -39,6 +40,55 @@ class Scores(object):
             "window_slope_min": {"prefix": "WinMin",   "format": "{:.2f}", "factor": 1, "unit": ""},
             "outlier_count":    {"prefix": "Outlier",  "format": "{:.0f}", "factor": 1, "unit": ""},
         }
+
+    @staticmethod
+    def gfx_fields_cfg() -> dict:
+        return {
+            "level":                {"prefix": "Level",      "format": "{}",      "factor": 1,   "unit": ""},
+            "score":                {"prefix": "Score",      "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "color":                {"prefix": "Color",      "format": "{}",      "factor": 1,   "unit": ""},
+            "frame_count":          {"prefix": "Count",      "format": "{:.0f}",  "factor": 1,   "unit": ""},
+            "duration_s":           {"prefix": "Dur",        "format": "{:.2f}",  "factor": 1,   "unit": "s"},
+            "min_fps":              {"prefix": "Min FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "avg_fps":              {"prefix": "Avg FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "max_fps":              {"prefix": "Max FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "p95_fps":              {"prefix": "P95 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "p99_fps":              {"prefix": "P99 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "fps_std":              {"prefix": "STD",        "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "jank_ratio":           {"prefix": "JNK",        "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "high_latency_ratio":   {"prefix": "Hi-Lat",     "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "severe_latency_ratio": {"prefix": "Sev-Lat",    "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "max_frame_time":       {"prefix": "MaxDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
+            "min_frame_time":       {"prefix": "MinDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
+            "roll_avg_fps":         {"prefix": "Roll FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "roll_jnk_ratio":       {"prefix": "Roll JNK",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "drag_avg_fps":         {"prefix": "Drag FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "drag_jnk_ratio":       {"prefix": "Drag JNK",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "longest_low_fps":      {"prefix": "LMax",       "format": "{:.2f}",  "factor": 1,   "unit": "s"},
+            "score_jank":           {"prefix": "JNK Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "score_latency":        {"prefix": "Lat Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "score_fps_var":        {"prefix": "Var Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "score_motion":         {"prefix": "Mot Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+        }
+
+    @staticmethod
+    def io_fields_cfg() -> dict:
+        return {
+            "swap_status":        {"prefix": "Swap",      "format": "{}",      "factor": 1,   "unit": ""},
+            "swap_max_kb":        {"prefix": "SwapMax",   "format": "{:.0f}",  "factor": 1,   "unit": "KB"},
+            "swap_burst_ratio":   {"prefix": "SwpBurst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "swap_burst_count":   {"prefix": "SwpBurst#", "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "rw_peak_kb":         {"prefix": "RWPeak",    "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
+            "rw_std_kb":          {"prefix": "RWStd",     "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
+            "rw_burst_ratio":     {"prefix": "RW Burst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "rw_idle_ratio":      {"prefix": "RW Idle",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "sys_burst":          {"prefix": "SysBurst",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "sys_burst_events":   {"prefix": "BurstEvt",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "score":              {"prefix": "Score",     "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "grade":              {"prefix": "Grade",     "format": "{}",      "factor": 1,   "unit": ""},
+        }
+
+    # Workflow: ======================== MEM ========================
 
     @staticmethod
     def analyze_mem_score(
@@ -175,36 +225,6 @@ class Scores(object):
     # Workflow: ======================== GFX ========================
 
     @staticmethod
-    def gfx_fields_cfg() -> dict:
-        return {
-            "level":                {"prefix": "Level",      "format": "{}",      "factor": 1,   "unit": ""},
-            "score":                {"prefix": "Score",      "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "color":                {"prefix": "Color",      "format": "{}",      "factor": 1,   "unit": ""},
-            "frame_count":          {"prefix": "Count",      "format": "{:.0f}",  "factor": 1,   "unit": ""},
-            "duration_s":           {"prefix": "Dur",        "format": "{:.2f}",  "factor": 1,   "unit": "s"},
-            "min_fps":              {"prefix": "Min FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "avg_fps":              {"prefix": "Avg FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "max_fps":              {"prefix": "Max FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "p95_fps":              {"prefix": "P95 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "p99_fps":              {"prefix": "P99 FPS",    "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "fps_std":              {"prefix": "STD",        "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "jank_ratio":           {"prefix": "JNK",        "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "high_latency_ratio":   {"prefix": "Hi-Lat",     "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "severe_latency_ratio": {"prefix": "Sev-Lat",    "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "max_frame_time":       {"prefix": "MaxDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
-            "min_frame_time":       {"prefix": "MinDur",     "format": "{:.2f}",  "factor": 1,   "unit": "ms"},
-            "roll_avg_fps":         {"prefix": "Roll FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "roll_jnk_ratio":       {"prefix": "Roll JNK",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "drag_avg_fps":         {"prefix": "Drag FPS",   "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "drag_jnk_ratio":       {"prefix": "Drag JNK",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "longest_low_fps":      {"prefix": "LMax",       "format": "{:.2f}",  "factor": 1,   "unit": "s"},
-            "score_jank":           {"prefix": "JNK Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "score_latency":        {"prefix": "Lat Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "score_fps_var":        {"prefix": "Var Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "score_motion":         {"prefix": "Mot Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-        }
-
-    @staticmethod
     def analyze_gfx_score(
         frames: list[dict],
         roll_ranges: list[dict],
@@ -276,7 +296,7 @@ class Scores(object):
         severe_frame_time = 32
         severe_over_threshold = sum(1 for f in frames if f["duration_ms"] > severe_frame_time)
         result["severe_latency_ratio"] = severe_over_threshold / total_frames
-        
+
         # 🟩 ==== 连续低FPS最长段 ====
         low_fps_threshold, longest, cur = 30, 0, 0
         for fps in fps_values:
@@ -365,23 +385,6 @@ class Scores(object):
     # Workflow: ======================== I/O ========================
 
     @staticmethod
-    def io_fields_cfg() -> dict:
-        return {
-            "swap_status":        {"prefix": "Swap",      "format": "{}",      "factor": 1,   "unit": ""},
-            "swap_max_kb":        {"prefix": "SwapMax",   "format": "{:.0f}",  "factor": 1,   "unit": "KB"},
-            "swap_burst_ratio":   {"prefix": "SwpBurst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "swap_burst_count":   {"prefix": "SwpBurst#", "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "rw_peak_kb":         {"prefix": "RWPeak",    "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
-            "rw_std_kb":          {"prefix": "RWStd",     "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
-            "rw_burst_ratio":     {"prefix": "RW Burst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "rw_idle_ratio":      {"prefix": "RW Idle",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
-            "sys_burst":          {"prefix": "SysBurst",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "sys_burst_events":   {"prefix": "BurstEvt",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "score":              {"prefix": "Score",     "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "grade":              {"prefix": "Grade",     "format": "{}",      "factor": 1,   "unit": ""},
-        }
-
-    @staticmethod
     def analyze_io_score(
         df: "pd.DataFrame",
         rw_peak_threshold: int = 102400,
@@ -431,8 +434,7 @@ class Scores(object):
 
         # 🟦 ==== 爆发段 ====
         rw_burst_threshold = rw_vals.mean() + rw_vals.std()
-        rw_burst_mask = rw_vals > rw_burst_threshold
-        rw_burst_ratio = rw_burst_mask.sum() / len(rw_vals)
+        rw_burst_ratio = (rw_vals > rw_burst_threshold).mean()
         result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
         if rw_burst_ratio > 0.1:
             penalties.append(10)

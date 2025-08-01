@@ -47,7 +47,7 @@ from memcore.design import Design
 from memcore.parser import Parser
 from memcore.profile import Align
 from memnova.reporter import Reporter
-from memnova.tracer import GfxAnalyzer
+from memnova.trace_analyzer import GfxAnalyzer
 from memnova import const
 
 
@@ -580,9 +580,9 @@ class Memrix(object):
                     "MSG": f"Rendering {total} tasks",
                     "TMS": f"{time.time() - reporter.before_time:.1f} s"
                 })
-                
+
                 func, loop = getattr(reporter, render), asyncio.get_running_loop()
-                
+
                 if not (resp := await func(db, loop, executor, self.memories, team_data, self.layer)):
                     animation_event.set()
                     await self.animation_task

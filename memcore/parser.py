@@ -65,7 +65,7 @@ class Parser(object):
             help=textwrap.dedent(f'''\
                 \033[1;34m^*帧影流光*^\033[0m
                 -------------------------
-                - 流畅度，I/O
+                - 流畅度
 
             ''')
         )
