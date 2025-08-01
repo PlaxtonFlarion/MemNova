@@ -239,7 +239,7 @@ class Reporter(object):
                 continue
             if k in score and k in cfg:
                 field = cfg[k]
-                prefix = f"{prefix}: " if field.get("prefix", k) else ""
+                prefix = f"{prefix}: " if (prefix := field.get("prefix", k)) else ""
                 val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "")
                 factor = field.get("factor", 1)
                 text_val = f"{prefix}-" if val is None else fmt.format(val * factor)
