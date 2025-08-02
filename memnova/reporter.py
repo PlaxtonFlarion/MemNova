@@ -243,7 +243,7 @@ class Reporter(object):
                 prefix = f"{prefix}: " if (prefix := field.get("prefix", k)) else ""
                 val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "")
                 factor = field.get("factor", 1)
-                text_val = f"{prefix}-" if val is None else fmt.format(val * factor)
+                text_val = "-" if val is None else fmt.format(val * factor)
                 formatted.append({
                     "text": f"{prefix}{text_val}{unit}", "class": classes.get(k, ""), **standard[k]
                 })
