@@ -299,6 +299,7 @@ async def packaging() -> tuple[
         f"--include-module=deprecation",
         f"--include-package=pygments",
         f"--include-package=adbutils,lxml.etree",
+        f"--enable-plugin=tk-inter",
         f"--assume-yes-for-downloads", f"--show-progress", f"--show-memory",
         f"--output-dir={app}", f"{const.APP_NAME}.py"
     ]
@@ -424,7 +425,7 @@ async def post_build() -> typing.Coroutine | None:
         "本地文件": local_file,
         "第三方库": [
             (site_packages / dep, target / dep) for dep in [
-                "uiautomator2"
+                "uiautomator2", "perfetto"
             ]
         ]
     }
