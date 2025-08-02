@@ -102,6 +102,7 @@ class Orbis(object):
 
         # 🟨 ==== 默认结果 ====
         result = {
+            "trend: "N/A",
             "trend_score": 0.0,
             "jitter_index": 0.0,
             "r_squared": 0.0,
@@ -123,20 +124,20 @@ class Orbis(object):
         df = df.copy()
 
         if column not in df or df[column].isnull().any():
-            return {"trend": "Invalid Data"} | result
+            return {"trend": "Invalid Data", **result}
 
         if len(values := df[column].to_numpy()) < 10:
-            return {"trend": "Few Data"} | result
+            return {"trend": "Few Data", **result}
 
         # 🟨 ==== 异常剔除 ====
         outlier_count = 0
         if remove_outlier:
             if np.all(np.isnan(zs := zscore(values))):
-                return {"trend": "All NaN", "outlier_count": len(values)} | result
+                return {"trend": "All NaN", "outlier_count": len(values), **result}
             mask = np.abs(zs) < 3
             outlier_count = np.sum(~mask)
             if len(values := values[mask]) < 10:
-                return {"trend": "Cleaned", "outlier_count": outlier_count} | result
+                return {"trend": "Cleaned", "outlier_count": outlier_count, **result}
 
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
