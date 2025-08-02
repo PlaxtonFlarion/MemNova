@@ -45,7 +45,7 @@ class Orbis(object):
     def gfx_fields_cfg() -> dict:
         return {
             "level":                {"prefix": "Level",      "format": "{}",      "factor": 1,   "unit": ""},
-            "score":                {"prefix": "Score",      "format": "{:.2f}",  "factor": 100, "unit": "%"},
+            "score":                {"prefix": "Score",      "format": "{:.2f}",  "factor": 100, "unit": ""},
             "color":                {"prefix": "Color",      "format": "{}",      "factor": 1,   "unit": ""},
             "frame_count":          {"prefix": "Count",      "format": "{:.0f}",  "factor": 1,   "unit": ""},
             "duration_s":           {"prefix": "Dur",        "format": "{:.2f}",  "factor": 1,   "unit": "s"},
