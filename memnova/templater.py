@@ -299,7 +299,7 @@ class Templater(object):
         for frame in frames:
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
-        df = pd.DataFrame(frames)
+        df = pd.DataFrame(frames).copy()
         df["timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
 
