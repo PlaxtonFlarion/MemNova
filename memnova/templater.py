@@ -96,20 +96,20 @@ class Templater(object):
     async def plot_mem_analysis(df: "pd.DataFrame") -> "figure":
         # 🟡 ==== 数据处理 ====
         df = df.copy()
-        df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         for col in ["summary_java_heap", "summary_native_heap", "summary_graphics", "pss", "rss", "uss"]:
-            df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
-        df["activity"] = df["activity"].fillna("")
+            df.loc[:, col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
+        df.loc[:, "activity"] = df["activity"].fillna("")
 
         # 🟡 ==== 滑动窗口均值 ====
         window_size = max(3, len(df) // 20)
-        df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
+        df.loc[:, "pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 🟡 ==== 区块分组 ====
         mode_series = df["mode"]
         changed = mode_series.ne(mode_series.shift())
-        df["block_id"] = changed.cumsum()
+        df.loc[:, "block_id"] = changed.cumsum()
 
         # 🟡 ==== 主统计 ====
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
@@ -185,10 +185,10 @@ class Templater(object):
         )
 
         # 🟡 ==== 折线 / 极值点 ====
-        df["colors"] = df["pss"].apply(
+        df.loc[:, "colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
         )
-        df["sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
+        df.loc[:, "sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
         source = ColumnDataSource(df)
 
         # 🟡 ==== PSS 主线 ====
@@ -300,7 +300,7 @@ class Templater(object):
             frame["color"] = "#FF4D4D" if frame.get("is_jank") else "#32CD32"
 
         df = pd.DataFrame(frames)
-        df["timestamp_s"] = df["timestamp_ms"] / 1000
+        df.loc[:, "timestamp_s"] = df["timestamp_ms"] / 1000
         source = ColumnDataSource(df)
 
         # 🟢 ==== 动态 Y 轴范围 ====
