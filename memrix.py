@@ -230,8 +230,7 @@ class Memrix(object):
 
         # ⛔️ ==== 生成报告 ====
         if self.atlas:
-            self.forge = Path(reporter.group_dir).name
-            return await self.observation()
+            return await self.observation(reporter)
 
         # ⛔️ ==== 收尾动画 ====
         Design.console.print()
@@ -530,13 +529,11 @@ class Memrix(object):
             )
 
     # """真相快照"""
-    async def observation(self) -> None:
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Report Start {self.padding}*^"
-        )
-
+    async def observation(self, reporter: typing.Optional["Reporter"] = None) -> None:
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
-        if not (target_dir := original / self.forge).exists():
+        
+        target_dir = original / Path(reporter.group_dir).name if reporter else self.forge
+        if not target_dir.exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
         segment_router = {
@@ -552,7 +549,7 @@ class Memrix(object):
         except KeyError:
             raise MemrixError(f"Unsupported directory type: {src} ...")
 
-        reporter = Reporter(self.src_total_place, src, dst, self.align)
+        reporter = reporter or Reporter(self.src_total_place, src, dst, self.align)
 
         for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
             if not Path(file).is_file():
@@ -566,6 +563,9 @@ class Memrix(object):
         if not (data_list := team_data.get("file")):
             raise MemrixError(f"No data scenario: {data_list} ...")
 
+        logger.info(
+            f"^*{self.padding} {const.APP_DESC} Report Start {self.padding}*^"
+        )
         self.memories = {
             "MSG": "*", "MAX": (total := len(data_list)), "CUR": 0, "TMS": "0.0 s",
         }
