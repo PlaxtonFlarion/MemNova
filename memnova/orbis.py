@@ -414,9 +414,7 @@ class Orbis(object):
 
         # 🟦 ==== 差值处理，避免链式赋值 ====
         io_cols = ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]
-        df[io_cols] = (
-            df[io_cols].astype(float).diff().fillna(0).clip(lower=0)
-        )
+        df.loc[:, io_cols] = df[io_cols].astype(float).diff().fillna(0).clip(lower=0)
 
         # 🟦 ==== 标签统计 ====
         tags, penalties = [], []
