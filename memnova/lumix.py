@@ -33,20 +33,20 @@ class Lumix(object):
 
         df = pd.DataFrame(mem_data)
 
-        df["x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
+        df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
-        df["num_x"] = md.date2num(df["x"])
-        df["pss"] = pd.to_numeric(df["pss"], errors="coerce")
+        df.loc[:, "num_x"] = md.date2num(df["x"])
+        df.loc[:, "pss"] = pd.to_numeric(df["pss"], errors="coerce")
         df = df.dropna(subset=["pss"])
 
         # 🟡 ==== 滑动窗口平均 ====
         window_size = max(3, len(df) // 20)
-        df["pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
+        df.loc[:, "pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
         # 🟡 ==== 前后台区块分组 ====
         mode_series = df["mode"]
         changed = mode_series.ne(mode_series.shift())
-        df["block_id"] = changed.cumsum()
+        df.loc[:, "block_id"] = changed.cumsum()
 
         # 🟡 ==== 全局统计 ====
         avg_val = kwargs.get("avg", df["pss"].mean())
