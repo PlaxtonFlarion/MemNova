@@ -298,7 +298,7 @@ async def packaging() -> tuple[
         f"--nofollow-import-to=uiautomator2,perfetto",
         f"--include-module=deprecation",
         f"--include-package=pygments",
-        f"--include-package=adbutils,lxml.etree",
+        f"--include-package=adbutils,lxml.etree,google",
         f"--enable-plugin=tk-inter",
         f"--assume-yes-for-downloads", f"--show-progress", f"--show-memory",
         f"--output-dir={app}", f"{const.APP_NAME}.py"
