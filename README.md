@@ -189,7 +189,7 @@ memrix --storm --focus <com.example.application> --title <name>
 memrix --storm --focus <com.example.application> --atlas
 ```
 
-### ⚜️ 星辰序列 (`--layer`)
+### ⚜️ 极昼极夜 (`--layer`)
 #### 📔 功能描述:
 
 #### 📔 参数说明: 
