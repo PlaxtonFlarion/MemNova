@@ -104,6 +104,9 @@ class Memrix(object):
         self.__remote = value if isinstance(value, dict) else {}
 
     def task_clean_up(self, *_, **__) -> None:
+        """
+        执行任务收尾操作，记录日志并触发关闭事件。
+        """
         self.memories.update({
             "MSG": (msg := "Finishing up ...")
         })
@@ -111,6 +114,9 @@ class Memrix(object):
         self.task_close_event.set()
 
     async def watcher(self) -> None:
+        """
+        启动本地监听器，接收令牌指令后触发关闭事件。
+        """
         logger.info(f"Token: {(token := f'{const.APP_DESC}.{secrets.token_hex(8)}')}")
 
         async def handler(reader: "asyncio.StreamReader", writer: "asyncio.StreamWriter") -> None:
@@ -133,7 +139,9 @@ class Memrix(object):
         team_name: str,
         prefix: str,
     ) -> "Path":
-
+        """
+        初始化文件信息与标签，记录采样参数，生成摘要数据。
+        """
         self.file_insert = 0
         self.file_folder = team_name
 
@@ -170,6 +178,10 @@ class Memrix(object):
         return traces
 
     async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
+        """
+        终止采样流程，处理数据收尾、动画结束、报告生成与资源清理。
+        """
+
         # ⛔️ ==== 等待 MEM 单轮采集结束 ====
         if self.dumped and not self.dumped.is_set():
             logger.info(f"Awaiting dumped sync ...")
@@ -196,7 +208,7 @@ class Memrix(object):
                 self.memories.update(
                     {"MSG": msg, "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": "*", "BACKGROUND": "*"}
                     if self.storm else
-                    {"MSG": msg, "ANA": "*", "ERR": "*"}
+                    {"MSG": msg, "ANA": "*", "PFT": "*", "ERR": "*"}
                 )
                 arg.set()
 
@@ -242,7 +254,9 @@ class Memrix(object):
         db: "aiosqlite.Connection",
         now_time: str
     ) -> None:
-
+        """
+        处理图形轨迹队列数据，提取指标并插入数据库，支持异步分析与错误回溯。
+        """
         if not track_enabled:
             return None
 
@@ -275,7 +289,7 @@ class Memrix(object):
 
             except Exception as e:
                 self.memories.update({
-                    "MSG": "*", "ANA": "*", "ERR": f"[bold #FF5F5F]{e}",
+                    "MSG": "*", "ANA": "*", "PFT": "*", "ERR": f"[bold #FF5F5F]{e}",
                 })
             finally:
                 self.data_queue.task_done()
@@ -286,6 +300,9 @@ class Memrix(object):
         device: "Device",
         db: "aiosqlite.Connection"
     ) -> None:
+        """
+        混合采集内存与 I/O 数据，自动识别前后台状态，异步解析并入库，支持持续追踪与队列化处理。
+        """
 
         async def mem_analyze(pname: str) -> dict:
             meminfo_map, summary_map = {}, {}
@@ -459,10 +476,13 @@ class Memrix(object):
             await track_launcher()
             await asyncio.sleep(self.align.mem_speed)
 
-    # """星痕律动 / 星落浮影 / 帧影流光 / 引力回廊"""
+    # """星痕律动 / 帧影流光"""
     async def track_core_task(self, device: "Device") -> None:
+        """
+        主采样任务核心逻辑，执行配置校验、资源准备、动画启动、数据采集与收尾控制流程。
+        """
 
-        # Workflow: ========== 检查配置 ==========
+        # 🏆 ========== 检查配置 ==========
         if not (check := await device.examine_pkg(self.focus)):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
@@ -490,14 +510,14 @@ class Memrix(object):
             device, self.ft_file, traces, trace_loc
         )
 
-        # Workflow: ========== 显示面板 ==========
+        # 🏆 ========== 显示面板 ==========
         self.memories = {
             "MSG": "*", "MOD": "*", "ACT": "*", "PSS": "*", "FOREGROUND": 0, "BACKGROUND": 0
         } if self.storm else {
-            "MSG": "*", "ANA": "*", "ERR": "*"
+            "MSG": "*", "ANA": "*", "PFT": "*", "ERR": "*"
         }
 
-        # Workflow: ========== 开始采样 ==========
+        # 🏆 ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.initialize_tables(
                 db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info
@@ -520,7 +540,7 @@ class Memrix(object):
 
             await self.task_close_event.wait()
 
-            # Workflow: ========== 结束采样 ==========
+            # 🏆 ========== 结束采样 ==========
             await asyncio.gather(*perfetto.backgrounds)
             await perfetto.replenish()
             await self.data_queue.join()
@@ -530,8 +550,11 @@ class Memrix(object):
 
     # """真相快照"""
     async def observation(self, reporter: typing.Optional["Reporter"] = None) -> None:
+        """
+        执行报告生成流程，载入任务数据、渲染多任务报告并输出 HTML，含动画与错误处理机制。
+        """
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
-        
+
         target_dir = original / Path(reporter.group_dir).name if reporter else self.forge
         if not target_dir.exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
@@ -641,15 +664,24 @@ class Perfetto(object):
 
     @staticmethod
     async def input_stream(transports: "asyncio.subprocess.Process") -> None:
+        """
+        异步读取采样进程的标准输出流，并记录日志。
+        """
         async for line in transports.stdout:
             logger.info(line.decode(const.CHARSET).strip())
 
     @staticmethod
     async def error_stream(transports: "asyncio.subprocess.Process") -> None:
+        """
+        异步读取采样进程的错误输出流，并记录日志。
+        """
         async for line in transports.stderr:
             logger.info(line.decode(const.CHARSET).strip())
 
     async def start(self) -> str:
+        """
+        启动 Perfetto 采样任务，推送配置文件并执行远程采样命令。
+        """
         unique_id = time.strftime("%Y%m%d%H%M%S") + "_" + uuid.uuid4().hex[:6]
         device_folder = f"/data/misc/perfetto-configs/{Path(self.ft_file).name}"
         self.last_record = target_folder = f"/data/misc/perfetto-traces/trace_{unique_id}.perfetto-trace"
@@ -666,6 +698,9 @@ class Perfetto(object):
         return target_folder
 
     async def close(self, target_folder: str) -> None:
+        """
+        拉取并删除目标 trace 文件，同时写入分析数据队列。
+        """
         trace_file = self.traces_dir / f"{Path(target_folder).stem}.perfetto-trace"
 
         await self.device.pull(target_folder, str(trace_file))
@@ -673,6 +708,9 @@ class Perfetto(object):
         await self.data_queue.put({"trace_file": str(trace_file)})
 
     async def replenish(self) -> None:
+        """
+        结束采样后进行补采处理，拉取最终 trace 文件。
+        """
         if not self.track_enabled:
             return None
 
@@ -680,21 +718,27 @@ class Perfetto(object):
         await self.close(self.last_record)
 
     async def automatic(self, memories: dict) -> None:
+        """
+        执行自动采样循环，根据采样频率推送 trace 文件并交由后台处理。
+        """
         if not self.track_enabled:
             return None
 
         await self.device.remove("/data/misc/perfetto-traces/*.perfetto-trace")
 
         while not self.track_event.is_set():
-            memories.update({
-                "MSG": "[bold #FFAF5F]Sampling ..."
-            })
             target_folder = await self.start()
+            memories.update({
+                "PFT": "[bold #FFAF5F]Sampling ..."
+            })
             await asyncio.sleep(self.gfx_speed)
             await self.device.perfetto_close()
             self.backgrounds.append(asyncio.create_task(
                 self.close(target_folder))
             )
+            memories.update({
+                "PFT": "[bold #FFD787]Push ..."
+            })
 
 
 # """Main"""

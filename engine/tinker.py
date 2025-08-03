@@ -292,9 +292,13 @@ class Active(object):
 
 
 class Period(object):
+    """Period"""
 
     @staticmethod
     def convert_time(raw_time: str) -> str:
+        """
+        将压缩时间字符串（如 20250803143000）转换为标准格式（YYYY-MM-DD HH:MM:SS）。
+        """
         try:
             dt = datetime.strptime(raw_time, "%Y%m%d%H%M%S")
             return dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -303,6 +307,9 @@ class Period(object):
 
     @staticmethod
     def compress_time(dt: "datetime") -> str:
+        """
+        将 datetime 对象或标准时间字符串压缩为紧凑格式（YYYYMMDDHHMMSS）。
+        """
         if isinstance(dt, str):
             # 可自适应格式，也可以指定格式如 "%Y-%m-%d %H:%M:%S"
             try:
@@ -315,8 +322,6 @@ class Period(object):
 class Pid(object):
     """
     多进程 PID 映射结构，用于保存包名下关联的所有 PID 及其进程名。
-
-    常用于应用多进程分析场景，支持通过 `member` 属性访问字典形式的映射关系。
 
     Parameters
     ----------
@@ -342,6 +347,9 @@ class ToolKit(object):
 
     @staticmethod
     def fit_mem(text: str, text_content: str) -> float:
+        """
+        提取内存字段对应数值并转换为 MB 单位，适用于 MEMINFO 区段解析。
+        """
         try:
             match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
             return round(float(match.group(1)) / 1024, 3)
@@ -350,6 +358,9 @@ class ToolKit(object):
 
     @staticmethod
     def fit_io(text: str, text_content: str) -> float:
+        """
+        提取 I/O 字段对应字节数并转换为 MB 单位，适用于进程 I/O 区段解析。
+        """
         try:
             match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
             return round(float(match.group(1)) / 1024 / 1024, 3)
@@ -358,6 +369,9 @@ class ToolKit(object):
 
     @staticmethod
     def fit_io_count(text: str, text_content: str) -> int:
+        """
+        提取 I/O 操作次数（如 syscr、syscw），返回整数计数值。
+        """
         try:
             match = re.search(fr"{text}.*?(\d+)", text_content, re.S)
             return int(match.group(1))
@@ -366,6 +380,9 @@ class ToolKit(object):
 
     @staticmethod
     def uss_addition(text_content: str) -> float:
+        """
+        解析 TOTAL 段中的 Pss_Dirty 与 Pss_Clean，计算 USS 总值（MB）。
+        """
         try:
             match = re.search(r"(?<=TOTAL).*(\d+)", text_content, re.S)
             total = match.group().split()

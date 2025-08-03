@@ -22,22 +22,31 @@ class _TraceAnalyzer(object):
     normalize_start_ts: float = 0.0
 
     def set_trace_start_ts(self, tp: "TraceProcessor") -> None:
-        self.normalize_start_ts = float(list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts) / 1e6
+        """
+        设置 trace 起始时间戳，用于时间归一化处理。
+        """
+        self.normalize_start_ts = float(
+            list(tp.query("SELECT trace_start() AS start_ts"))[0].start_ts
+        ) / 1e6
 
     # Notes: ======================== MEM ========================
 
     @staticmethod
     def extract_rss(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        """
+        提取指定进程的 RSS 内存使用数据。
+        """
         sql = f"""
-               SELECT
-                   c.ts / 1e6 AS time_sec,
-                   c.value / 1024.0 / 1024.0 AS rss_mb
-               FROM counter c
-               JOIN process_counter_track t ON c.track_id = t.id
-               JOIN process p ON t.upid = p.upid
-               WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
-               ORDER BY c.ts;
-           """
+            SELECT
+                c.ts / 1e6 AS time_sec,
+                c.value / 1024.0 / 1024.0 AS rss_mb
+            FROM counter c
+            JOIN process_counter_track t ON c.track_id = t.id
+            JOIN process p ON t.upid = p.upid
+            WHERE t.name = 'mem.rss' AND p.name = '{app_name}'
+            ORDER BY c.ts;
+        """
+
         df = tp.query(sql).as_pandas_dataframe().dropna()
         # df["time_sec"] -= self.normalize_start_ts
         return df.to_dict("records")
@@ -46,6 +55,9 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_raw_frames(tp: "TraceProcessor", app_name: str) -> list[dict]:
+        """
+        提取实际帧和期望帧的时间戳与属性，计算是否掉帧。
+        """
         sql = f"""
             SELECT * FROM (
                 SELECT
@@ -89,11 +101,15 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_roll_ranges(tp: "TraceProcessor") -> list[dict]:
+        """
+        提取 trace 中滑动操作对应的时间范围。
+        """
         sql = """
             SELECT ts, dur
             FROM slice
             WHERE name LIKE '%Scroll%' OR name LIKE '%scroll%'
         """
+
         return [
             {
                 # "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
@@ -105,11 +121,15 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_drag_ranges(tp: "TraceProcessor") -> list[dict]:
+        """
+        提取 trace 中拖拽操作对应的时间范围。
+        """
         sql = """
             SELECT ts, dur
             FROM slice
             WHERE name LIKE '%drag%' OR name LIKE '%Drag%'
         """
+
         return [
             {
                 # "start_ts": (row.ts / 1e6) - self.normalize_start_ts,
@@ -121,6 +141,9 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_vsync_sys_points(tp: "TraceProcessor") -> list[dict]:
+        """
+        提取系统 VSYNC 事件，计算系统帧率变化。
+        """
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -129,6 +152,7 @@ class _TraceAnalyzer(object):
             )
             ORDER BY counter.ts
         """
+
         result = list(tp.query(sql))
         timestamps = [row.ts for row in result]
 
@@ -153,6 +177,9 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_vsync_app_points(tp: "TraceProcessor") -> list[dict]:
+        """
+        提取应用 VSYNC 事件，计算应用帧率变化。
+        """
         sql = f"""
             SELECT counter.ts
             FROM counter
@@ -161,6 +188,7 @@ class _TraceAnalyzer(object):
             )
             ORDER BY counter.ts
         """
+
         result = list(tp.query(sql))
         timestamps = [row.ts for row in result]
 
@@ -185,18 +213,25 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_sf_fps(tp: "TraceProcessor") -> list[dict]:
+        """
+        提取 SurfaceFlinger 的 FPS 计数器曲线。
+        """
         sql = """
             SELECT ts/1e6 AS ts, value AS fps
             FROM counter
             WHERE track_id = (SELECT id FROM track WHERE name = 'SfCpu_fps')
             ORDER BY ts
         """
+
         df = tp.query(sql).as_pandas_dataframe()
         # df["ts"] -= self.normalize_start_ts
         return df.to_dict("records")
 
     @staticmethod
     def mark_consecutive_jank(frames: list[dict], min_count: int = 2) -> list[dict]:
+        """
+        标记连续掉帧区间，用于识别卡顿片段。
+        """
         jank_ranges = []
         count = 0
         start_ts = None
@@ -227,7 +262,9 @@ class _TraceAnalyzer(object):
         vsync_sys: list[dict],
         vsync_app: list[dict]
     ) -> None:
-
+        """
+        为帧数据打标注，包括滑动/拖拽/掉帧区间及对应帧率。
+        """
         max_delta_ms = 50.0
 
         def in_any_range(ts: float, ranges: list[dict]) -> bool:
@@ -256,6 +293,9 @@ class _TraceAnalyzer(object):
 
     @staticmethod
     def extract_metrics(trace_file: str, tp_shell: str, app_name: str) -> dict:
+        """
+        抽象方法，需由子类实现指标提取逻辑。
+        """
         raise NotImplementedError("Subclasses must implement extract_metrics() to return formatted trace data.")
 
 
@@ -270,7 +310,6 @@ class GfxAnalyzer(_TraceAnalyzer):
     """GFX"""
 
     def extract_metrics(self, trace_file: str, tp_shell: str, app_name: str) -> dict:
-
         with TraceProcessor(trace_file, config=TraceProcessorConfig(tp_shell)) as tp:
             self.set_trace_start_ts(tp)
 

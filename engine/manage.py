@@ -18,11 +18,25 @@ from memcore.design import Design
 
 
 class Manage(object):
+    """Manage"""
 
     def __init__(self, adb: str):
         self.adb = adb
 
     async def device_info(self, serial: str) -> dict:
+        """
+        异步查询设备的基础信息，包括品牌、型号与系统版本，用于设备标识与能力识别。
+
+        Parameters
+        ----------
+        serial : str
+            目标设备的唯一序列号，用于通过 ADB 定位设备。
+
+        Returns
+        -------
+        info : dict
+            返回包含设备基础信息的字典结构。
+        """
         keys = {
             "brand": "ro.product.brand",
             "model": "ro.product.model",
@@ -39,6 +53,19 @@ class Manage(object):
         } | {"serialno": serial}
 
     async def operate_device(self, imply: str) -> typing.Optional["Device"]:
+        """
+        轮询检测可连接设备，支持按序列号精确绑定目标设备，或由用户交互式选择。
+
+        Parameters
+        ----------
+        imply : str
+            期望绑定的设备序列号，用于在多设备连接时自动筛选目标设备。
+
+        Returns
+        -------
+        device : Device or None
+            返回匹配成功的设备对象；若超时或操作中断，则返回 None。
+        """
         try_again, max_try_again = 0, 20
 
         while True:

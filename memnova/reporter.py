@@ -64,6 +64,9 @@ class Reporter(object):
         self.background_tasks: list = []
 
     async def make_report(self, template: str, *args, **kwargs) -> str:
+        """
+        基于 Jinja2 模板渲染生成 HTML 报告，带随机文件名并异步写入磁盘。
+        """
         template_dir, template_file = os.path.dirname(template), os.path.basename(template)
         loader = FileSystemLoader(template_dir)
         environment = Environment(loader=loader)
@@ -82,6 +85,9 @@ class Reporter(object):
         return html_file
 
     async def begin_render(self, team_data: dict) -> tuple:
+        """
+        提取任务时间、标注信息与数据文件列表，用于初始化渲染流程。
+        """
         cur_time = team_data.get(
             "time", time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.before_time))
         )
@@ -95,6 +101,9 @@ class Reporter(object):
         return cur_time, cur_mark, cur_data
 
     async def final_render(self, memories: dict) -> None:
+        """
+        等待所有后台绘图任务完成，并更新耗时信息至内存面板。
+        """
         memories.update({
             "MSG": (msg := f"Wait background tasks")
         })
@@ -108,6 +117,9 @@ class Reporter(object):
 
     @staticmethod
     def mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
+        """
+        计算结果集中某组字段的平均值，用于聚合评分或展示统计。
+        """
         vals = [
             float(c[group][field]) for c in compilation
             if group in c and c[group] not in (None, "", "nan")
@@ -116,6 +128,9 @@ class Reporter(object):
 
     @staticmethod
     def build_minor_items(key_tuples: list, groups: list, grouped: dict) -> list:
+        """
+        构建分组字段的均值摘要条目，适配报告展示的副项信息。
+        """
         minor_items = []
         for group_cfg in groups:
             keys = [k for k, g, f in key_tuples if g == group_cfg["name"]]
@@ -128,7 +143,27 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
+    def build_evaluate(formatted: list, g_limit: int, f_limit: int, pg: list = None, sg: list = None) -> list:
+        """
+        将格式化评分字段划分为评估字段组，适配 UI 展示结构。
+        """
+        if pg:
+            formatted = pg + formatted
+        if sg:
+            formatted = formatted + sg
+
+        # 按 f_limit 切分
+        field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
+        # 保留 g_limit 组
+        evaluate = [{"fields": group} for group in field_groups[:g_limit]]
+
+        return evaluate
+
+    @staticmethod
     def score_classes(score: dict, standard: dict, d_cls: str) -> dict:
+        """
+        根据标准值与方向为每个字段打上评分等级样式类名。
+        """
         fail_cls, invalid_cls = "expiry-fail", "expiry-none"
 
         op_map = {
@@ -157,7 +192,9 @@ class Reporter(object):
 
     @staticmethod
     def split_ranges(frames: list[dict], *args, **kwargs) -> list[tuple]:
-
+        """
+        将帧数据按时间分段并提取各段对应的滑动、拖拽与卡顿区间。
+        """
         (roll_ranges, drag_ranges, jank_ranges, *_), segment_ms = args, kwargs.get("segment_ms", 60000)
 
         frames = sorted(frames, key=lambda f: f["timestamp_ms"])
@@ -188,12 +225,12 @@ class Reporter(object):
 
     @staticmethod
     def merge_alignment_frames(frames: list[dict]) -> dict:
-        # ==== 先提取所有 normalize ====
-        normalize_list = [
-            record.get("metadata", {}).get("normalize", 0) for record in frames
-        ]
+        """
+        合并多个图形对齐结果并统一时间基线，用于报告汇总展示。
+        """
+        normalize_list = [record.get("metadata", {}).get("normalize", 0) for record in frames]
 
-        # ==== 以最早的 normalize 作为基准 ====
+        # ==== 时间基线 ====
         normalize_start_ts = min(normalize_list)
 
         # ==== 初始化合并结构 ====
@@ -233,6 +270,9 @@ class Reporter(object):
 
     @staticmethod
     def format_score(score: dict, standard: dict, classes: dict, cfg: dict, exclude: set = None) -> list:
+        """
+        根据字段配置与样式类格式化指标值，用于展示结构化评分文本。
+        """
         formatted, exclude = [], exclude or set()
         for k in standard:
             if k in exclude:
@@ -248,20 +288,6 @@ class Reporter(object):
                     "text": f"{prefix}{text_val}{unit}", "class": classes.get(k, ""), **standard[k]
                 })
         return formatted
-
-    @staticmethod
-    def build_evaluate(formatted: list, g_limit: int, f_limit: int, pg: list = None, sg: list = None) -> list:
-        if pg:
-            formatted = pg + formatted
-        if sg:
-            formatted = formatted + sg
-
-        # 按 f_limit 切分
-        field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
-        # 保留 g_limit 组
-        evaluate = [{"fields": group} for group in field_groups[:g_limit]]
-
-        return evaluate
 
     # Workflow: ======================== Rendering ========================
 
