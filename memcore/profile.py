@@ -161,7 +161,7 @@ class Align(object):
                         "class": "refer",
                         "value": [
                             "AVG FPS ≥ 55",
-                            "FPS STD ≤ 5",
+                            "STD ≤ 5",
                             "JNK % ≤ 3%",
                             "Roll FPS ≥ 50",
                             "Sev-Lat % ≤ 2%",
