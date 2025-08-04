@@ -555,7 +555,7 @@ class Memrix(object):
         """
         original = Path(self.src_total_place) / const.TOTAL_DIR / const.TREE_DIR
 
-        target_dir = original / Path(reporter.group_dir).name if reporter else self.forge
+        target_dir = original / Path(reporter.group_dir).name if reporter else original / self.forge
         if not target_dir.exists():
             raise MemrixError(f"Target directory {target_dir.name} does not exist ...")
 
