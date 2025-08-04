@@ -737,7 +737,7 @@ class Perfetto(object):
                 self.close(target_folder))
             )
             memories.update({
-                "PFT": "[bold #FFD787]Push ..."
+                "PFT": "[bold #87FFD7]Push ..."
             })
 
 
