@@ -143,21 +143,12 @@ class Reporter(object):
         return minor_items
 
     @staticmethod
-    def build_evaluate(formatted: list, g_limit: int, f_limit: int, pg: list = None, sg: list = None) -> list:
+    def build_evaluate(formatted: list, group_limit: int, field_limit: int) -> list:
         """
         将格式化评分字段划分为评估字段组，适配 UI 展示结构。
         """
-        if pg:
-            formatted = pg + formatted
-        if sg:
-            formatted = formatted + sg
-
-        # 按 f_limit 切分
-        field_groups = [formatted[i:i+f_limit] for i in range(0, len(formatted), f_limit)]
-        # 保留 g_limit 组
-        evaluate = [{"fields": group} for group in field_groups[:g_limit]]
-
-        return evaluate
+        field_groups = [formatted[i:i + field_limit] for i in range(0, len(formatted), field_limit)
+        return [{"fields": group} for group in field_groups[:group_limit]]
 
     @staticmethod
     def score_classes(score: dict, standard: dict, d_cls: str) -> dict:
