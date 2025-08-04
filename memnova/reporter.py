@@ -147,7 +147,7 @@ class Reporter(object):
         """
         将格式化评分字段划分为评估字段组，适配 UI 展示结构。
         """
-        field_groups = [formatted[i:i + field_limit] for i in range(0, len(formatted), field_limit)
+        field_groups = [formatted[i:i + field_limit] for i in range(0, len(formatted), field_limit)]
         return [{"fields": group} for group in field_groups[:group_limit]]
 
     @staticmethod
