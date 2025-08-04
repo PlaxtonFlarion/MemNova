@@ -499,9 +499,9 @@ class Memrix(object):
 
         if self.title:
             safe = re.sub(r'[\\/:"*?<>|]+', '', self.title)
-            head = f"{safe[:11]}_{now_time}"
+            head, cur_title = f"{safe[:11]}_{now_time}", safe[:11]
         else:
-            head = self.file_folder
+            head, cur_title = self.file_folder, None
 
         trace_loc = traces / f"{head}_trace.perfetto-trace"
 
@@ -520,7 +520,7 @@ class Memrix(object):
         # 🏆 ========== 开始采样 ==========
         async with aiosqlite.connect(reporter.db_file) as db:
             await Cubicle.initialize_tables(
-                db, self.file_folder, self.title, Period.convert_time(now_time), device.device_info
+                db, self.file_folder, cur_title, Period.convert_time(now_time), device.device_info
             )
             self.animation_task = asyncio.create_task(
                 getattr(self.design, "mem_wave" if self.storm else "gfx_wave")(
