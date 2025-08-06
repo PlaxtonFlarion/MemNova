@@ -329,6 +329,7 @@ class Reporter(object):
             score_group = {}
             for _, row in group_stats.iterrows():
                 part_df = df[df["mode"] == (mode := row["mode"])]
+                part_list = df[df["mode"] == mode]["pss"].tolist()
                 score = Orbis.analyze_mem_score(part_df, column="pss")
                 logger.info(f"{mode}-Score: {score}")
 
@@ -376,6 +377,9 @@ class Reporter(object):
             leak_loc = Path(group) / f"{head}_leak.png"
 
             # 🟨 ==== MEM 评分 ====
+            score = await loop.run_in_executor(
+                executor, Orbis.analyze_mem_score, df["pss"].tolist()
+            )
             score = Orbis.analyze_mem_score(df, column="pss")
             logger.info(f"Score: {score}")
             score_group = {"MEM": score}
@@ -476,7 +480,10 @@ class Reporter(object):
         io_loc = None
 
         # 🟩 ==== GFX 评分 ====
-        score = Orbis.analyze_gfx_score(raw_frames, roll_ranges, drag_ranges, jank_ranges, fps_key="fps_app")
+        score = await loop.run_in_executor(
+            executor, Orbis.analyze_gfx_score, 
+            raw_frames, roll_ranges, drag_ranges, jank_ranges, "fps_app"
+        )
         logger.info(f"Score: {score}")
         score_group = {"GFX": score}
 
