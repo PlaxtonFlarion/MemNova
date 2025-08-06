@@ -93,9 +93,9 @@ class Templater(object):
     # Workflow: ======================== MEM ========================
 
     @staticmethod
-    async def plot_mem_analysis(df: "pd.DataFrame") -> "figure":
+    def plot_mem_analysis(mem_data: list[dict]) -> "figure":
         # 🟡 ==== 数据处理 ====
-        df = df.copy()
+        df = pd.DataFrame(mem_data)
         df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
         for col in ["summary_java_heap", "summary_native_heap", "summary_graphics", "pss", "rss", "uss"]:
@@ -275,7 +275,7 @@ class Templater(object):
     # Workflow: ======================== GFX ========================
 
     @staticmethod
-    async def plot_gfx_analysis(
+    def plot_gfx_analysis(
         frames: list[dict],
         roll_ranges: typing.Optional[list[dict]],
         drag_ranges: typing.Optional[list[dict]],
