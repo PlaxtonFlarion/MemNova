@@ -215,7 +215,7 @@ class Reporter(object):
         return segment_list
 
     @staticmethod
-    def merge_alignment_frames(frames: list[dict]) -> dict:
+    def merge_alignment_frames(frames: list[dict]) -> dict[str, list]:
         """
         合并多个图形对齐结果并统一时间基线，用于报告汇总展示。
         """
@@ -280,6 +280,33 @@ class Reporter(object):
                 })
         return formatted
 
+    @staticmethod
+    def plot_mem(group: str, data_dir: str, task_list: list[dict], *args, **__) -> str:
+        plot = Templater.plot_mem_analysis(task_list)
+
+        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
+        viewer_div = Templater.generate_viewers(*args)
+
+        layout = column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both")
+        save(layout)
+
+        return output_path
+
+    @staticmethod
+    def plot_gfx(group: str, data_dir: str, task_list: list[tuple], *args, **__) -> str:
+        plots = []
+        for segment, roll, drag, jank, *_ in task_list:
+            p = Templater.plot_gfx_analysis(segment, roll, drag, jank)
+            plots.append(p)
+
+        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
+        viewer_div = Templater.generate_viewers(*args)
+
+        layout = column(viewer_div, Spacer(height=10), *plots, sizing_mode="stretch_width")
+        save(layout)
+
+        return output_path
+
     # Workflow: ======================== Rendering ========================
 
     async def mem_rendering(
@@ -312,11 +339,22 @@ class Reporter(object):
         gfx_loc = None
         io_loc = Path(group) / f"{head}_io.png"
 
+        # 🟦 ==== I/O 评分 ====
+        rw_peak_threshold, idle_threshold, swap_threshold = 102400, 102400, 10240
+        io_score = await loop.run_in_executor(
+            executor, Orbis.analyze_io_score, io_data,
+            rw_peak_threshold, idle_threshold, swap_threshold
+        )
+
         # 🔵 ==== I/O 绘图 ====
+        io_paint_func = partial(Lumix.draw_io_metrics, **io_score)
         draw_io_future = loop.run_in_executor(
-            executor, Lumix.draw_io_metrics, io_data, str(io_loc)
+            executor, io_paint_func, io_data, str(io_loc)
         )
         self.background_tasks.append(draw_io_future)
+
+        # 🟨 ==== MEM 评分 ====
+        r2_threshold, slope_threshold, window, remove_outlier = 0.5, 0.01, 30, True
 
         # 🟡 ==== 内存基线 ====
         if baseline:
@@ -328,9 +366,12 @@ class Reporter(object):
             # 🟡 ==== 分组统计 ====
             score_group = {}
             for _, row in group_stats.iterrows():
-                part_df = df[df["mode"] == (mode := row["mode"])]
-                part_list = df[df["mode"] == mode]["pss"].tolist()
-                score = Orbis.analyze_mem_score(part_df, column="pss")
+                # 🟨 ==== MEM 评分 ====
+                part_list = df[df["mode"] == (mode := row["mode"])]["pss"].tolist()
+                score = await loop.run_in_executor(
+                    executor, Orbis.analyze_mem_score, part_list,
+                    r2_threshold, slope_threshold, window, remove_outlier
+                )
                 logger.info(f"{mode}-Score: {score}")
 
                 # 🟡 ==== 数据校验 ====
@@ -378,9 +419,9 @@ class Reporter(object):
 
             # 🟨 ==== MEM 评分 ====
             score = await loop.run_in_executor(
-                executor, Orbis.analyze_mem_score, df["pss"].tolist()
+                executor, Orbis.analyze_mem_score, df["pss"].tolist(),
+                r2_threshold, slope_threshold, window, remove_outlier
             )
-            score = Orbis.analyze_mem_score(df, column="pss")
             logger.info(f"Score: {score}")
             score_group = {"MEM": score}
 
@@ -426,10 +467,10 @@ class Reporter(object):
             ]
 
         # 🟡 ==== MEM 渲染 ====
-        plot = await Templater.plot_mem_analysis(df)
-        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = Templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file))
-        save(column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both"))
+        output_path = await loop.run_in_executor(
+            executor, self.plot_mem, group, data_dir, mem_data,
+            trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file)
+        )
 
         # 🟡 ==== MEM 进度 ====
         memories.update({
@@ -471,7 +512,12 @@ class Reporter(object):
         title, timestamp, *_ = joint
 
         frame_merged = self.merge_alignment_frames(gfx_data)
-        _, raw_frames, vsync_sys, vsync_app, roll_ranges, drag_ranges, jank_ranges = frame_merged.values()
+        raw_frames = frame_merged.get("raw_frames", [])
+        vsync_sys = frame_merged.get("vsync_sys", [])
+        vsync_app = frame_merged.get("vsync_app", [])
+        roll_ranges = frame_merged.get("roll_ranges", [])
+        drag_ranges = frame_merged.get("drag_ranges", [])
+        jank_ranges = frame_merged.get("jank_ranges", [])
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = Path(self.assemblage).parent / const.TRACES_DIR / data_dir
@@ -481,7 +527,7 @@ class Reporter(object):
 
         # 🟩 ==== GFX 评分 ====
         score = await loop.run_in_executor(
-            executor, Orbis.analyze_gfx_score, 
+            executor, Orbis.analyze_gfx_score,
             raw_frames, roll_ranges, drag_ranges, jank_ranges, "fps_app"
         )
         logger.info(f"Score: {score}")
@@ -514,16 +560,15 @@ class Reporter(object):
         ]
 
         # 🟢 ==== 分段切割 ====
-        segments = self.split_ranges(raw_frames, roll_ranges, drag_ranges, jank_ranges)
+        segments = await loop.run_in_executor(
+            executor, self.split_ranges, raw_frames, roll_ranges, drag_ranges, jank_ranges
+        )
 
         # 🟢 ==== GFX 渲染 ====
-        plots = await asyncio.gather(
-            *(Templater.plot_gfx_analysis(segment, roll, drag, jank)
-              for segment, roll, drag, jank, *_ in segments)
+        output_path = await loop.run_in_executor(
+            executor, self.plot_gfx, group, data_dir, segments,
+            trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file)
         )
-        output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = Templater.generate_viewers(trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file))
-        save(column(viewer_div, *plots, Spacer(height=10), sizing_mode="stretch_width"))
 
         # 🟢 ==== GFX 进度 ====
         memories.update({

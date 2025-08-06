@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from loguru import logger
-from memnova.orbis import Orbis
 
 
 class Lumix(object):
@@ -325,27 +324,26 @@ class Lumix(object):
     @staticmethod
     def draw_io_metrics(
         io_data: list[dict],
-        output_path: str
+        output_path: str,
+        *_,
+        **kwargs
     ) -> str:
 
         df = pd.DataFrame(io_data)
 
-        # 🔵 ==== 获取评分 ====
-        score = Orbis.analyze_io_score(df)
-
         io_summary = (
-            f"Grade: {score['grade']}\n"
-            f"Score: {score['score']}\n"
-            f"Peak RW: {score['rw_peak_kb']} KB\n"
-            f"RW Std: {score['rw_std_kb']} KB\n"
-            f"RW Burst Ratio: {score['rw_burst_ratio']:.2%}\n"
-            f"Idle Ratio: {score['rw_idle_ratio']:.2%}\n"
-            f"Swap Max: {score.get('swap_max_kb', 0)} KB\n"
-            f"Swap Burst: {score.get('swap_burst_count', 0)} / {score.get('swap_burst_ratio', 0):.2%}\n"
-            f"Sys Burst Events: {score['sys_burst']}\n"
+            f"Grade: {kwargs['grade']}\n"
+            f"Score: {kwargs['score']}\n"
+            f"Peak RW: {kwargs['rw_peak_kb']} KB\n"
+            f"RW Std: {kwargs['rw_std_kb']} KB\n"
+            f"RW Burst Ratio: {kwargs['rw_burst_ratio']:.2%}\n"
+            f"Idle Ratio: {kwargs['rw_idle_ratio']:.2%}\n"
+            f"Swap Max: {kwargs.get('swap_max_kb', 0)} KB\n"
+            f"Swap Burst: {kwargs.get('swap_burst_count', 0)} / {kwargs.get('swap_burst_ratio', 0):.2%}\n"
+            f"Sys Burst Events: {kwargs['sys_burst']}\n"
         )
-        if score["tags"]:
-            io_summary += f"Tags: {', '.join(score['tags'])}"
+        if kwargs["tags"]:
+            io_summary += f"Tags: {', '.join(kwargs['tags'])}"
 
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()

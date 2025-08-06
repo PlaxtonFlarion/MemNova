@@ -101,89 +101,84 @@ class Orbis(object):
 
     @staticmethod
     def analyze_mem_score(
-        df: "pd.DataFrame",
-        column: str = "pss",
+        mem_part: list[float],
         r2_threshold: float = 0.5,
         slope_threshold: float = 0.01,
         window: int = 30,
         remove_outlier: bool = True
     ) -> dict:
         """
-        分析一组时间序列内存数据的变化趋势、稳定性与结构特征，并返回结构化评分结果。
+        分析一组内存采样数据的变化趋势、稳定性与结构特征，返回结构化评分结果。
 
         Parameters
         ----------
-        df : pandas.DataFrame
-            包含原始内存采样数据的表格，必须包含指定的数值列。
-
-        column : str, optional
-            指定用于分析的字段名称，默认使用 "pss" 列作为指标。
+        mem_part : list[float]
+            内存采样的原始时间序列数据，一般为某段时间内的 PSS 或 RSS 值。
 
         r2_threshold : float, optional
-            趋势判定中线性拟合优度的阈值，低于此值将视为无明显趋势，默认值为 0.5。
+            判定趋势拟合优度的阈值，R² 低于该值将视为无明显趋势，默认值为 0.5。
 
         slope_threshold : float, optional
-            趋势斜率判定的阈值，控制上升或下降趋势的灵敏度，默认值为 0.01。
+            判定线性趋势方向的斜率阈值，低于该值将视为稳定趋势，默认值为 0.01。
 
         window : int, optional
-            滑动窗口的大小，用于局部趋势拟合分析，默认值为 30。
+            滑动窗口大小，用于计算局部斜率变化趋势，默认值为 30。
 
         remove_outlier : bool, optional
-            是否启用异常值剔除，默认启用。通过 Z-Score 筛选高离群点，提升分析稳定性。
+            是否启用异常值剔除，通过 Z-Score 剔除超过 ±3 的离群点，默认启用。
 
         Returns
         -------
         result : dict
-            返回一个包含趋势判定、评分、波动性、多项式拟合与窗口斜率等字段的字典。
-            字段说明如下：
+            返回结构化的趋势评分字典，字段说明如下：
 
             - trend : str
-                趋势类型（如 Upward、Stable、Wave、Downward 等）
+                趋势类型，包括 Upward ↑、Downward ↓、Stable →、Wave ~ 等。
 
             - trend_score : float
-                趋势得分，反映趋势显著性和拟合程度。
+                趋势得分，范围 [-1.0, 1.0]，反映趋势强度与方向性。
 
             - jitter_index : float
-                抖动指数，衡量采样点的波动性，越大表示越不稳定。
+                抖动指数，衡量数据的波动幅度，值越大表示不稳定性越高。
 
             - r_squared : float
-                线性拟合的决定系数 R²，越接近 1 越说明趋势稳定。
+                线性拟合的决定系数 R²，用于量化趋势拟合优度。
 
             - slope : float
-                拟合的线性斜率，表示变化速率的方向与幅度。
+                拟合直线的斜率，正值表示上升，负值表示下降。
 
             - avg, max, min : float
-                当前数据的均值、最大值与最小值。
+                内存数据的均值、最大值与最小值，单位与输入一致。
 
             - color : str
-                根据趋势类型自动分配的十六进制颜色代码。
+                趋势对应的推荐颜色，用于图表高亮或 UI 渲染。
 
             - poly_trend : str
-                多项式趋势类型（如 U-shape、∩-shape、Linear ~ 等）。
+                多项式趋势形态标识（如 U-shape ↑↓、∩-shape ↓↑、Linear ~）。
 
             - poly_r2 : float
-                多项式拟合的 R² 指标，用于衡量非线性趋势效果。
+                二阶多项式拟合的决定系数 R²，反映非线性趋势拟合效果。
 
             - poly_coef : list[float]
-                多项式系数（2阶），反映曲线形态。
+                多项式拟合的系数列表 [a, b, c]，对应公式 ax² + bx + c。
 
             - window_slope : float
-                滑动窗口下所有子区间的平均斜率。
+                滑动窗口中所有局部斜率的平均值。
 
             - window_slope_max : float
-                滑动窗口中最大斜率值，体现局部剧烈上升趋势。
+                滑动窗口中观察到的最大上升斜率。
 
             - window_slope_min : float
-                滑动窗口中最小斜率值，体现局部剧烈下降趋势。
+                滑动窗口中观察到的最大下降斜率。
 
             - outlier_count : int
-                被识别并剔除的异常值数量。
+                被剔除的异常采样点数量，便于评估数据清洗情况。
 
         Notes
         -----
-        - 该方法适用于周期性采样的内存使用数据，要求采样频率相对均匀。
-        - 趋势判定主要依赖线性回归与拟合优度，结合多项式拟合增强非线性识别能力。
-        - 抖动指数、窗口斜率等指标可辅助分析波动性与短期不稳定性。
+        - 建议输入等间隔采样的内存使用序列，采样长度不少于 10。
+        - 若输入数据波动剧烈或噪声较多，开启异常剔除可提升趋势识别准确性。
+        - 趋势评分可作为内存泄漏、回收抖动等问题的辅助判据。
         """
 
         # 🟨 ==== 默认结果 ====
@@ -207,12 +202,10 @@ class Orbis(object):
         }
 
         # 🟨 ==== 数据校验 ====
-        df = df.copy()
-
-        if column not in df or df[column].isnull().any():
+        if np.isnan(values := np.array(mem_part, dtype=float)).any():
             return {"trend": "Invalid Data", **result}
 
-        if len(values := df[column].to_numpy()) < 10:
+        if len(values) < 10:
             return {"trend": "Few Data", **result}
 
         # 🟨 ==== 异常剔除 ====
@@ -561,80 +554,80 @@ class Orbis(object):
 
     @staticmethod
     def analyze_io_score(
-        df: "pd.DataFrame",
+        io_data: list[dict],
         rw_peak_threshold: int = 102400,
-        idle_threshold=10,
+        idle_threshold: int = 10,
         swap_threshold: int = 10240
     ) -> dict:
         """
-        分析 I/O 数据的读写行为、波动性、Swap 使用和系统调用，生成风险项与评分等级。
+        分析一组 I/O 指标数据的性能表现，包括读写行为、Swap 使用和系统调用波动，并生成评分与等级。
 
         Parameters
         ----------
-        df : pandas.DataFrame
-            含原始 I/O 统计信息的数据表，需包含读写字节数、系统调用次数与 Swap 信息等列。
+        io_data : list of dict
+            包含原始 I/O 采样数据的列表，每个字典表示一次采样结果，需包含读写字节数、Swap、系统调用等字段。
 
         rw_peak_threshold : int, optional
-            读写峰值的判定阈值（单位：字节），超过此值将视为异常，默认值为 102400。
+            读写峰值阈值（单位：字节），超过该值会触发 RW 高峰惩罚，默认值为 102400。
 
-        idle_threshold : int or float, optional
-            判定空闲周期的 I/O 活动阈值（单位：字节），低于此值将计为 Idle，默认值为 10。
+        idle_threshold : int, optional
+            判定空闲状态的 I/O 活动阈值（单位：字节），低于此值的周期将视为 Idle，默认值为 10。
 
         swap_threshold : int, optional
-            Swap 使用量的判定阈值（单位：KB），超过此值认为发生 Swap 爆发，默认值为 10240。
+            Swap 使用量的爆发阈值（单位：KB），超过该值将被判定为 Swap 爆发，默认值为 10240。
 
         Returns
         -------
         result : dict
-            返回包含评分、风险标签与各类指标的字典结果，字段说明如下：
+            包含 I/O 评估结果的结构化字典，字段说明如下：
 
             - swap_status : str
-                Swap 状态标签，若超过阈值将标记为异常（如 "FAIL"）。
+                Swap 状态标记（如 PASS / FAIL），用于快速判断是否存在异常。
 
             - swap_max_kb : float
-                Swap 最大使用量（KB），用于评估 Swap 影响程度。
+                采样周期内观察到的最大 Swap 使用量（单位：KB）。
 
             - swap_burst_ratio : float
-                Swap 爆发比例，即采样点中 Swap 超阈值的占比。
+                Swap 爆发比例，表示超过阈值的采样点占比。
 
             - swap_burst_count : int
-                Swap 爆发的采样次数。
+                Swap 爆发的总次数（即超阈值的点数）。
 
             - rw_peak_kb : float
-                单周期最大读写字节数（KB），反映带宽峰值。
+                读写带宽的最大瞬时值（单位：KB）。
 
             - rw_std_kb : float
-                读写数据的标准差（KB），用于衡量读写波动性。
+                读写带宽的波动程度（标准差，单位：KB）。
 
             - rw_burst_ratio : float
-                读写爆发段比例，反映带宽使用的集中度。
+                RW 爆发段比例，即带宽瞬时值超出波动阈值的占比。
 
             - rw_idle_ratio : float
-                空闲占比（无有效 I/O 活动），用于评估资源利用率。
+                Idle 周期占比，即 RW 活动较低的时间段占比。
 
             - sys_burst : float
-                系统调用突变事件次数，基于系统调用剧烈变化计算。
+                系统调用突变事件的总数（读+写）。
 
             - sys_burst_events : int
-                总系统突变次数（syscr、syscw 的异常点计数）。
+                系统突变的采样点数量，表示调用量异常剧增的事件频次。
 
-            - tags : list[str]
-                所触发的风险标签（如 rw_peak_high、swap_burst 等）。
+            - tags : list of str
+                所触发的风险标签，用于识别哪些维度存在异常（如 rw_burst、swap_burst 等）。
 
-            - risk : list[str]
-                人类可读的风险提示文本，用于展示在报告中。
+            - risk : list of str
+                对应标签的风险描述文本，适用于日志与前端展示。
 
             - score : float
-                最终评分（0~100），越高代表 I/O 越健康。
+                总评分（0~100），由各异常项的扣分总和决定。
 
             - grade : str
-                分数等级（S~E），用于直观表示性能健康水平。
+                评分等级（S~E），用于表示整体 I/O 健康度。
 
         Notes
         -----
-        - 建议用于后台任务、数据库读写、应用冷启动等 I/O 密集型场景的性能分析。
-        - 若开启 swap，建议重点关注 swap_max_kb 与 swap_burst_ratio。
-        - 若系统频繁空闲或爆发，rw_idle_ratio 与 rw_burst_ratio 可作为优化指标。
+        - 建议输入已按照时间顺序排列的原始 I/O 数据，且包含完整字段。
+        - 差值处理采用 `.diff()` 提取周期变化值，因此首个点不参与计算。
+        - 分数评估体系采用惩罚累计机制，初始分数为 100，逐项扣除异常项得分。
         """
 
         # 🟦 ==== 默认结果 ====
@@ -655,7 +648,7 @@ class Orbis(object):
             "grade": "S"
         }
 
-        df = df.copy()
+        df = pd.DataFrame(io_data)
 
         # 🟦 ==== 差值处理，避免链式赋值 ====
         io_cols = ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]
