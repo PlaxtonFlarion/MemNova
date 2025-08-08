@@ -281,7 +281,10 @@ class Reporter(object):
         return formatted
 
     @staticmethod
-    def plot_mem(group: str, data_dir: str, task_list: list[dict], *args, **__) -> str:
+    def plot_mem(group: str, data_dir: str, task_list: list, *args, **__) -> str:
+        """
+        生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
+        """
         plot = Templater.plot_mem_analysis(task_list)
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
@@ -293,7 +296,10 @@ class Reporter(object):
         return output_path
 
     @staticmethod
-    def plot_gfx(group: str, data_dir: str, task_list: list[tuple], *args, **__) -> str:
+    def plot_gfx(group: str, data_dir: str, task_list: list, *args, **__) -> str:
+        """
+        生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
+        """
         plots = []
         for segment, roll, drag, jank, *_ in task_list:
             p = Templater.plot_gfx_analysis(segment, roll, drag, jank)
@@ -340,7 +346,7 @@ class Reporter(object):
         io_loc = Path(group) / f"{head}_io.png"
 
         # 🟦 ==== I/O 评分 ====
-        rw_peak_threshold, idle_threshold, swap_threshold = 102400, 102400, 10240
+        rw_peak_threshold, idle_threshold, swap_threshold = 102400, 10, 10240
         io_score = await loop.run_in_executor(
             executor, Orbis.analyze_io_score, io_data,
             rw_peak_threshold, idle_threshold, swap_threshold
