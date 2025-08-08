@@ -12,15 +12,11 @@ import json
 import typing
 import asyncio
 import aiosqlite
+from memnova import const
 
 
 class Cubicle(object):
     """Cubicle"""
-
-    joint_data_table = "joint_data"
-    mem_data_table = "mem_data"
-    gfx_data_table = "gfx_data"
-    io_data_table = "io_data"
 
     @staticmethod
     async def initialize_tables(
@@ -30,7 +26,31 @@ class Cubicle(object):
         timestamp: str,
         payload: dict
     ) -> typing.Any:
+        """
+        初始化四类数据表并写入联合元信息的首条记录。
 
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            已连接的异步 SQLite 连接。
+
+        data_dir : str
+            任务数据目录名（同一任务的分组键）。
+
+        title : str
+            任务标题或显示名称。
+
+        timestamp : str
+            任务起始时间，建议使用 YYYY-MM-DD HH:MM:SS。
+
+        payload : dict
+            设备元信息字典，需包含 brand、model、release、serialno 等键。
+
+        Returns
+        -------
+        Any
+            插入联合表后的执行结果（通常为 None，取决于执行器行为）。
+        """
         await asyncio.gather(
             Cubicle.joint_table(db), Cubicle.mem_table(db), Cubicle.gfx_table(db), Cubicle.io_table(db)
         )
@@ -38,7 +58,20 @@ class Cubicle(object):
 
     @staticmethod
     async def joint_table(db: "aiosqlite.Connection") -> typing.Any:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.joint_data_table} (
+        """
+        创建联合元信息表，若不存在则新建。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            已连接的异步 SQLite 连接。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {const.JOINT_DATA_TABLE} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             title TEXT,
@@ -47,7 +80,7 @@ class Cubicle(object):
             model TEXT,
             release TEXT,
             serialno TEXT)''')
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def insert_joint(
@@ -56,8 +89,33 @@ class Cubicle(object):
         title: str,
         timestamp: str,
         payload: dict,
-    ):
-        await db.execute(f'''INSERT INTO {Cubicle.joint_data_table} (
+    ) -> typing.Any:
+        """
+        向联合元信息表插入一条任务级元信息记录。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        title : str
+            任务标题。
+
+        timestamp : str
+            任务时间戳（YYYY-MM-DD HH:MM:SS）。
+
+        payload : dict
+            设备信息：brand、model、release、serialno。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''INSERT INTO {const.JOINT_DATA_TABLE} (
             data_dir,
             title,
             timestamp,
@@ -74,10 +132,26 @@ class Cubicle(object):
                 payload["serialno"]
             )
         )
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def query_joint(db: "aiosqlite.Connection", data_dir: str) -> list[tuple]:
+        """
+        按 data_dir 查询联合元信息，返回任务级元数据。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        Returns
+        -------
+        list of tuple
+            包含 (title, timestamp, brand, model, release, serialno) 的结果集。
+        """
         sql = f"""
             SELECT
                 title,
@@ -86,7 +160,7 @@ class Cubicle(object):
                 model,
                 release,
                 serialno
-            FROM {Cubicle.joint_data_table}
+            FROM {const.JOINT_DATA_TABLE}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:
@@ -95,8 +169,21 @@ class Cubicle(object):
     # Notes: ======================== MEM ========================
 
     @staticmethod
-    async def mem_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.mem_data_table} (
+    async def mem_table(db: "aiosqlite.Connection") -> typing.Any:
+        """
+        创建内存明细表，若不存在则新建。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {const.MEM_DATA_TABLE} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -130,7 +217,7 @@ class Cubicle(object):
             egl_mtrack REAL,
             gl_mtrack REAL,
             unknown REAL)''')
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def insert_mem(
@@ -138,9 +225,30 @@ class Cubicle(object):
         data_dir: str,
         label: str,
         payload: dict
-    ) -> None:
+    ) -> typing.Any:
+        """
+        插入一条内存采样记录（包含标注与明细分区）。
 
-        await db.execute(f'''INSERT INTO {Cubicle.mem_data_table} (
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        label : str
+            任务或应用标签。
+
+        payload : dict
+            结构化内存数据，包含 mark/summary/meminfo 子字典。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''INSERT INTO {const.MEM_DATA_TABLE} (
             data_dir,
             label,
             timestamp,
@@ -206,10 +314,26 @@ class Cubicle(object):
                 payload["meminfo"]["Unknown"]
             )
         )
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def query_mem(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+        """
+        按 data_dir 查询内存采样核心字段，按时间升序返回。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        Returns
+        -------
+        list of dict
+            每条记录包含 timestamp、adj、activity、mode、summary_*、pss/rss/uss/swap 等。
+        """
         sql = f"""
             SELECT
                 timestamp,
@@ -223,7 +347,7 @@ class Cubicle(object):
                 rss,
                 uss,
                 swap
-            FROM {Cubicle.mem_data_table}
+            FROM {const.MEM_DATA_TABLE}
             WHERE data_dir = ? AND pss != ''
             ORDER BY timestamp ASC
         """
@@ -235,8 +359,21 @@ class Cubicle(object):
     # Notes: ======================== GFX ========================
 
     @staticmethod
-    async def gfx_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.gfx_data_table} (
+    async def gfx_table(db: "aiosqlite.Connection") -> typing.Any:
+        """
+        创建图形帧数据表，若不存在则新建。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {const.GFX_DATA_TABLE} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -248,7 +385,7 @@ class Cubicle(object):
             roll_ranges TEXT,
             drag_ranges TEXT,
             jank_ranges TEXT)''')
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def insert_gfx(
@@ -257,9 +394,33 @@ class Cubicle(object):
         label: str,
         timestamp: str,
         payload: dict
-    ) -> None:
+    ) -> typing.Any:
+        """
+        插入一条图形时序记录（含帧、VSYNC、滚动/拖拽/掉帧区间）。
 
-        await db.execute(f'''INSERT INTO {Cubicle.gfx_data_table} (
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        label : str
+            任务或应用标签。
+
+        timestamp : str
+            采样时间（YYYY-MM-DD HH:MM:SS）。
+
+        payload : dict
+            已序列化为 JSON 的字段：metadata/raw_frames/vsync_sys/vsync_app/roll/drag/jank。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''INSERT INTO {const.GFX_DATA_TABLE} (
             data_dir,
             label,
             timestamp,
@@ -282,10 +443,26 @@ class Cubicle(object):
                 payload["jank_ranges"]
             )
         )
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def query_gfx(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+        """
+        按 data_dir 查询图形时序数据，并将 JSON 字段反序列化为 Python 对象。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        Returns
+        -------
+        list of dict
+            每条包含 metadata、raw_frames、vsync_sys、vsync_app、roll_ranges、drag_ranges、jank_ranges。
+        """
         sql = f"""
             SELECT
                 metadata,
@@ -295,7 +472,7 @@ class Cubicle(object):
                 roll_ranges,
                 drag_ranges,
                 jank_ranges
-            FROM {Cubicle.gfx_data_table}
+            FROM {const.GFX_DATA_TABLE}
             WHERE data_dir = ?
         """
         async with db.execute(sql, (data_dir,)) as cursor:
@@ -316,8 +493,21 @@ class Cubicle(object):
     # Notes: ======================== I/O ========================
 
     @staticmethod
-    async def io_table(db: "aiosqlite.Connection") -> None:
-        await db.execute(f'''CREATE TABLE IF NOT EXISTS {Cubicle.io_data_table} (
+    async def io_table(db: "aiosqlite.Connection") -> typing.Any:
+        """
+        创建 I/O 数据表，若不存在则新建。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''CREATE TABLE IF NOT EXISTS {const.IO_DATA_TABLE} (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data_dir TEXT,
             label TEXT,
@@ -330,7 +520,7 @@ class Cubicle(object):
             read_bytes INTEGER,
             write_bytes INTEGER,
             cancelled_write_bytes INTEGER)''')
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def insert_io(
@@ -339,9 +529,33 @@ class Cubicle(object):
         label: str,
         timestamp: str,
         payload: dict
-    ) -> None:
+    ) -> typing.Any:
+        """
+        插入一条 I/O 采样记录。
 
-        await db.execute(f'''INSERT INTO {Cubicle.io_data_table} (
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        label : str
+            任务或应用标签。
+
+        timestamp : str
+            采样时间（YYYY-MM-DD HH:MM:SS）。
+
+        payload : dict
+            I/O 指标字典：swap、rchar、wchar、syscr、syscw、read_bytes、write_bytes、cancelled_write_bytes。
+
+        Returns
+        -------
+        Any
+            执行结果（提交成功后通常为 None）。
+        """
+        await db.execute(f'''INSERT INTO {const.IO_DATA_TABLE} (
             data_dir,
             label,
             timestamp,
@@ -366,10 +580,26 @@ class Cubicle(object):
                 payload["cancelled_write_bytes"]
             )
         )
-        await db.commit()
+        return await db.commit()
 
     @staticmethod
     async def query_io(db: "aiosqlite.Connection", data_dir: str) -> list[dict]:
+        """
+        按 data_dir 查询 I/O 序列数据，按时间升序返回。
+
+        Parameters
+        ----------
+        db : aiosqlite.Connection
+            异步数据库连接。
+
+        data_dir : str
+            任务数据目录名。
+
+        Returns
+        -------
+        list of dict
+            每条记录包含 timestamp、swap、rchar、wchar、syscr、syscw、read_bytes、write_bytes。
+        """
         sql = f"""
             SELECT
                 timestamp,
@@ -380,7 +610,7 @@ class Cubicle(object):
                 syscw,
                 read_bytes,
                 write_bytes
-            FROM {Cubicle.io_data_table}
+            FROM {const.IO_DATA_TABLE}
             WHERE data_dir = ?
             ORDER BY timestamp ASC
         """

@@ -153,7 +153,8 @@ class Device(object):
         """
         cmd = self.__initial + [
             "shell",
-            f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; dumpsys meminfo {package}; echo ====EOF===="
+            f"echo ====I/O====; cat /proc/{pid}/io; echo ====EOF====; "
+            f"echo ====MEM====; dumpsys meminfo {package}; echo ====EOF===="
         ]
         return await Terminal.cmd_line(cmd)
 

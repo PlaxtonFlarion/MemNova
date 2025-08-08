@@ -21,6 +21,9 @@ class Terminal(object):
 
     @staticmethod
     async def cmd_line(cmd: list[str], transmit: typing.Optional[bytes] = None) -> typing.Optional[str]:
+        """
+        执行异步子进程命令并返回输出结果，支持传入数据流。
+        """
         logger.debug(cmd)
 
         transports = await asyncio.create_subprocess_exec(
@@ -37,6 +40,9 @@ class Terminal(object):
 
     @staticmethod
     async def cmd_link(cmd: list[str]) -> "asyncio.subprocess.Process":
+        """
+        执行异步子进程命令并返回进程对象，便于后续交互。
+        """
         logger.debug(cmd)
 
         transports = await asyncio.create_subprocess_exec(
@@ -48,6 +54,9 @@ class Terminal(object):
 
     @staticmethod
     async def cmd_line_shell(cmd: str, transmit: typing.Optional[bytes] = None) -> typing.Any:
+        """
+        通过 Shell 执行异步命令并返回输出结果，支持传入数据流。
+        """
         logger.debug(cmd)
 
         transports = await asyncio.create_subprocess_shell(
@@ -64,6 +73,9 @@ class Terminal(object):
 
     @staticmethod
     async def cmd_link_shell(cmd: str) -> "asyncio.subprocess.Process":
+        """
+        通过 Shell 执行异步命令并返回进程对象，便于后续交互。
+        """
         logger.debug(cmd)
 
         transports = await asyncio.create_subprocess_shell(

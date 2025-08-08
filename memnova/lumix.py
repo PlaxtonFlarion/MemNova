@@ -29,7 +29,28 @@ class Lumix(object):
         *_,
         **kwargs
     ) -> str:
+        """
+        绘制内存使用时序图（PSS/RSS/USS 及堆叠内存区），并保存为图片文件。
 
+        Parameters
+        ----------
+        mem_data : list[dict]
+            内存数据列表，每条记录包含时间戳、内存值（PSS、RSS、USS）、模式（前台/后台）、堆内存等信息。
+
+        output_path : str
+            输出图片的保存路径（包含文件名和扩展名）。
+
+        Returns
+        -------
+        str
+            保存的图片文件路径。
+
+        Notes
+        -----
+        - 图表包含 PSS 主曲线、RSS/USS 辅助曲线、滑动平均线，以及 Java Heap/Native Heap/Graphics 堆叠区。
+        - 前台/后台区块以不同底色区分，并标注均值带、极值点。
+        - 图例由主曲线与堆叠区两部分构成，评分信息显示在图表左上角。
+        """
         df = pd.DataFrame(mem_data)
 
         df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
@@ -211,7 +232,44 @@ class Lumix(object):
         *_,
         **kwargs
     ) -> str:
+        """
+        绘制帧耗时与帧率分布图，并高亮滚动、拖拽及掉帧区域，输出为图片文件。
 
+        Parameters
+        ----------
+        raw_frames : list[dict]
+            原始帧数据列表，每条记录包含时间戳（毫秒）、帧耗时（毫秒）等信息。
+
+        vsync_sys : list[dict]
+            系统层 FPS 采样数据列表，每条记录包含 FPS 值。
+
+        vsync_app : list[dict]
+            应用层 FPS 采样数据列表，每条记录包含 FPS 值。
+
+        roll_ranges : list[dict]
+            滚动（Scroll）区间列表，每项包含起止时间戳（毫秒）。
+
+        drag_ranges : list[dict]
+            拖拽（Drag）区间列表，每项包含起止时间戳（毫秒）。
+
+        jank_ranges : list[dict]
+            掉帧（Jank）区间列表，每项包含起止时间戳（毫秒）。
+
+        output_path : str
+            输出图片的保存路径（包含文件名和扩展名）。
+
+        Returns
+        -------
+        str
+            保存的图片文件路径。
+
+        Notes
+        -----
+        - 主折线为帧耗时（ms），附带平均线、最大耗时线及 16.67ms 基准线（对应 60 FPS）。
+        - 附加多帧率参考线（30/45/90/120 FPS）用于快速对比性能表现。
+        - 滚动、拖拽、掉帧区间以不同颜色背景高亮标识。
+        - 左上角展示系统层与应用层 FPS 的均值、最大值、评分与等级。
+        """
         timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
         durations = [f["duration_ms"] for f in raw_frames]
         fps_sys = [f["fps"] for f in vsync_sys]
@@ -328,7 +386,29 @@ class Lumix(object):
         *_,
         **kwargs
     ) -> str:
+        """
+        绘制 I/O 读写与系统调用的时间序列图，支持多指标对比和性能评分展示。
 
+        Parameters
+        ----------
+        io_data : list[dict]
+            I/O 采样数据列表，每条记录包含时间戳、读写字节数、字符数、系统调用次数等。
+
+        output_path : str
+            输出图片的保存路径（包含文件名和扩展名）。
+
+        Returns
+        -------
+        str
+            保存的图片文件路径。
+
+        Notes
+        -----
+        - 主轴（左）显示读写字节量变化（MB/s），含 Read Bytes、Write Bytes、RChar、WChar 四条曲线。
+        - 副轴（右）显示系统调用变化（Count/s），含 Syscr、Syscw 两条曲线。
+        - 评分信息（等级、得分、峰值、抖动、空闲占比、Swap、系统调用爆发等）显示在图表左上角。
+        - 对负值进行归零处理，确保数据可视化的稳定性。
+        """
         df = pd.DataFrame(io_data)
 
         io_summary = (
