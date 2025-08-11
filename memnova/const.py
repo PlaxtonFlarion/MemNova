@@ -35,10 +35,10 @@ Version [bold #FFD75F]{APP_VERSION}[/] :: Licensed software. Authorization requi
 # ========【路径与资源配置】========
 TOTAL_DIR        = f"{APP_DESC}_Library"
 TREE_DIR         = r"Tree"
-TRACES_DIR       = f"{APP_NAME}_traces"
 IMAGES_DIR       = f"{APP_NAME}_images"
 IONICS_DIR       = f"{APP_NAME}_ionics"
 SUMMARY          = r"Summary"
+TRACES           = r"traces"
 DB_FILE          = f"{APP_NAME}_data.db"
 JOINT_DATA_TABLE = r"joint_data"
 MEM_DATA_TABLE   = r"mem_data"
