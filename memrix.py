@@ -145,7 +145,7 @@ class Memrix(object):
         self.file_insert = 0
         self.file_folder = team_name
 
-        traces = reporter.branch(self.file_folder)
+        traces = await reporter.branch(self.file_folder)
 
         format_before_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(reporter.before_time)
