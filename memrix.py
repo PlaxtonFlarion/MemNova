@@ -145,6 +145,12 @@ class Memrix(object):
         self.file_insert = 0
         self.file_folder = team_name
 
+        if not (traces := Path(reporter.assemblage) / const.SUMMARY / self.file_folder / const.TRACES).exists():
+            traces.mkdir(parents=True, exist_ok=True)
+
+        log_file = os.path.join(reporter.assemblage, const.SUMMARY, self.file_folder, f"{self.file_folder}.log")
+        logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+
         format_before_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(reporter.before_time)
         )
@@ -171,12 +177,6 @@ class Memrix(object):
                 "file": [self.file_folder]
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
-
-        if not (traces := Path(reporter.assemblage) / const.SUMMARY / self.file_folder / const.TRACES).exists():
-            traces.mkdir(parents=True, exist_ok=True)
-
-        log_file = os.path.join(reporter.assemblage, const.SUMMARY, self.file_folder, f"{self.file_folder}.log")
-        logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
         
         return traces
 
@@ -492,14 +492,14 @@ class Memrix(object):
         reporter = Reporter(
             self.src_total_place, self.nodes, prefix := "Storm" if self.storm else "Sleek", self.align
         )
+        
+        team_name = f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        traces = await self.refresh(device, reporter, self.focus, team_name, prefix)
 
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
-
-        team_name = f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, reporter, self.focus, team_name, prefix)
-
+        
         if self.title:
             safe = re.sub(r'[\\/:"*?<>|]+', '', self.title)
             head, cur_title = f"{safe[:11]}_{now_time}", safe[:11]
