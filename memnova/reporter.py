@@ -30,7 +30,6 @@ from jinja2 import (
     Environment, FileSystemLoader
 )
 from concurrent.futures import ProcessPoolExecutor
-from engine.tinker import Period
 from memcore.cubicle import Cubicle
 from memcore.profile import Align
 from memnova.lumix import Lumix
@@ -54,12 +53,10 @@ class Reporter(object):
         if not (group_dir := Path(self.group_dir)).exists():
             group_dir.mkdir(parents=True, exist_ok=True)
 
-        self.db_file = os.path.join(self.total_dir, const.DB_FILE)
-        self.log_file = os.path.join(self.group_dir, f"{const.APP_NAME}_log_{nodes}.log")
-        self.team_file = os.path.join(self.group_dir, f"{const.APP_NAME}_team_{nodes}.yaml")
         self.assemblage = os.path.join(self.group_dir, f"Report_{Path(self.group_dir).name}")
-
-        logger.add(self.log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        
+        self.db_file = os.path.join(self.assemblage, const.DB_FILE)
+        self.team_file = os.path.join(self.assemblage, f"{const.APP_NAME}_team_{nodes}.yaml")
 
         self.background_tasks: list = []
 
@@ -339,11 +336,11 @@ class Reporter(object):
 
         df = pd.DataFrame(mem_data)
 
-        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = None
         leak_loc = None
         gfx_loc = None
-        io_loc = Path(group) / f"{head}_io.png"
+        io_loc = Path(group) / f"{data_dir}_io.png"
+        log_loc = Path(group) / f"{data_dir}.log"
 
         # 🟦 ==== I/O 评分 ====
         rw_peak_threshold, idle_threshold, swap_threshold = 102400, 10, 10240
@@ -421,7 +418,7 @@ class Reporter(object):
 
         # 🟡 ==== 内存泄漏 ====
         else:
-            leak_loc = Path(group) / f"{head}_leak.png"
+            leak_loc = Path(group) / f"{data_dir}_leak.png"
 
             # 🟨 ==== MEM 评分 ====
             score = await loop.run_in_executor(
@@ -475,7 +472,7 @@ class Reporter(object):
         # 🟡 ==== MEM 渲染 ====
         output_path = await loop.run_in_executor(
             executor, self.plot_mem, group, data_dir, mem_data,
-            trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file)
+            trace_loc, leak_loc, gfx_loc, io_loc, log_loc
         )
 
         # 🟡 ==== MEM 进度 ====
@@ -525,11 +522,11 @@ class Reporter(object):
         drag_ranges = frame_merged.get("drag_ranges", [])
         jank_ranges = frame_merged.get("jank_ranges", [])
 
-        head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
         trace_loc = Path(self.assemblage) / const.SUMMARY / data_dir / const.TRACES
         leak_loc = None
-        gfx_loc = Path(group) / f"{head}_gfx.png"
+        gfx_loc = Path(group) / f"{data_dir}_gfx.png"
         io_loc = None
+        log_loc = Path(group) / f"{data_dir}.log"
 
         # 🟩 ==== GFX 评分 ====
         score = await loop.run_in_executor(
@@ -573,7 +570,7 @@ class Reporter(object):
         # 🟢 ==== GFX 渲染 ====
         output_path = await loop.run_in_executor(
             executor, self.plot_gfx, group, data_dir, segments,
-            trace_loc, leak_loc, gfx_loc, io_loc, Path(self.log_file)
+            trace_loc, leak_loc, gfx_loc, io_loc, log_loc
         )
 
         # 🟢 ==== GFX 进度 ====
