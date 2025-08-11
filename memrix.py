@@ -481,7 +481,7 @@ class Memrix(object):
             self.src_total_place, self.nodes, prefix := "Storm" if self.storm else "Sleek", self.align
         )
         self.file_insert, self.file_folder = 0, f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await reporter.branch(self.file_folder)
+        traces = await reporter.spawn_trace_hub(self.file_folder)
 
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
