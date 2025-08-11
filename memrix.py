@@ -494,7 +494,7 @@ class Memrix(object):
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
 
-        team_name = f"{prefix}_Data_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        team_name = f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await self.refresh(device, reporter, self.focus, team_name, prefix)
 
         if self.title:
