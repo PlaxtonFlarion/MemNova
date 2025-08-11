@@ -136,17 +136,11 @@ class Memrix(object):
         device: "Device",
         reporter: "Reporter",
         package: str,
-        team_name: str,
         prefix: str,
-    ) -> "Path":
+    ) -> None:
         """
         初始化文件信息与标签，记录采样参数，生成摘要数据。
         """
-        self.file_insert = 0
-        self.file_folder = team_name
-
-        traces = await reporter.branch(self.file_folder)
-
         format_before_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(reporter.before_time)
         )
@@ -173,8 +167,6 @@ class Memrix(object):
                 "file": [self.file_folder]
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
-        
-        return traces
 
     async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
         """
@@ -488,14 +480,14 @@ class Memrix(object):
         reporter = Reporter(
             self.src_total_place, self.nodes, prefix := "Storm" if self.storm else "Sleek", self.align
         )
-        
-        team_name = f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
-        traces = await self.refresh(device, reporter, self.focus, team_name, prefix)
+        self.file_insert, self.file_folder = 0, f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        traces = await reporter.branch(self.file_folder)
 
         logger.info(
             f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
         )
-        
+        await self.refresh(device, reporter, self.focus, prefix)
+
         if self.title:
             safe = re.sub(r'[\\/:"*?<>|]+', '', self.title)
             head, cur_title = f"{safe[:11]}_{now_time}", safe[:11]
