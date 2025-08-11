@@ -54,6 +54,8 @@ class Reporter(object):
             group_dir.mkdir(parents=True, exist_ok=True)
 
         self.assemblage = os.path.join(self.group_dir, f"Report_{Path(self.group_dir).name}")
+        if not (assemblage := Path(self.assemblage)).exists():
+            assemblage.mkdir(parents=True, exist_ok=True)
         
         self.db_file = os.path.join(self.assemblage, const.DB_FILE)
         self.team_file = os.path.join(self.assemblage, f"{const.APP_NAME}_team_{nodes}.yaml")
