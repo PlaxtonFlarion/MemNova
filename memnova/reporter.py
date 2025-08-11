@@ -62,6 +62,15 @@ class Reporter(object):
 
         self.background_tasks: list = []
 
+    async def branch(self, file_folder: str) -> "Path":
+        if not (traces := Path(self.assemblage) / const.SUMMARY / file_folder / const.TRACES).exists():
+            traces.mkdir(parents=True, exist_ok=True)
+
+        log_file = os.path.join(self.assemblage, const.SUMMARY, file_folder, f"{file_folder}.log")
+        logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+
+        return traces
+
     async def make_report(self, template: str, *args, **kwargs) -> str:
         """
         基于 Jinja2 模板渲染生成 HTML 报告，带随机文件名并异步写入磁盘。
