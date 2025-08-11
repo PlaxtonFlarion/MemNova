@@ -602,20 +602,20 @@ class Memrix(object):
                     await self.animation_task
                     raise MemrixError(f"Rendering tasks failed")
 
-        self.memories.update({
-            "MSG": (msg := f"Polymerization"),
-            "TMS": f"{time.time() - reporter.before_time:.1f} s"
-        })
-        logger.info(msg)
-        html_file = await reporter.make_report(self.unity_template, **resp)
-        self.memories.update({
-            "MSG": (msg := f"Polymerization Done"),
-            "TMS": f"{time.time() - reporter.before_time:.1f} s"
-        })
-        logger.info(msg)
+                self.memories.update({
+                    "MSG": (msg := f"Polymerization"),
+                    "TMS": f"{time.time() - reporter.before_time:.1f} s"
+                })
+                logger.info(msg)
+                html_file = await reporter.make_report(self.unity_template, **resp)
+                self.memories.update({
+                    "MSG": (msg := f"Polymerization Done"),
+                    "TMS": f"{time.time() - reporter.before_time:.1f} s"
+                })
+                logger.info(msg)
 
-        animation_event.set()
-        await self.animation_task
+                animation_event.set()
+                await self.animation_task
 
         Design.console.print()
         Design.build_file_tree(html_file)
