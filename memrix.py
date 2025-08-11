@@ -175,6 +175,9 @@ class Memrix(object):
         if not (traces := Path(reporter.assemblage) / const.SUMMARY / self.file_folder / const.TRACES).exists():
             traces.mkdir(parents=True, exist_ok=True)
 
+        log_file = os.path.join(reporter.assemblage, const.SUMMARY, self.file_folder, f"{self.file_folder}.log")
+        logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        
         return traces
 
     async def sample_stop(self, reporter: "Reporter", *args, **__) -> None:
