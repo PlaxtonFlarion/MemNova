@@ -62,13 +62,15 @@ class Reporter(object):
 
         self.background_tasks: list = []
 
-    async def branch(self, file_folder: str) -> "Path":
-        if not (traces := Path(self.assemblage) / const.SUMMARY / file_folder / const.TRACES).exists():
-            traces.mkdir(parents=True, exist_ok=True)
-
+    async def spawn_trace_hub(self, file_folder: str) -> "Path":
+        """
+        初始化任务日志文件并创建追踪数据目录，返回追踪目录路径。
+        """
         log_file = os.path.join(self.assemblage, const.SUMMARY, file_folder, f"{file_folder}.log")
         logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
-
+        
+        if not (traces := Path(self.assemblage) / const.SUMMARY / file_folder / const.TRACES).exists():
+            traces.mkdir(parents=True, exist_ok=True)
         return traces
 
     async def make_report(self, template: str, *args, **kwargs) -> str:
