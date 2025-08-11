@@ -145,11 +145,7 @@ class Memrix(object):
         self.file_insert = 0
         self.file_folder = team_name
 
-        if not (traces := Path(reporter.assemblage) / const.SUMMARY / self.file_folder / const.TRACES).exists():
-            traces.mkdir(parents=True, exist_ok=True)
-
-        log_file = os.path.join(reporter.assemblage, const.SUMMARY, self.file_folder, f"{self.file_folder}.log")
-        logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
+        traces = reporter.branch(self.file_folder)
 
         format_before_time = time.strftime(
             "%Y-%m-%d %H:%M:%S", time.localtime(reporter.before_time)
