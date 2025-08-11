@@ -76,7 +76,7 @@ class Reporter(object):
         salt: typing.Callable[[], str] = lambda: "".join(
             random.choices(string.ascii_uppercase + string.digits, k=5)
         )
-        html_file = os.path.join(self.assemblage, f"{const.APP_DESC}_Inform_{salt()}.html")
+        html_file = os.path.join(self.group_dir, f"{const.APP_DESC}_Inform_{salt()}.html")
 
         async with aiofiles.open(html_file, "w", encoding=const.CHARSET) as f:
             await f.write(html)
@@ -490,7 +490,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name)
+                "link": str(Path(self.assemblage).name / Path(const.SUMMARY) / data_dir / Path(output_path).name)
             },
             "evaluate": evaluate,
             "tags": tag_lines
@@ -526,7 +526,7 @@ class Reporter(object):
         jank_ranges = frame_merged.get("jank_ranges", [])
 
         head = f"{title}_{Period.compress_time(timestamp)}" if title else data_dir
-        trace_loc = Path(self.assemblage).parent / const.TRACES_DIR / data_dir
+        trace_loc = Path(self.assemblage) / const.SUMMARY / data_dir / const.TRACES
         leak_loc = None
         gfx_loc = Path(group) / f"{head}_gfx.png"
         io_loc = None
@@ -588,7 +588,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(const.SUMMARY) / data_dir / Path(output_path).name),
+                "link": str(Path(self.assemblage).name / Path(const.SUMMARY) / data_dir / Path(output_path).name),
             },
             "evaluate": evaluate,
             "tags": tag_lines
