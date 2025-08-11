@@ -172,7 +172,7 @@ class Memrix(object):
             }
         await FileAssist.dump_yaml(reporter.team_file, scene)
 
-        if not (traces := Path(reporter.group_dir) / const.TRACES_DIR / self.file_folder).exists():
+        if not (traces := Path(reporter.assemblage) / const.SUMMARY / self.file_folder / const.TRACES).exists():
             traces.mkdir(parents=True, exist_ok=True)
 
         return traces
