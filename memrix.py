@@ -577,7 +577,7 @@ class Memrix(object):
 
         reporter = reporter or Reporter(self.src_total_place, src, dst, self.align)
 
-        for file in [reporter.db_file, reporter.log_file, reporter.team_file]:
+        for file in [reporter.db_file, reporter.team_file]:
             if not Path(file).is_file():
                 raise MemrixError(f"Missing valid data file: {file}")
 
