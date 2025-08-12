@@ -204,36 +204,14 @@ class Parser(object):
         return self.__parse_engine
 
     @staticmethod
-    def parse_integer(value: typing.Any) -> int:
-        """
-        安全解析整数值，失败时返回默认值 0。
-        """
-        try:
-            return int(max(0, value))
-        except TypeError:
-            return 0
-
-    @staticmethod
     def parse_decimal(value: typing.Any) -> float:
         """
         安全解析浮点值，自动将负数归零，失败时返回默认值 0.0。
         """
         try:
-            return round(float(max(0.0, value)), 2)
-        except TypeError:
+            return round(max(0.0, float(value)), 2)
+        except (TypeError, ValueError):
             return 0.0
-
-    @staticmethod
-    def is_valid(val: typing.Any) -> bool:
-        """
-        判断输入值是否为有效配置项。
-        """
-        if val is None:
-            return False
-        if isinstance(val, str) and not val.strip():
-            return False
-        # 数字类型（int/float）都认为是有效的
-        return True
 
 
 if __name__ == '__main__':
