@@ -221,15 +221,11 @@ class Memrix(object):
         # ⛔️ ==== 存储位置 ====
         if self.file_insert:
             Design.console.print()
-            fc = Design.build_file_tree(reporter.group_dir)
+            Design.build_file_tree(reporter.group_dir)
             Design.console.print()
-            Design.Doc.log(
-                f"Usage: [bold #00D787]{const.APP_NAME} --forge [{fc}]{Path(reporter.group_dir).name}[/]"
-            )
+            logger.info(f"Usage: {const.APP_NAME} --forge {Path(reporter.group_dir).name}")
 
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^"
-        )
+        logger.info(f"^*{self.padding} {const.APP_DESC} Engine Close {self.padding}*^")
 
         # ⛔️ ==== 生成报告 ====
         if self.atlas:
@@ -483,9 +479,8 @@ class Memrix(object):
         self.file_insert, self.file_folder = 0, f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await reporter.spawn_trace_hub(self.file_folder)
 
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^"
-        )
+        logger.info(f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^")
+
         await self.refresh(device, reporter, self.focus, prefix)
 
         if self.title:
@@ -535,6 +530,8 @@ class Memrix(object):
             await asyncio.gather(*perfetto.backgrounds)
             await perfetto.replenish()
             await self.data_queue.join()
+
+            # 🏆 ========== 任务收尾 ==========
             await asyncio.gather(
                 watcher, self.sample_stop(reporter, pft_task, gfx_task, animation_event)
             )
@@ -577,9 +574,8 @@ class Memrix(object):
         if not (data_list := team_data.get("file")):
             raise MemrixError(f"No data scenario: {data_list} ...")
 
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Report Start {self.padding}*^"
-        )
+        logger.info(f"^*{self.padding} {const.APP_DESC} Report Start {self.padding}*^")
+
         self.memories = {
             "MSG": "*", "MAX": (total := len(data_list)), "CUR": 0, "TMS": "0.0 s",
         }
@@ -620,9 +616,8 @@ class Memrix(object):
         Design.console.print()
         Design.build_file_tree(html_file)
         Design.console.print()
-        logger.info(
-            f"^*{self.padding} {const.APP_DESC} Report Close {self.padding}*^"
-        )
+        logger.info(f"^*{self.padding} {const.APP_DESC} Report Close {self.padding}*^")
+
         return await self.design.system_disintegrate()
 
 

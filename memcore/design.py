@@ -165,7 +165,7 @@ class Design(object):
         Design.console.print(task_fail)
 
     @staticmethod
-    def build_file_tree(file_path: str) -> str:
+    def build_file_tree(file_path: str) -> None:
         """
         显示树状图。
         """
@@ -223,7 +223,6 @@ class Design(object):
         current_node.add(f"[bold {file_color}]{choice_icon(ext)} {file.name}[/]")
 
         Design.console.print(tree)
-        return file_color
 
     @staticmethod
     async def compile_animation() -> None:
@@ -669,7 +668,7 @@ class Design(object):
         def get_theme_by_mod() -> list:
             if prev == dt:
                 return list(default_theme.values())
-            
+
             return list(random.choice(color_themes).values())
 
         def make_header() -> str:
