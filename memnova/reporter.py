@@ -500,7 +500,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(self.assemblage).name / Path(const.SUMMARY) / data_dir / Path(output_path).name)
+                "link": str(Path(self.assemblage).name / const.SUMMARY / data_dir / Path(output_path).name)
             },
             "evaluate": evaluate,
             "tags": tag_lines
@@ -535,7 +535,7 @@ class Reporter(object):
         drag_ranges = frame_merged.get("drag_ranges", [])
         jank_ranges = frame_merged.get("jank_ranges", [])
 
-        trace_loc = Path(self.assemblage) / const.SUMMARY / data_dir / const.TRACES
+        trace_loc = Path(group) / const.TRACES
         leak_loc = None
         gfx_loc = Path(group) / f"{data_dir}_gfx.png"
         io_loc = None
@@ -598,7 +598,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(self.assemblage).name / Path(const.SUMMARY) / data_dir / Path(output_path).name),
+                "link": str(Path(self.assemblage).name / const.SUMMARY / data_dir / Path(output_path).name),
             },
             "evaluate": evaluate,
             "tags": tag_lines
