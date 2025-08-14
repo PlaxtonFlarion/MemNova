@@ -30,32 +30,32 @@ class Templater(object):
         viewers = [
             {**({
                     "label": "➤ 🛰️Traces 查看", 
-                    "url": f"file:///{trace_loc.name}", 
+                    "url": trace_loc.name, 
                     "color": "#38BDF8"
                 } if trace_loc else {})},
             {**({
-                    "label": "➤ 🧬Leak 查看",
-                    "url": f"file:///{leak_loc.name}",
+                    "label": "➤ 🧬Leak 查看", 
+                    "url": leak_loc.name, 
                     "color": "#F43F5E"
                 } if leak_loc else {})},
             {**({
-                    "label": "➤ 🌊Gfx 查看",
-                    "url": f"file:///{gfx_loc.name}",
+                    "label": "➤ 🌊Gfx 查看", 
+                    "url": gfx_loc.name, 
                     "color": "#A78BFA"
                 } if gfx_loc else {})},
             {**({
-                    "label": "➤ 📈I/O 查看",
-                    "url": f"file:///{io_loc.name}",
+                    "label": "➤ 📈I/O 查看", 
+                    "url": io_loc.name, 
                     "color": "#10B981"
                 } if io_loc else {})},
             {**({
-                     "label": "➤ 📄日志 查看",
-                     "url": f"file:///{log_loc.name}",
-                     "color": "#6366F1"
+                    "label": "➤ 📄日志 查看", 
+                    "url": log_loc.name, 
+                    "color": "#6366F1"
                  } if log_loc else {})},
             {
-                "label": "➤ 🌐UI.Perfetto.dev 查看",
-                "url": f"https://ui.perfetto.dev",
+                "label": "➤ 🌐UI.Perfetto.dev 查看", 
+                "url": f"https://ui.perfetto.dev", 
                 "color": "#F59E42"
             }
         ]
