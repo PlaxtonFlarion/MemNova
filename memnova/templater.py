@@ -202,27 +202,27 @@ class Templater(object):
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 9
-        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "shapes"] = "triangle"
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "shapes"] = "circle"
 
         df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "colors"] = "#91F9E5"  # 前台最小
         df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "sizes"] = 9
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "shapes"] = "inverted_triangle"
+        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "shapes"] = "circle"
 
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"  # 后台最大
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 9
-        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "shapes"] = "diamond"
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
 
         df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "colors"] = "#B3E66B"  # 后台最小
         df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "sizes"] = 9
         df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
 
         df.loc[(df["pss"] == max_value) & (~extreme), "colors"] = max_color  # 全局最大
-        df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 7
-        df.loc[(df["pss"] == max_value) & (~extreme), "shapes"] = "triangle"
+        df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 9
+        df.loc[(df["pss"] == max_value) & (~extreme), "shapes"] = "circle"
 
         df.loc[(df["pss"] == min_value) & (~extreme), "colors"] = min_color  # 全局最小
-        df.loc[(df["pss"] == min_value) & (~extreme), "sizes"] = 7
-        df.loc[(df["pss"] == min_value) & (~extreme), "shapes"] = "inverted_triangle"
+        df.loc[(df["pss"] == min_value) & (~extreme), "sizes"] = 9
+        df.loc[(df["pss"] == min_value) & (~extreme), "shapes"] = "circle"
     
         source = ColumnDataSource(df)
 
