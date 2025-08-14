@@ -56,7 +56,7 @@ class Reporter(object):
         self.assemblage = os.path.join(self.group_dir, f"Report_{Path(self.group_dir).name}")
         if not (assemblage := Path(self.assemblage)).exists():
             assemblage.mkdir(parents=True, exist_ok=True)
-        
+
         self.db_file = os.path.join(self.assemblage, const.DB_FILE)
         self.team_file = os.path.join(self.assemblage, f"{const.APP_NAME}_team_{nodes}.yaml")
 
@@ -68,7 +68,7 @@ class Reporter(object):
         """
         log_file = os.path.join(self.assemblage, const.SUMMARY, file_folder, f"{file_folder}.log")
         logger.add(log_file, level=const.NOTE_LEVEL, format=const.WRITE_FORMAT)
-        
+
         if not (traces := Path(self.assemblage) / const.SUMMARY / file_folder / const.TRACES).exists():
             traces.mkdir(parents=True, exist_ok=True)
         return traces
@@ -124,6 +124,29 @@ class Reporter(object):
         })
 
     # Workflow: ======================== MEM / GFX ========================
+
+    @staticmethod
+    def format_score(
+        score: dict, standard: dict, classes: dict, cfg: dict, exclude: typing.Optional[set] = None
+    ) -> list:
+        """
+        根据字段配置与样式类格式化指标值，用于展示结构化评分文本。
+        """
+        formatted, exclude = [], exclude or set()
+        for k in standard:
+            if k in exclude:
+                logger.info(f"{k} is default key, skipped cfg ...")
+                continue
+            if k in score and k in cfg:
+                field = cfg[k]
+                prefix = f"{prefix}: " if (prefix := field.get("prefix", k)) else ""
+                val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "")
+                factor = field.get("factor", 1)
+                text_val = "-" if val is None else fmt.format(val * factor)
+                formatted.append({
+                    "text": f"{prefix}{text_val}{unit}", "class": classes.get(k, ""), **standard[k]
+                })
+        return formatted
 
     @staticmethod
     def mean_of_field(compilation: list[dict], group: str, field: str) -> typing.Optional[float]:
@@ -270,35 +293,15 @@ class Reporter(object):
         return merged
 
     @staticmethod
-    def format_score(score: dict, standard: dict, classes: dict, cfg: dict, exclude: set = None) -> list:
-        """
-        根据字段配置与样式类格式化指标值，用于展示结构化评分文本。
-        """
-        formatted, exclude = [], exclude or set()
-        for k in standard:
-            if k in exclude:
-                logger.info(f"{k} is default key, skipped cfg ...")
-                continue
-            if k in score and k in cfg:
-                field = cfg[k]
-                prefix = f"{prefix}: " if (prefix := field.get("prefix", k)) else ""
-                val, fmt, unit = score[k], field.get("format", "{}"), field.get("unit", "")
-                factor = field.get("factor", 1)
-                text_val = "-" if val is None else fmt.format(val * factor)
-                formatted.append({
-                    "text": f"{prefix}{text_val}{unit}", "class": classes.get(k, ""), **standard[k]
-                })
-        return formatted
-
-    @staticmethod
-    def plot_mem(group: str, data_dir: str, task_list: list, *args, **kwargs) -> str:
+    def plot_mem(group: str, data_dir: str, task_list: list, *args) -> str:
         """
         生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
         """
-        plot = Templater.plot_mem_analysis(task_list, kwargs.get("extreme", False))
+        *loc, extreme = args
+        plot = Templater.plot_mem_analysis(task_list, extreme)
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
-        viewer_div = Templater.generate_viewers(*args)
+        viewer_div = Templater.generate_viewers(*loc)
 
         layout = column(viewer_div, Spacer(height=10), plot, sizing_mode="stretch_both")
         save(layout)
@@ -306,7 +309,7 @@ class Reporter(object):
         return output_path
 
     @staticmethod
-    def plot_gfx(group: str, data_dir: str, task_list: list, *args, **__) -> str:
+    def plot_gfx(group: str, data_dir: str, task_list: list, *args) -> str:
         """
         生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
         """
@@ -338,6 +341,7 @@ class Reporter(object):
         os.makedirs(
             group := os.path.join(self.assemblage, const.SUMMARY, data_dir), exist_ok=True
         )
+        relatively = Path(Path(self.assemblage).name) / const.SUMMARY / data_dir
 
         # 🟡 ==== 数据查询 ====
         mem_data, io_data, (joint, *_) = await asyncio.gather(
@@ -350,10 +354,10 @@ class Reporter(object):
         df = pd.DataFrame(mem_data)
 
         trace_loc = None
-        leak_loc = None
-        gfx_loc = None
-        io_loc = Path(group) / f"{data_dir}_io.png"
-        log_loc = Path(group) / f"{data_dir}.log"
+        leak_loc  = None
+        gfx_loc   = None
+        io_loc    = Path(group) / f"{data_dir}_io.png"
+        log_loc   = Path(group) / f"{data_dir}.log"
 
         # 🟦 ==== I/O 评分 ====
         rw_peak_threshold, idle_threshold, swap_threshold = 102400, 10, 10240
@@ -380,8 +384,9 @@ class Reporter(object):
             )
 
             # 🟡 ==== 分组统计 ====
-            score_group = {}
+            scores = {}
             for _, row in group_stats.iterrows():
+
                 # 🟨 ==== MEM 评分 ====
                 part_list = df[df["mode"] == (mode := row["mode"])]["pss"].tolist()
                 score = await loop.run_in_executor(
@@ -393,7 +398,7 @@ class Reporter(object):
                 # 🟡 ==== 数据校验 ====
                 if not row["count"] or pd.isna(row["avg_pss"]):
                     continue
-                score_group[mode] = score
+                scores[mode] = score
 
                 # 🟡 ==== 定制评价 ====
                 standard = self.align.get_standard("mem", "base")
@@ -439,7 +444,7 @@ class Reporter(object):
                 r2_threshold, slope_threshold, window
             )
             logger.info(f"Score: {score}")
-            score_group = {"MEM": score}
+            scores = {"MEM": score}
 
             # 🟡 ==== MEM 绘图 ====
             paint_func = partial(Lumix.draw_mem_metrics, **score)
@@ -483,10 +488,9 @@ class Reporter(object):
             ]
 
         # 🟡 ==== MEM 渲染 ====
-        plot_func = partial(self.plot_mem, extreme=baseline)
         output_path = await loop.run_in_executor(
-            executor, plot_func, group, data_dir, mem_data,
-            trace_loc, leak_loc, gfx_loc, io_loc, log_loc
+            executor, self.plot_mem, group, data_dir, mem_data,
+            trace_loc, leak_loc, gfx_loc, io_loc, log_loc, baseline
         )
 
         # 🟡 ==== MEM 进度 ====
@@ -498,10 +502,10 @@ class Reporter(object):
         logger.info(msg)
 
         return {
-            **score_group,
+            **scores,
             "subtitle": {
                 "text": title or data_dir,
-                "link": os.path.join(Path(self.assemblage).name, const.SUMMARY, data_dir, Path(output_path).name)
+                "link": str(relatively / Path(output_path).name),
             },
             "evaluate": evaluate,
             "tags": tag_lines
@@ -519,6 +523,7 @@ class Reporter(object):
         os.makedirs(
             group := os.path.join(self.assemblage, const.SUMMARY, data_dir), exist_ok=True
         )
+        relatively = Path(Path(self.assemblage).name) / const.SUMMARY / data_dir
 
         # 🟢 ==== 数据查询 ====
         gfx_data, (joint, *_) = await asyncio.gather(
@@ -529,18 +534,18 @@ class Reporter(object):
         title, timestamp, *_ = joint
 
         frame_merged = self.merge_alignment_frames(gfx_data)
-        raw_frames = frame_merged.get("raw_frames", [])
-        vsync_sys = frame_merged.get("vsync_sys", [])
-        vsync_app = frame_merged.get("vsync_app", [])
-        roll_ranges = frame_merged.get("roll_ranges", [])
-        drag_ranges = frame_merged.get("drag_ranges", [])
-        jank_ranges = frame_merged.get("jank_ranges", [])
+        raw_frames   = frame_merged.get("raw_frames", [])
+        vsync_sys    = frame_merged.get("vsync_sys", [])
+        vsync_app    = frame_merged.get("vsync_app", [])
+        roll_ranges  = frame_merged.get("roll_ranges", [])
+        drag_ranges  = frame_merged.get("drag_ranges", [])
+        jank_ranges  = frame_merged.get("jank_ranges", [])
 
         trace_loc = Path(group) / const.TRACES
-        leak_loc = None
-        gfx_loc = Path(group) / f"{data_dir}_gfx.png"
-        io_loc = None
-        log_loc = Path(group) / f"{data_dir}.log"
+        leak_loc  = None
+        gfx_loc   = Path(group) / f"{data_dir}_gfx.png"
+        io_loc    = None
+        log_loc   = Path(group) / f"{data_dir}.log"
 
         # 🟩 ==== GFX 评分 ====
         score = await loop.run_in_executor(
@@ -548,7 +553,7 @@ class Reporter(object):
             raw_frames, roll_ranges, drag_ranges, jank_ranges, "fps_app"
         )
         logger.info(f"Score: {score}")
-        score_group = {"GFX": score}
+        scores = {"GFX": score}
 
         # 🟢 ==== GFX 绘图 ====
         paint_func = partial(Lumix.draw_gfx_metrics, **score)
@@ -596,10 +601,10 @@ class Reporter(object):
         logger.info(msg)
 
         return {
-            **score_group,
+            **scores,
             "subtitle": {
                 "text": title or data_dir,
-                "link": os.path.join(Path(self.assemblage).name, const.SUMMARY, data_dir, Path(output_path).name)
+                "link": str(relatively / Path(output_path).name),
             },
             "evaluate": evaluate,
             "tags": tag_lines

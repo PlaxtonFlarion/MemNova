@@ -67,7 +67,7 @@ class Memrix(object):
         self.remote: dict = remote or {}  # workflow: 远程全局配置
 
         self.storm, self.sleek, self.forge, *_ = args
-        _, _, _, self.focus, self.nodes, self.title, self.atlas, self.layer, *_ = args
+        _, _, _, self.focus, self.scene, self.title, self.atlas, self.layer, *_ = args
 
         self.src_opera_place: str = kwargs["src_opera_place"]
         self.src_total_place: str = kwargs["src_total_place"]
@@ -474,9 +474,10 @@ class Memrix(object):
             raise MemrixError(f"应用名称不存在 {self.focus} -> {check}")
 
         reporter = Reporter(
-            self.src_total_place, self.nodes, prefix := "Storm" if self.storm else "Sleek", self.align
+            self.src_total_place, self.scene, prefix := "Storm" if self.storm else "Sleek", self.align
         )
-        self.file_insert, self.file_folder = 0, f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
+        self.file_insert = 0
+        self.file_folder = f"{prefix}_{(now_time := time.strftime('%Y%m%d%H%M%S'))}"
         traces = await reporter.spawn_trace_hub(self.file_folder)
 
         logger.info(f"^*{self.padding} {const.APP_DESC} Engine Start {self.padding}*^")
@@ -935,7 +936,7 @@ async def main() -> typing.Any:
 
     positions = (
         cmd_lines.storm, cmd_lines.sleek, cmd_lines.forge,
-        cmd_lines.focus, cmd_lines.nodes, cmd_lines.title, cmd_lines.atlas, cmd_lines.layer,
+        cmd_lines.focus, cmd_lines.scene, cmd_lines.title, cmd_lines.atlas, cmd_lines.layer,
     )
     keywords = {
         "src_opera_place": src_opera_place,

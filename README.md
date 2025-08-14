@@ -218,7 +218,7 @@ memrix --storm --focus <com.example.application> --imply <device.serial>
 
 ---
 
-### ⚜️ 中枢节点 (`--nodes`)
+### ⚜️ 中枢节点 (`--scene`)
 #### 📔 功能描述:
 - 指定文件夹名称，作为任务的挂载目录或输出目录。数据的中转与聚合中心。
 - 每次采集任务会将所有数据输出到一个对应的文件夹中，便于归档与后续生成报告。
@@ -226,7 +226,7 @@ memrix --storm --focus <com.example.application> --imply <device.serial>
 - **字符串**，用于指定输出目录名称。
 #### 📔 实际应用: 
 ```
-memrix --storm --focus <com.example.application> --nodes <file.name>
+memrix --storm --focus <com.example.application> --scene <file.name>
 ```
 
 ---

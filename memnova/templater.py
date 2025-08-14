@@ -12,6 +12,7 @@
 import typing
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from bokeh.io import curdoc
 from bokeh.plotting import figure
 from bokeh.models import (
@@ -24,39 +25,54 @@ class Templater(object):
     """Templater"""
 
     @staticmethod
-    def generate_viewers(*args, **__) -> "Div":
-        trace_loc, leak_loc, gfx_loc, io_loc, log_loc, *_ = args
+    def generate_viewers(
+        trace_loc: "Path", leak_loc: "Path", gfx_loc: "Path", io_loc: "Path", log_loc: "Path"
+    ) -> "Div":
+        """
+        生成可视化报告入口按钮的 HTML 视图。
 
+        根据传入的各类分析文件路径，动态生成跳转按钮集合，供用户在报告页面中快速访问
+        Trace、Leak、Gfx、I/O、日志等分析结果，同时提供在线 Perfetto UI 入口。
+        按钮样式包含渐变背景、阴影与悬停缩放效果，整体居中排布，提升可视化交互体验。
+
+        Parameters
+        ----------
+        trace_loc : Path
+            Trace 分析文件路径对象，若为空则不生成对应按钮。
+
+        leak_loc : Path
+            内存泄漏分析文件路径对象，若为空则不生成对应按钮。
+
+        gfx_loc : Path
+            图形渲染分析文件路径对象，若为空则不生成对应按钮。
+
+        io_loc : Path
+            I/O 性能分析文件路径对象，若为空则不生成对应按钮。
+
+        log_loc : Path
+            日志文件路径对象，若为空则不生成对应按钮。
+
+        Returns
+        -------
+        Div
+            `bokeh.models.Div` HTML 元素，包含一个或多个跳转按钮：
+            - 每个按钮对应一种分析文件或在线工具。
+            - 所有按钮采用统一的渐变配色和悬停交互效果。
+            - 按钮以居中方式展示，便于用户快速导航。
+
+        Notes
+        -----
+        - 所有按钮均在新标签页中打开。
+        - 当路径对象为 None 或空时，不会生成对应按钮。
+        """
         viewers = [
-            {**({
-                    "label": "➤ 🛰️Traces 查看", 
-                    "url": trace_loc.name, 
-                    "color": "#38BDF8"
-                } if trace_loc else {})},
-            {**({
-                    "label": "➤ 🧬Leak 查看", 
-                    "url": leak_loc.name, 
-                    "color": "#F43F5E"
-                } if leak_loc else {})},
-            {**({
-                    "label": "➤ 🌊Gfx 查看", 
-                    "url": gfx_loc.name, 
-                    "color": "#A78BFA"
-                } if gfx_loc else {})},
-            {**({
-                    "label": "➤ 📈I/O 查看", 
-                    "url": io_loc.name, 
-                    "color": "#10B981"
-                } if io_loc else {})},
-            {**({
-                    "label": "➤ 📄日志 查看", 
-                    "url": log_loc.name, 
-                    "color": "#6366F1"
-                 } if log_loc else {})},
+            {**({"label": "➤ 🛰️Traces 查看", "url": trace_loc.name, "color": "#38BDF8"} if trace_loc else {})},
+            {**({"label": "➤ 🧬Leak 查看",   "url": leak_loc.name,  "color": "#F43F5E"} if leak_loc  else {})},
+            {**({"label": "➤ 🌊Gfx 查看",    "url": gfx_loc.name,   "color": "#A78BFA"} if gfx_loc   else {})},
+            {**({"label": "➤ 📈I/O 查看",    "url": io_loc.name,    "color": "#10B981"} if io_loc    else {})},
+            {**({"label": "➤ 📄Log 查看",    "url": log_loc.name,   "color": "#6366F1"} if log_loc   else {})},
             {
-                "label": "➤ 🌐UI.Perfetto.dev 查看", 
-                "url": f"https://ui.perfetto.dev", 
-                "color": "#F59E42"
+                "label": "➤ 🌐UI.Perfetto.dev 查看", "url": f"https://ui.perfetto.dev", "color": "#F59E42"
             }
         ]
 
@@ -93,8 +109,44 @@ class Templater(object):
     # Workflow: ======================== MEM ========================
 
     @staticmethod
-    def plot_mem_analysis(mem_data: list[dict], extreme: bool = False) -> "figure":
-        
+    def plot_mem_analysis(
+        mem_data: list[dict], extreme: bool = False
+    ) -> "figure":
+        """
+        绘制内存用量随时间变化的分析图。
+
+        将内存采集数据转换为时间序列可视化，支持 PSS 主线、RSS/USS 辅助线、
+        Java/Native/Graphics 堆叠面积图，以及前后台模式分区底色。可选地标注前台、
+        后台及全局的极值点，以便快速定位异常。
+
+        Parameters
+        ----------
+        mem_data : list of dict
+            内存采集数据列表，每个元素包含时间戳、内存统计值、模式信息等字段。
+
+        extreme : bool, default=False
+            是否启用极值标记模式：
+            - True  ：分别标注前台最大/最小值、后台最大/最小值。
+            - False ：仅标注全局最大/最小值。
+
+        Returns
+        -------
+        figure
+            `bokeh.plotting.figure` 对象，包含以下绘制元素：
+            - 堆叠面积图（Java Heap、Native Heap、Graphics）。
+            - PSS 主线及滑动均值、RSS 与 USS 辅助线。
+            - 前后台分区底色，透明度区分模式。
+            - 极值点标记及悬浮提示（HoverTool）。
+            - 自适应坐标轴、时间格式化和交互工具。
+
+        Notes
+        -----
+        - 横轴为时间，纵轴为内存用量（MB）。
+        - 前后台区分使用不同底色：前台湖蓝，后台浅灰。
+        - 悬浮提示提供多维度信息（时间、滑窗均值、堆统计、模式等）。
+        - 适合内存趋势分析、异常检测及多模式性能对比。
+        """
+
         # 🟡 ==== 数据处理 ====
         df = pd.DataFrame(mem_data)
         df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
@@ -147,12 +199,8 @@ class Templater(object):
 
         # 🟡 ==== 堆叠配色 ====
         stack_fields = ["summary_java_heap", "summary_native_heap", "summary_graphics"]
-        stack_colors = [
-            "#FFD6E0",  # Java Heap   淡粉
-            "#D4E7FF",  # Native Heap 淡蓝
-            "#CAE7E1",  # Graphics    淡青
-        ]
         stack_labels = ["Java Heap", "Native Heap", "Graphics"]
+        stack_colors = ["#FFD6E0", "#D4E7FF", "#CAE7E1"]
 
         # 🟡 ==== 堆叠数据 ====
         stack_source = ColumnDataSource(df)
@@ -198,7 +246,7 @@ class Templater(object):
         fg_min = fg_df["pss"].min() if not fg_df.empty else None
         bg_max = bg_df["pss"].max() if not bg_df.empty else None
         bg_min = bg_df["pss"].min() if not bg_df.empty else None
-        
+
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 9
@@ -223,7 +271,7 @@ class Templater(object):
         df.loc[(df["pss"] == min_value) & (~extreme), "colors"] = min_color  # 全局最小
         df.loc[(df["pss"] == min_value) & (~extreme), "sizes"] = 9
         df.loc[(df["pss"] == min_value) & (~extreme), "shapes"] = "circle"
-    
+
         source = ColumnDataSource(df)
 
         # 🟡 ==== PSS 主线 ====
@@ -316,6 +364,50 @@ class Templater(object):
         drag_ranges: typing.Optional[list[dict]],
         jank_ranges: typing.Optional[list[dict]]
     ) -> "figure":
+        """
+        绘制图形渲染帧耗时分析图。
+
+        将帧级别性能数据可视化，展示帧耗时变化趋势、前端滚动/拖拽/掉帧区间，
+        并提供平均值、最大值及性能阈值参考线，用于图形渲染性能分析与优化诊断。
+
+        Parameters
+        ----------
+        frames : list of dict
+            帧数据列表，每个元素应包含：
+            - `timestamp_ms` : 采样时间戳（毫秒）。
+            - `duration_ms`  : 当前帧渲染耗时（毫秒）。
+            - `is_jank`      : 是否掉帧（布尔值）。
+            - `frame_type`   : 帧类型描述（如 App / SurfaceFlinger）。
+            - `fps_sys` / `fps_app` : 系统与应用帧率。
+            - `layer_name`   : 图层名称（可选）。
+
+        roll_ranges : list of dict or None
+            滚动操作的时间区间，每个元素包含：
+            - `start_ts` / `end_ts` : 区间起止时间戳（毫秒）。
+
+        drag_ranges : list of dict or None
+            拖拽操作的时间区间，结构同上。
+
+        jank_ranges : list of dict or None
+            掉帧发生的时间区间，结构同上。
+
+        Returns
+        -------
+        figure
+            `bokeh.plotting.figure` 对象，包含：
+            - 主帧耗时折线与颜色标记的散点（绿色正常 / 红色掉帧）。
+            - 平均值、最大值及 60 FPS 阈值参考线。
+            - 滚动、拖拽、掉帧背景区间标记。
+            - 悬浮提示（HoverTool）显示帧耗时与上下文信息。
+            - 可交互图例与缩放平移工具。
+
+        Notes
+        -----
+        - X 轴为秒，基于帧采样时间戳换算。
+        - Y 轴为帧渲染耗时（毫秒），动态调整范围。
+        - 背景区块区分不同交互类型（滚动、拖拽、掉帧）。
+        - 用于可视化帧性能瓶颈、交互性能衰退及掉帧集中区域。
+        """
 
         # 🟢 ==== 汇总所有区间时间 ====
         all_starts, all_closes = [], []

@@ -344,6 +344,5 @@ class GfxAnalyzer(_TraceAnalyzer):
             return gfx_fmt_data
 
 
-
 if __name__ == '__main__':
     pass

@@ -131,7 +131,7 @@ class Parser(object):
             ''')
         )
         minor_group.add_argument(
-            "--nodes", type=str, default=None,
+            "--scene", type=str, default=None,
             help=textwrap.dedent(f'''\
                 \033[1;36m^*中枢节点*^\033[0m
                 -------------------------

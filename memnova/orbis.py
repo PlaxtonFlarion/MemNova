@@ -211,21 +211,29 @@ class Orbis(object):
         r_squared = round(r_val ** 2, 4)
         slope = round(slope, 4)
 
-        # 🟨 ==== 多项式拟合（2阶） ====
+        # 🟨 ==== 二阶多项式拟合 ====
         try:
-            poly_coef = np.polyfit(x, values, 2)
-            poly_fit = np.poly1d(poly_coef)
-            fitted = poly_fit(x)
-            poly_r2 = 1 - np.sum((values - fitted) ** 2) / np.sum((values - np.mean(values)) ** 2)
+            x = np.asarray(x, dtype=np.float64)
+            values = np.asarray(values, dtype=np.float64)
+
+            poly_coef = np.polyfit(x, values, deg=2)
+            poly_func = np.poly1d(poly_coef)
+            fitted = poly_func(x)
+
+            ss_res = np.sum(np.square(values - fitted))              # 残差平方和
+            ss_tot = np.sum(np.square(values - np.mean(values)))     # 总方差
+            poly_r2 = 1.0 - ss_res / ss_tot if ss_tot != 0 else 0.0
             poly_r2 = round(poly_r2, 4)
+
             if abs(poly_coef[0]) < 1e-8:
                 poly_trend = "Linear ~"
             elif poly_coef[0] > 0:
                 poly_trend = "U-shape ↑↓"
             else:
                 poly_trend = "∩-shape ↓↑"
+
         except (np.linalg.LinAlgError, ValueError):
-            poly_coef = [0, 0, 0]
+            poly_coef = [0.0, 0.0, 0.0]
             poly_r2 = 0.0
             poly_trend = "-"
 
@@ -405,7 +413,7 @@ class Orbis(object):
             "score_jank": 0.0,
             "score_latency": 0.0,
             "score_fps_var": 0.0,
-            "score_motion": 0.0,
+            "score_motion": 0.0
         }
 
         # 🟩 ==== 数据校验 ====
@@ -628,7 +636,7 @@ class Orbis(object):
 
         df = pd.DataFrame(io_data)
 
-        # 🟦 ==== 差值处理，避免链式赋值 ====
+        # 🟦 ==== 差值处理 ====
         io_cols = ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]
         df.loc[:, io_cols] = df[io_cols].astype(float).diff().fillna(0).clip(lower=0)
 
@@ -647,8 +655,8 @@ class Orbis(object):
             result["risk"].append("RW Peak High")
 
         # 🟦 ==== 爆发段 ====
-        rw_burst_threshold = rw_vals.mean() + rw_vals.std()
-        rw_burst_ratio = (rw_vals > rw_burst_threshold).mean()
+        rw_burst_threshold = float(np.mean(rw_vals)) + float(np.std(rw_vals))
+        rw_burst_ratio = float(np.mean(rw_vals > rw_burst_threshold))
         result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
         if rw_burst_ratio > 0.1:
             penalties.append(10)
