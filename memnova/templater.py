@@ -25,34 +25,34 @@ class Templater(object):
 
     @staticmethod
     def generate_viewers(*args, **__) -> "Div":
-        trace_path, leak_path, gfx_path, io_path, log_path, *_ = args
+        trace_loc, leak_loc, gfx_loc, io_loc, log_loc, *_ = args
 
         viewers = [
             {**({
-                    "label": "➤ 🛰️Traces 查看",
-                    "url": f"file:///{trace_path.as_posix()}",
+                    "label": "➤ 🛰️Traces 查看", 
+                    "url": f"file:///{trace_loc.name}", 
                     "color": "#38BDF8"
-                } if trace_path else {})},
+                } if trace_loc else {})},
             {**({
                     "label": "➤ 🧬Leak 查看",
-                    "url": f"file:///{leak_path.as_posix()}",
+                    "url": f"file:///{leak_loc.name}",
                     "color": "#F43F5E"
-                } if leak_path else {})},
+                } if leak_loc else {})},
             {**({
                     "label": "➤ 🌊Gfx 查看",
-                    "url": f"file:///{gfx_path.as_posix()}",
+                    "url": f"file:///{gfx_loc.name}",
                     "color": "#A78BFA"
-                } if gfx_path else {})},
+                } if gfx_loc else {})},
             {**({
                     "label": "➤ 📈I/O 查看",
-                    "url": f"file:///{io_path.as_posix()}",
+                    "url": f"file:///{io_loc.name}",
                     "color": "#10B981"
-                } if io_path else {})},
+                } if io_loc else {})},
             {**({
                      "label": "➤ 📄日志 查看",
-                     "url": f"file:///{log_path.as_posix()}",
+                     "url": f"file:///{log_loc.name}",
                      "color": "#6366F1"
-                 } if log_path else {})},
+                 } if log_loc else {})},
             {
                 "label": "➤ 🌐UI.Perfetto.dev 查看",
                 "url": f"https://ui.perfetto.dev",
