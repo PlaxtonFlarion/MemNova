@@ -186,6 +186,7 @@ class Templater(object):
         )
 
         # 🟡 ==== 默认极值 ====
+        df.loc[:, "shapes"] = "circle"
         df.loc[:, "colors"] = pss_color
         df.loc[:, "sizes"] = 3
 
@@ -197,25 +198,31 @@ class Templater(object):
         fg_min = fg_df["pss"].min() if not fg_df.empty else None
         bg_max = bg_df["pss"].max() if not bg_df.empty else None
         bg_min = bg_df["pss"].min() if not bg_df.empty else None
-
+        
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "shapes"] = "triangle"
 
         df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "colors"] = "#91F9E5"  # 前台最小
         df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "shapes"] = "inverted_triangle"
 
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"  # 后台最大
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "shapes"] = "diamond"
 
         df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "colors"] = "#B3E66B"  # 后台最小
         df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
 
-        df.loc[(df["pss"] == max_value) & (~focus_extreme), "colors"] = max_color  # 全局最大
-        df.loc[(df["pss"] == max_value) & (~focus_extreme), "sizes"] = 7
+        df.loc[(df["pss"] == max_value) & (~extreme), "colors"] = max_color  # 全局最大
+        df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 7
+        df.loc[(df["pss"] == max_value) & (~extreme), "shapes"] = "triangle"
 
-        df.loc[(df["pss"] == min_value) & (~focus_extreme), "colors"] = min_color  # 全局最小
-        df.loc[(df["pss"] == min_value) & (~focus_extreme), "sizes"] = 7
+        df.loc[(df["pss"] == min_value) & (~extreme), "colors"] = min_color  # 全局最小
+        df.loc[(df["pss"] == min_value) & (~extreme), "sizes"] = 7
+        df.loc[(df["pss"] == min_value) & (~extreme), "shapes"] = "inverted_triangle"
     
         source = ColumnDataSource(df)
 
@@ -251,7 +258,7 @@ class Templater(object):
         # 🟡 ==== 极值点 ====
         pss_spot = p.scatter(
             "x", "pss",
-            source=source, size="sizes", color="colors", alpha=0.98
+            source=source, size="sizes", color="colors", marker="shapes", alpha=0.98
         )
 
         # 🟡 ==== 悬浮提示 ====
