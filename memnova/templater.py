@@ -100,7 +100,7 @@ class Templater(object):
         df = df.dropna(subset=["x"])
         for col in ["summary_java_heap", "summary_native_heap", "summary_graphics", "pss", "rss", "uss"]:
             df.loc[:, col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
-        df.loc[:, "activity"] = df["activity"].fillna("")
+        df.loc[:, "activity"] = df["activity"].fillna("-")
 
         # 🟡 ==== 滑动窗口均值 ====
         window_size = max(3, len(df) // 20)
