@@ -291,11 +291,11 @@ class Reporter(object):
         return formatted
 
     @staticmethod
-    def plot_mem(group: str, data_dir: str, task_list: list, extreme: bool, *args, **__) -> str:
+    def plot_mem(group: str, data_dir: str, task_list: list, *args, **kwargs) -> str:
         """
         生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
         """
-        plot = Templater.plot_mem_analysis(task_list, extreme)
+        plot = Templater.plot_mem_analysis(task_list, kwargs["extreme"])
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
         viewer_div = Templater.generate_viewers(*args)
@@ -483,9 +483,9 @@ class Reporter(object):
             ]
 
         # 🟡 ==== MEM 渲染 ====
-        extreme = True if baseline else False
+        plot_func = partial(self.plot_mem, {"extreme": True if baseline else False})
         output_path = await loop.run_in_executor(
-            executor, self.plot_mem, group, data_dir, mem_data, extreme,
+            executor,plot_func, group, data_dir, mem_data,
             trace_loc, leak_loc, gfx_loc, io_loc, log_loc
         )
 
