@@ -370,7 +370,7 @@ class Reporter(object):
         self.background_tasks.append(draw_io_future)
 
         # 🟨 ==== MEM 评分 ====
-        r2_threshold, slope_threshold, window, remove_outlier = 0.5, 0.01, 30, True
+        r2_threshold, slope_threshold, window = 0.5, 0.01, 30
 
         # 🟡 ==== 内存基线 ====
         if baseline:
@@ -386,7 +386,7 @@ class Reporter(object):
                 part_list = df[df["mode"] == (mode := row["mode"])]["pss"].tolist()
                 score = await loop.run_in_executor(
                     executor, Orbis.analyze_mem_score, part_list,
-                    r2_threshold, slope_threshold, window, remove_outlier
+                    r2_threshold, slope_threshold, window
                 )
                 logger.info(f"{mode}-Score: {score}")
 
@@ -436,7 +436,7 @@ class Reporter(object):
             # 🟨 ==== MEM 评分 ====
             score = await loop.run_in_executor(
                 executor, Orbis.analyze_mem_score, df["pss"].tolist(),
-                r2_threshold, slope_threshold, window, remove_outlier
+                r2_threshold, slope_threshold, window
             )
             logger.info(f"Score: {score}")
             score_group = {"MEM": score}
