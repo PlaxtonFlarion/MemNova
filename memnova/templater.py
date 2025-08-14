@@ -93,7 +93,8 @@ class Templater(object):
     # Workflow: ======================== MEM ========================
 
     @staticmethod
-    def plot_mem_analysis(mem_data: list[dict], focus_extreme: bool = False) -> "figure":
+    def plot_mem_analysis(mem_data: list[dict], extreme: bool = False) -> "figure":
+        
         # 🟡 ==== 数据处理 ====
         df = pd.DataFrame(mem_data)
         df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
@@ -138,13 +139,13 @@ class Templater(object):
         min_color = "#54E3AF"  # 谷值薄荷绿
         sld_color = "#A8BFFF"
 
-        # 🟡 ==== 区块色 ====
+        # 🟡 ==== 区块配色 ====
         fg_color = "#8FE9FC"  # 前台湖蓝
         bg_color = "#F1F1F1"  # 后台淡灰
         fg_alpha = 0.15
         bg_alpha = 0.35
 
-        # 🟡 ==== 堆叠配色（马卡龙/莫兰迪风）====
+        # 🟡 ==== 堆叠配色 ====
         stack_fields = ["summary_java_heap", "summary_native_heap", "summary_graphics"]
         stack_colors = [
             "#FFD6E0",  # Java Heap   淡粉
@@ -198,17 +199,17 @@ class Templater(object):
         bg_min = bg_df["pss"].min() if not bg_df.empty else None
 
         # 🟡 ==== 标记极值 ====
-        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & focus_extreme, "colors"] = "#FF90A0"  # 前台最大
-        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & focus_extreme, "sizes"] = 9
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 9
 
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & focus_extreme, "colors"] = "#91F9E5"  # 前台最小
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & focus_extreme, "sizes"] = 9
+        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "colors"] = "#91F9E5"  # 前台最小
+        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "sizes"] = 9
 
-        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & focus_extreme, "colors"] = "#FFB366"  # 后台最大
-        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & focus_extreme, "sizes"] = 9
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"  # 后台最大
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 9
 
-        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & focus_extreme, "colors"] = "#B3E66B"  # 后台最小
-        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & focus_extreme, "sizes"] = 9
+        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "colors"] = "#B3E66B"  # 后台最小
+        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "sizes"] = 9
 
         df.loc[(df["pss"] == max_value) & (~focus_extreme), "colors"] = max_color  # 全局最大
         df.loc[(df["pss"] == max_value) & (~focus_extreme), "sizes"] = 7
