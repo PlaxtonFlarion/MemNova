@@ -40,8 +40,7 @@ class Orbis(object):
             "poly_coef":        {"prefix": "PolyC",    "format": "{}",     "factor": 1, "unit": ""},
             "window_slope":     {"prefix": "WinSlp",   "format": "{:.2f}", "factor": 1, "unit": ""},
             "window_slope_max": {"prefix": "WinMax",   "format": "{:.2f}", "factor": 1, "unit": ""},
-            "window_slope_min": {"prefix": "WinMin",   "format": "{:.2f}", "factor": 1, "unit": ""},
-            "outlier_count":    {"prefix": "Outlier",  "format": "{:.0f}", "factor": 1, "unit": ""},
+            "window_slope_min": {"prefix": "WinMin",   "format": "{:.2f}", "factor": 1, "unit": ""}
         }
 
     @staticmethod
@@ -74,7 +73,7 @@ class Orbis(object):
             "score_jank":           {"prefix": "JNK Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
             "score_latency":        {"prefix": "Lat Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
             "score_fps_var":        {"prefix": "Var Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "score_motion":         {"prefix": "Mot Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
+            "score_motion":         {"prefix": "Mot Score",  "format": "{:.2f}",  "factor": 1,   "unit": ""}
         }
 
     @staticmethod
@@ -94,7 +93,7 @@ class Orbis(object):
             "sys_burst":          {"prefix": "SysBurst",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
             "sys_burst_events":   {"prefix": "BurstEvt",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
             "score":              {"prefix": "Score",     "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "grade":              {"prefix": "Grade",     "format": "{}",      "factor": 1,   "unit": ""},
+            "grade":              {"prefix": "Grade",     "format": "{}",      "factor": 1,   "unit": ""}
         }
 
     # Workflow: ======================== MEM ========================
@@ -104,8 +103,7 @@ class Orbis(object):
         mem_part: list[float],
         r2_threshold: float = 0.5,
         slope_threshold: float = 0.01,
-        window: int = 30,
-        remove_outlier: bool = True
+        window: int = 30
     ) -> dict:
         """
         分析一组内存采样数据的变化趋势、稳定性与结构特征，返回结构化评分结果。
@@ -123,9 +121,6 @@ class Orbis(object):
 
         window : int, optional
             滑动窗口大小，用于计算局部斜率变化趋势，默认值为 30。
-
-        remove_outlier : bool, optional
-            是否启用异常值剔除，通过 Z-Score 剔除超过 ±3 的离群点，默认启用。
 
         Returns
         -------
@@ -171,9 +166,6 @@ class Orbis(object):
             - window_slope_min : float
                 滑动窗口中观察到的最大下降斜率。
 
-            - outlier_count : int
-                被剔除的异常采样点数量，便于评估数据清洗情况。
-
         Notes
         -----
         - 建议输入等间隔采样的内存使用序列，采样长度不少于 10。
@@ -197,8 +189,7 @@ class Orbis(object):
             "poly_coef": [],
             "window_slope": None,
             "window_slope_max": None,
-            "window_slope_min": None,
-            "outlier_count": 0
+            "window_slope_min": None
         }
 
         # 🟨 ==== 数据校验 ====
@@ -207,16 +198,6 @@ class Orbis(object):
 
         if len(values) < 10:
             return {"trend": "Few Data", **result}
-
-        # 🟨 ==== 异常剔除 ====
-        outlier_count = 0
-        if remove_outlier:
-            if np.all(np.isnan(zs := zscore(values))):
-                return {"trend": "All NaN", "outlier_count": len(values), **result}
-            mask = np.abs(zs) < 3
-            outlier_count = np.sum(~mask)
-            if len(values := values[mask]) < 10:
-                return {"trend": "Cleaned", "outlier_count": outlier_count, **result}
 
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
@@ -298,8 +279,7 @@ class Orbis(object):
             "poly_coef": [round(c, 6) for c in poly_coef],
             "window_slope": window_slope,
             "window_slope_max": window_slope_max,
-            "window_slope_min": window_slope_min,
-            "outlier_count": int(outlier_count)
+            "window_slope_min": window_slope_min
         }
 
     # Workflow: ======================== GFX ========================
