@@ -500,7 +500,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(self.assemblage).name / const.SUMMARY / data_dir / Path(output_path).name)
+                "link": os.path.join(Path(self.assemblage).name, const.SUMMARY, data_dir, Path(output_path).name)
             },
             "evaluate": evaluate,
             "tags": tag_lines
@@ -598,7 +598,7 @@ class Reporter(object):
             **score_group,
             "subtitle": {
                 "text": title or data_dir,
-                "link": str(Path(self.assemblage).name / const.SUMMARY / data_dir / Path(output_path).name),
+                "link": os.path.join(Path(self.assemblage).name, const.SUMMARY, data_dir, Path(output_path).name)
             },
             "evaluate": evaluate,
             "tags": tag_lines
