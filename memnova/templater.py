@@ -184,8 +184,13 @@ class Templater(object):
             alpha=0.4
         )
 
-        # 🟡 ==== 折线 / 极值点 ====
-        # ==== 前后台极值 ====
+        # 🟡 ==== 默认极值 ====
+        df.loc[:, "colors"] = df["pss"].apply(
+            lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
+        )
+        df.loc[:, "sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
+        
+        # 🟡 ==== 前后台极值 ====
         fg_df = df[df["mode"] == "FG"]
         bg_df = df[df["mode"] == "BG"]
 
@@ -194,11 +199,7 @@ class Templater(object):
         bg_max = bg_df["pss"].max() if not bg_df.empty else None
         bg_min = bg_df["pss"].min() if not bg_df.empty else None
 
-        # ==== 初始化默认颜色和大小 ====
-        df.loc[:, "colors"] = pss_color
-        df.loc[:, "sizes"] = 3
-
-        # ==== 使用 match-case 标记极值 ====
+        # 🟡 ==== 标记极值 ====
         for i, row in df.iterrows():
             match row["pss"]:
                 case v if v == fg_max:
@@ -213,17 +214,7 @@ class Templater(object):
                 case v if v == bg_min:
                     df.loc[i, "colors"] = "#B3E66B"  # 后台最小值
                     df.loc[i, "sizes"] = 9
-                case v if v == max_value:
-                    df.loc[i, "colors"] = max_color  # 全局最大值
-                    df.loc[i, "sizes"] = 7
-                case v if v == min_value:
-                    df.loc[i, "colors"] = min_color  # 全局最小值
-                    df.loc[i, "sizes"] = 7
-        
-        df.loc[:, "colors"] = df["pss"].apply(
-            lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
-        )
-        df.loc[:, "sizes"] = df["pss"].apply(lambda v: 7 if v in (max_value, min_value) else 3)
+    
         source = ColumnDataSource(df)
 
         # 🟡 ==== PSS 主线 ====
