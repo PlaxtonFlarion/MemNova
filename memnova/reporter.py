@@ -295,7 +295,7 @@ class Reporter(object):
         """
         生成并保存内存分析 HTML 报告，包含交互视图与统计图表。
         """
-        plot = Templater.plot_mem_analysis(task_list, kwargs["extreme"])
+        plot = Templater.plot_mem_analysis(task_list, kwargs.get("extreme", False))
 
         output_file(output_path := os.path.join(group, f"{data_dir}.html"))
         viewer_div = Templater.generate_viewers(*args)
@@ -483,9 +483,9 @@ class Reporter(object):
             ]
 
         # 🟡 ==== MEM 渲染 ====
-        plot_func = partial(self.plot_mem, {"extreme": True if baseline else False})
+        plot_func = partial(self.plot_mem, extreme=baseline)
         output_path = await loop.run_in_executor(
-            executor,plot_func, group, data_dir, mem_data,
+            executor, plot_func, group, data_dir, mem_data,
             trace_loc, leak_loc, gfx_loc, io_loc, log_loc
         )
 
