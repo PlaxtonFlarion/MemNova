@@ -10,9 +10,7 @@
 
 import numpy as np
 import pandas as pd
-from scipy.stats import (
-    linregress, zscore
-)
+from scipy.stats import linregress
 
 
 class Orbis(object):
