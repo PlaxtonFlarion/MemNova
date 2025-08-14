@@ -185,6 +185,41 @@ class Templater(object):
         )
 
         # 🟡 ==== 折线 / 极值点 ====
+        # ==== 前后台极值 ====
+        fg_df = df[df["mode"] == "FG"]
+        bg_df = df[df["mode"] == "BG"]
+
+        fg_max = fg_df["pss"].max() if not fg_df.empty else None
+        fg_min = fg_df["pss"].min() if not fg_df.empty else None
+        bg_max = bg_df["pss"].max() if not bg_df.empty else None
+        bg_min = bg_df["pss"].min() if not bg_df.empty else None
+
+        # ==== 初始化默认颜色和大小 ====
+        df.loc[:, "colors"] = pss_color
+        df.loc[:, "sizes"] = 3
+
+        # ==== 使用 match-case 标记极值 ====
+        for i, row in df.iterrows():
+            match row["pss"]:
+                case v if v == fg_max:
+                    df.loc[i, "colors"] = "#FF90A0"  # 前台最大值
+                    df.loc[i, "sizes"] = 9
+                case v if v == fg_min:
+                    df.loc[i, "colors"] = "#91F9E5"  # 前台最小值
+                    df.loc[i, "sizes"] = 9
+                case v if v == bg_max:
+                    df.loc[i, "colors"] = "#FFB366"  # 后台最大值
+                    df.loc[i, "sizes"] = 9
+                case v if v == bg_min:
+                    df.loc[i, "colors"] = "#B3E66B"  # 后台最小值
+                    df.loc[i, "sizes"] = 9
+                case v if v == max_value:
+                    df.loc[i, "colors"] = max_color  # 全局最大值
+                    df.loc[i, "sizes"] = 7
+                case v if v == min_value:
+                    df.loc[i, "colors"] = min_color  # 全局最小值
+                    df.loc[i, "sizes"] = 7
+        
         df.loc[:, "colors"] = df["pss"].apply(
             lambda v: max_color if v == max_value else (min_color if v == min_value else pss_color)
         )
