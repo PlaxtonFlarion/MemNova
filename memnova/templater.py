@@ -126,8 +126,8 @@ class Templater(object):
 
         extreme : bool, default=False
             是否启用极值标记模式：
-            - True  ：分别标注前台最大/最小值、后台最大/最小值。
-            - False ：仅标注全局最大/最小值。
+            - True  ：分别标注前台最大值、后台最大值。
+            - False ：仅标注全局最大值。
 
         Returns
         -------
@@ -243,34 +243,20 @@ class Templater(object):
         bg_df = df[df["mode"] == "BG"]
 
         fg_max = fg_df["pss"].max() if not fg_df.empty else None
-        fg_min = fg_df["pss"].min() if not fg_df.empty else None
-        bg_max = bg_df["pss"].max() if not bg_df.empty else None
-        bg_min = bg_df["pss"].min() if not bg_df.empty else None
+        bg_max = bg_df["pss"].max() if not bg_df.empty else Non
 
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
-        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 7
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "shapes"] = "circle"
 
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "colors"] = "#91F9E5"  # 前台最小
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "sizes"] = 9
-        df.loc[(df["pss"] == fg_min) & (df["mode"] == "FG") & extreme, "shapes"] = "circle"
-
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"  # 后台最大
-        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 9
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 7
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
 
-        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "colors"] = "#B3E66B"  # 后台最小
-        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "sizes"] = 9
-        df.loc[(df["pss"] == bg_min) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
-
         df.loc[(df["pss"] == max_value) & (~extreme), "colors"] = max_color  # 全局最大
-        df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 9
+        df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 7
         df.loc[(df["pss"] == max_value) & (~extreme), "shapes"] = "circle"
-
-        df.loc[(df["pss"] == min_value) & (~extreme), "colors"] = min_color  # 全局最小
-        df.loc[(df["pss"] == min_value) & (~extreme), "sizes"] = 9
-        df.loc[(df["pss"] == min_value) & (~extreme), "shapes"] = "circle"
 
         source = ColumnDataSource(df)
 
