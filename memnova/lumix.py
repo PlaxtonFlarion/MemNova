@@ -59,11 +59,11 @@ class Lumix(object):
         df.loc[:, "pss"] = pd.to_numeric(df["pss"], errors="coerce")
         df = df.dropna(subset=["pss"])
 
-        # 🟡 ==== 滑动窗口平均 ====
+        # 🟡 ==== 滑窗均值 ====
         window_size = max(3, len(df) // 20)
         df.loc[:, "pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
-        # 🟡 ==== 前后台区块分组 ====
+        # 🟡 ==== 区块分组 ====
         mode_series = df["mode"]
         changed = mode_series.ne(mode_series.shift())
         df.loc[:, "block_id"] = changed.cumsum()
@@ -79,8 +79,7 @@ class Lumix(object):
 
         # 🟡 ==== 区块统计 ====
         block_stats = df.groupby(["block_id", "mode"]).agg(
-            start_time=("num_x", "first"),
-            end_time=("num_x", "last"),
+            start_time=("num_x", "first"), end_time=("num_x", "last")
         ).reset_index()
 
         # 🟡 ==== 判断内存趋势 ====
@@ -97,13 +96,13 @@ class Lumix(object):
         pss_color = kwargs.get("color", "#3564B0")
         rss_color = "#FEB96B"
         uss_color = "#90B2C8"
-        avg_color = "#BDB5D5"   # 均值
-        max_color = "#FF5872"   # 峰值
-        min_color = "#54E3AF"   # 谷值
+        avg_color = "#BDB5D5"
+        max_color = "#FF5872"
+        # min_color = "#54E3AF"
         sld_color = "#A8BFFF"
         avg_band_color = "#D0D0FF"
 
-        # 🟡 ==== 前后台区块配色 ====
+        # 🟡 ==== 区块配色 ====
         fg_color = "#8FE9FC"
         bg_color = "#F1F1F1"
         fg_alpha = 0.15
@@ -387,7 +386,7 @@ class Lumix(object):
         Parameters
         ----------
         io_data : list[dict]
-            I/O 采样数据列表，每条记录包含时间戳、读写字节数、字符数、系统调用次数等。
+            I/O 采样数据列表，每条记录包含时间戳、读写字节量、字符数、系统调用次数等。
 
         output_path : str
             输出图片的保存路径（包含文件名和扩展名）。
@@ -409,11 +408,11 @@ class Lumix(object):
         io_summary = (
             f"Grade: {kwargs['grade']}\n"
             f"Score: {kwargs['score']}\n"
-            f"Peak RW: {kwargs['rw_peak_kb']} KB\n"
-            f"RW Std: {kwargs['rw_std_kb']} KB\n"
+            f"Peak RW: {kwargs['rw_peak_mb']} MB\n"
+            f"RW Std: {kwargs['rw_std_mb']} MB\n"
             f"RW Burst Ratio: {kwargs['rw_burst_ratio']:.2%}\n"
             f"Idle Ratio: {kwargs['rw_idle_ratio']:.2%}\n"
-            f"Swap Max: {kwargs.get('swap_max_kb', 0)} KB\n"
+            f"Swap Max: {kwargs.get('swap_max_mb', 0)} MB\n"
             f"Swap Burst: {kwargs.get('swap_burst_count', 0)} / {kwargs.get('swap_burst_ratio', 0):.2%}\n"
             f"Sys Burst Events: {kwargs['sys_burst']}\n"
         )
@@ -432,26 +431,35 @@ class Lumix(object):
             ("read_bytes", "#4F8CFD", "Read Bytes Δ", "o"),
             ("write_bytes", "#6BE675", "Write Bytes Δ", "^"),
             ("rchar", "#F09F3E", "RChar Δ", "s"),
-            ("wchar", "#F46C9D", "WChar Δ", "x"),
+            ("wchar", "#F46C9D", "WChar Δ", "x")
         ]
         byte_handles = []
         for col, color, label, marker in byte_fields:
             vals = df[col].astype(float).diff().fillna(0)
             vals = vals.clip(lower=0)   # 负值归零
-            ax1.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.4, markersize=2.5, alpha=0.95)
-            byte_handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2))
+            ax1.plot(
+                x, vals,
+                color=color, label=label, marker=marker, linewidth=1.4, markersize=2.5, alpha=0.95
+            )
+            byte_handles.append(
+                Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2)
+            )
 
         # 🔵 ==== 次数副轴 ====
         count_fields = [
-            ("syscr", "#9B8FBA", "Syscr Δ", "*"),
-            ("syscw", "#A8D8EA", "Syscw Δ", "+"),
+            ("syscr", "#9B8FBA", "Syscr Δ", "*"), ("syscw", "#A8D8EA", "Syscw Δ", "+")
         ]
         count_handles = []
         for col, color, label, marker in count_fields:
             vals = df[col].astype(float).diff().fillna(0)
             vals = vals.clip(lower=0)   # 负值归零
-            ax2.plot(x, vals, color=color, label=label, marker=marker, linewidth=1.5, markersize=2.8, alpha=0.88, linestyle="--")
-            count_handles.append(Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2, linestyle="--"))
+            ax2.plot(
+                x, vals,
+                color=color, label=label, marker=marker, linewidth=1.5, markersize=2.8, alpha=0.88, linestyle="--"
+            )
+            count_handles.append(
+                Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2, linestyle="--")
+            )
 
         # 🔵 ==== 坐标轴和标题 ====
         ax1.set_ylabel("Delta (MB/s)", fontsize=12)

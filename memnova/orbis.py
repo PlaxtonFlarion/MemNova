@@ -8,6 +8,7 @@
 # Copyright (c) 2024  Memrix :: 记忆星核
 # This file is licensed under the Memrix :: 记忆星核 License. See the LICENSE.md file for more details.
 
+import math
 import numpy as np
 import pandas as pd
 from scipy.stats import linregress
@@ -81,11 +82,11 @@ class Orbis(object):
         """
         return {
             "swap_status":        {"prefix": "Swap",      "format": "{}",      "factor": 1,   "unit": ""},
-            "swap_max_kb":        {"prefix": "SwapMax",   "format": "{:.0f}",  "factor": 1,   "unit": "KB"},
+            "swap_max_mb":        {"prefix": "SwapMax",   "format": "{:.0f}",  "factor": 1,   "unit": "MB"},
             "swap_burst_ratio":   {"prefix": "SwpBurst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
             "swap_burst_count":   {"prefix": "SwpBurst#", "format": "{:.2f}",  "factor": 1,   "unit": ""},
-            "rw_peak_kb":         {"prefix": "RWPeak",    "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
-            "rw_std_kb":          {"prefix": "RWStd",     "format": "{:.2f}",  "factor": 1,   "unit": "KB"},
+            "rw_peak_mb":         {"prefix": "RWPeak",    "format": "{:.2f}",  "factor": 1,   "unit": "MB"},
+            "rw_std_mb":          {"prefix": "RWStd",     "format": "{:.2f}",  "factor": 1,   "unit": "MB"},
             "rw_burst_ratio":     {"prefix": "RW Burst",  "format": "{:.2f}",  "factor": 100, "unit": "%"},
             "rw_idle_ratio":      {"prefix": "RW Idle",   "format": "{:.2f}",  "factor": 100, "unit": "%"},
             "sys_burst":          {"prefix": "SysBurst",  "format": "{:.2f}",  "factor": 1,   "unit": ""},
@@ -125,44 +126,19 @@ class Orbis(object):
         result : dict
             返回结构化的趋势评分字典，字段说明如下：
 
-            - trend : str
-                趋势类型，包括 Upward ↑、Downward ↓、Stable →、Wave ~ 等。
-
-            - trend_score : float
-                趋势得分，范围 [-1.0, 1.0]，反映趋势强度与方向性。
-
-            - jitter_index : float
-                抖动指数，衡量数据的波动幅度，值越大表示不稳定性越高。
-
-            - r_squared : float
-                线性拟合的决定系数 R²，用于量化趋势拟合优度。
-
-            - slope : float
-                拟合直线的斜率，正值表示上升，负值表示下降。
-
-            - avg, max, min : float
-                内存数据的均值、最大值与最小值，单位与输入一致。
-
-            - color : str
-                趋势对应的推荐颜色，用于图表高亮或 UI 渲染。
-
-            - poly_trend : str
-                多项式趋势形态标识（如 U-shape ↑↓、∩-shape ↓↑、Linear ~）。
-
-            - poly_r2 : float
-                二阶多项式拟合的决定系数 R²，反映非线性趋势拟合效果。
-
-            - poly_coef : list[float]
-                多项式拟合的系数列表 [a, b, c]，对应公式 ax² + bx + c。
-
-            - window_slope : float
-                滑动窗口中所有局部斜率的平均值。
-
-            - window_slope_max : float
-                滑动窗口中观察到的最大上升斜率。
-
-            - window_slope_min : float
-                滑动窗口中观察到的最大下降斜率。
+            - trend : str              : 趋势类型，包括 Upward ↑、Downward ↓、Stable →、Wave ~ 等。
+            - trend_score : float      : 趋势得分，范围 [-1.0, 1.0]，反映趋势强度与方向性。
+            - jitter_index : float     : 抖动指数，衡量数据的波动幅度，值越大表示不稳定性越高。
+            - r_squared : float        : 线性拟合的决定系数 R²，用于量化趋势拟合优度。
+            - slope : float            : 拟合直线的斜率，正值表示上升，负值表示下降。
+            - avg, max, min : float    : 内存数据的均值、最大值与最小值，单位与输入一致。
+            - color : str              : 趋势对应的推荐颜色，用于图表高亮或 UI 渲染。
+            - poly_trend : str         : 多项式趋势形态标识（如 U-shape ↑↓、∩-shape ↓↑、Linear ~）。
+            - poly_r2 : float          : 二阶多项式拟合的决定系数 R²，反映非线性趋势拟合效果。
+            - poly_coef : list[float]  : 多项式拟合的系数列表 [a, b, c]，对应公式 ax² + bx + c。
+            - window_slope : float     : 滑动窗口中所有局部斜率的平均值。
+            - window_slope_max : float : 滑动窗口中观察到的最大上升斜率。
+            - window_slope_min : float : 滑动窗口中观察到的最大下降斜率。
 
         Notes
         -----
@@ -192,10 +168,10 @@ class Orbis(object):
 
         # 🟨 ==== 数据校验 ====
         if np.isnan(values := np.array(mem_part, dtype=float)).any():
-            return {"trend": "Invalid Data", **result}
+            return {**result, "trend": "Invalid Data"}
 
         if len(values) < 10:
-            return {"trend": "Few Data", **result}
+            return {**result, "trend": "Few Data"}
 
         # 🟨 ==== 基础统计 ====
         avg_val = values.mean()
@@ -220,17 +196,14 @@ class Orbis(object):
             poly_func = np.poly1d(poly_coef)
             fitted = poly_func(x)
 
-            ss_res = np.sum(np.square(values - fitted))              # 残差平方和
-            ss_tot = np.sum(np.square(values - np.mean(values)))     # 总方差
+            ss_res = np.sum(np.square(values - fitted))
+            ss_tot = np.sum(np.square(values - np.mean(values)))
             poly_r2 = 1.0 - ss_res / ss_tot if ss_tot != 0 else 0.0
             poly_r2 = round(poly_r2, 4)
 
-            if abs(poly_coef[0]) < 1e-8:
-                poly_trend = "Linear ~"
-            elif poly_coef[0] > 0:
-                poly_trend = "U-shape ↑↓"
-            else:
-                poly_trend = "∩-shape ↓↑"
+            if abs(poly_coef[0]) < 1e-8: poly_trend = "Linear ~"
+            elif poly_coef[0] > 0: poly_trend = "U-shape ↑↓"
+            else: poly_trend = "∩-shape ↓↑"
 
         except (np.linalg.LinAlgError, ValueError):
             poly_coef = [0.0, 0.0, 0.0]
@@ -238,11 +211,11 @@ class Orbis(object):
             poly_trend = "-"
 
         # 🟨 ==== 滑动窗口趋势分析 ====
-        window_slope = window_slope_max = window_slope_min = None
+        window_slope, window_slope_max, window_slope_min = None, None, None
         if window and len(values) >= window:
             slopes = []
             for i in range(0, len(values) - window + 1):
-                segment = values[i:i+window]
+                segment = values[i:i + window]
                 xw = np.arange(window)
                 s, _, _, _, _ = linregress(xw, segment)
                 slopes.append(s)
@@ -323,62 +296,31 @@ class Orbis(object):
         result : dict
             返回包含评分、等级、波动性与局部指标的分析结果，字段说明如下：
 
-            - level : str
-                综合评分等级（S~E），反映系统图形性能档次。
-
-            - score : float
-                综合得分（0~1），由多个子评分加权计算而得。
-
-            - color : str
-                根据评分等级推荐的十六进制颜色值。
-
-            - frame_count : int
-                总帧数，用于评估采样数据覆盖量。
-
-            - duration_s : float
-                采样时长，单位为秒。
-
-            - min_fps, avg_fps, max_fps : float
-                最小、平均、最大帧率指标。
-
-            - p95_fps, p99_fps : float
-                第 95 和 99 百分位帧率，反映极端性能情况。
-
-            - fps_std : float
-                帧率标准差，用于衡量帧率波动性。
-
-            - jank_ratio : float
-                掉帧比例（帧耗时 > 16.67ms），反映系统轻度卡顿情况。
-
-            - high_latency_ratio : float
-                高延迟帧比例（帧耗时 > 16.67ms），衡量非理想帧时间的占比。
-
-            - severe_latency_ratio : float
-                严重延迟帧比例（帧耗时 > 32ms），衡量明显卡顿的频率。
-
-            - max_frame_time, min_frame_time : float
-                单帧最大与最小耗时（单位 ms）。
-
-            - longest_low_fps : float
-                连续低帧率段的最长时长（FPS < 30）。
-
-            - roll_avg_fps, roll_jnk_ratio : float or None
-                滑动区间下的平均帧率与卡顿比例，若无滑动则为 None。
-
-            - drag_avg_fps, drag_jnk_ratio : float or None
-                拖拽区间下的平均帧率与卡顿比例，若无拖拽则为 None。
-
-            - score_jank : float
-                卡顿评分，基于卡顿时长对总时长的占比计算。
-
-            - score_latency : float
-                延迟评分，基于高延迟帧占比评估响应能力。
-
-            - score_fps_var : float
-                帧率波动评分，结合稳定性与平均帧率计算。
-
-            - score_motion : float
-                动作流畅性评分，评估交互区与卡顿区的重叠程度。
+            - level : str                    : 综合评分等级（S~E），反映系统图形性能档次。
+            - score : float                  : 综合得分（0~1），由多个子评分加权计算而得。
+            - color : str                    : 根据评分等级推荐的十六进制颜色值。
+            - frame_count : int              : 总帧数，用于评估采样数据覆盖量。
+            - duration_s : float             : 采样时长，单位为秒。
+            - min_fps : float                : 最小帧率指标。
+            - avg_fps : float                : 平均帧率指标。
+            - max_fps : float                : 最大帧率指标。
+            - p95_fps : float                : 第 95 百分位帧率，反映极端性能情况。
+            - p99_fps : float                : 第 99 百分位帧率，反映极端性能情况。
+            - fps_std : float                : 帧率标准差，用于衡量帧率波动性。
+            - jank_ratio : float             : 掉帧比例（帧耗时 > 16.67ms），反映系统轻度卡顿情况。
+            - high_latency_ratio : float     : 高延迟帧比例（帧耗时 > 16.67ms），衡量非理想帧时间的占比。
+            - severe_latency_ratio : float   : 严重延迟帧比例（帧耗时 > 32ms），衡量明显卡顿的频率。
+            - max_frame_time : float         : 单帧最大耗时（单位 ms）。
+            - min_frame_time : float         : 单帧最小耗时（单位 ms）。
+            - longest_low_fps : float        : 连续低帧率段的最长时长（FPS < 30）。
+            - roll_avg_fps : float or None   : 滑动区间下的平均帧率，若无滑动则为 None。
+            - roll_jnk_ratio : float or None : 滑动区间下的卡顿比例，若无滑动则为 None。
+            - drag_avg_fps : float or None   : 拖拽区间下的平均帧率，若无拖拽则为 None。
+            - drag_jnk_ratio : float or None : 拖拽区间下的卡顿比例，若无拖拽则为 None。
+            - score_jank : float             : 卡顿评分，基于卡顿时长对总时长的占比计算。
+            - score_latency : float          : 延迟评分，基于高延迟帧占比评估响应能力。
+            - score_fps_var : float          : 帧率波动评分，结合稳定性与平均帧率计算。
+            - score_motion : float           : 动作流畅性评分，评估交互区与卡顿区的重叠程度。
 
         Notes
         -----
@@ -418,13 +360,13 @@ class Orbis(object):
 
         # 🟩 ==== 数据校验 ====
         if (total_frames := len(frames)) < 10:
-            return {"label": "Few Frames", **result}
+            return {**result, "label": "Few Frames"}
 
         if (duration := frames[-1]["timestamp_ms"] - frames[0]["timestamp_ms"]) <= 0:
-            return {"label": "Invalid Time", **result}
+            return {**result, "label": "Invalid Time"}
 
         if not (fps_values := [app_fps for f in frames if (app_fps := f.get(fps_key)) is not None]):
-            return {"label": "No FPS", **result}
+            return {**result, "label": "No FPS"}
 
         result["duration_s"] = (duration_s := duration / 1000)
         result["frame_count"] = total_frames
@@ -541,89 +483,76 @@ class Orbis(object):
     @staticmethod
     def analyze_io_score(
         io_data: list[dict],
-        rw_peak_threshold: int = 102400,
-        idle_threshold: int = 10,
-        swap_threshold: int = 10240
+        rw_peak_threshold: float = 100.0,
+        idle_threshold: float = 0.01,
+        swap_threshold: float = 10.0,
+        sys_burst_z: float = 2.5
     ) -> dict:
         """
-        分析一组 I/O 指标数据的性能表现，包括读写行为、Swap 使用和系统调用波动，并生成评分与等级。
+        分析一组 I/O 性能指标并计算综合评分与等级。
+
+        根据输入的 I/O 序列数据，检测读写峰值、突发行为、空闲占比、系统调用异常波动以及 Swap 使用情况，
+        最终返回性能得分（0~100）、等级（S~E）及风险标签。
 
         Parameters
         ----------
-        io_data : list of dict
-            包含原始 I/O 采样数据的列表，每个字典表示一次采样结果，需包含读写字节数、Swap、系统调用等字段。
+        io_data : list[dict]
+            I/O 指标时间序列，每个元素应包含以下字段（单位均为 MB 或计数）：
+            - read_bytes : float  : 读数据量（MB）
+            - write_bytes : float : 写数据量（MB）
+            - rchar : float       : 读字符数（MB）
+            - wchar : float       : 写字符数（MB）
+            - syscr : float       : 系统调用 - 读次数
+            - syscw : float       : 系统调用 - 写次数
+            - swap : float        : Swap 使用量（MB）
 
-        rw_peak_threshold : int, optional
-            读写峰值阈值（单位：字节），超过该值会触发 RW 高峰惩罚，默认值为 102400。
+        rw_peak_threshold : float, default=100.0
+            读写峰值判定阈值，超过此值视为高峰风险。
 
-        idle_threshold : int, optional
-            判定空闲状态的 I/O 活动阈值（单位：字节），低于此值的周期将视为 Idle，默认值为 10。
+        idle_threshold : float, default=0.01
+            空闲段总 I/O 判定阈值，低于此值计为空闲。
 
-        swap_threshold : int, optional
-            Swap 使用量的爆发阈值（单位：KB），超过该值将被判定为 Swap 爆发，默认值为 10240。
+        swap_threshold : float, default=10.0
+            Swap 突发判定阈值，超过此值视为异常。
+
+        sys_burst_z : float, default=2.5
+            z-score 阈值。
 
         Returns
         -------
-        result : dict
-            包含 I/O 评估结果的结构化字典，字段说明如下：
-
-            - swap_status : str
-                Swap 状态标记（如 PASS / FAIL），用于快速判断是否存在异常。
-
-            - swap_max_kb : float
-                采样周期内观察到的最大 Swap 使用量（单位：KB）。
-
-            - swap_burst_ratio : float
-                Swap 爆发比例，表示超过阈值的采样点占比。
-
-            - swap_burst_count : int
-                Swap 爆发的总次数（即超阈值的点数）。
-
-            - rw_peak_kb : float
-                读写带宽的最大瞬时值（单位：KB）。
-
-            - rw_std_kb : float
-                读写带宽的波动程度（标准差，单位：KB）。
-
-            - rw_burst_ratio : float
-                RW 爆发段比例，即带宽瞬时值超出波动阈值的占比。
-
-            - rw_idle_ratio : float
-                Idle 周期占比，即 RW 活动较低的时间段占比。
-
-            - sys_burst : float
-                系统调用突变事件的总数（读+写）。
-
-            - sys_burst_events : int
-                系统突变的采样点数量，表示调用量异常剧增的事件频次。
-
-            - tags : list of str
-                所触发的风险标签，用于识别哪些维度存在异常（如 rw_burst、swap_burst 等）。
-
-            - risk : list of str
-                对应标签的风险描述文本，适用于日志与前端展示。
-
-            - score : float
-                总评分（0~100），由各异常项的扣分总和决定。
-
-            - grade : str
-                评分等级（S~E），用于表示整体 I/O 健康度。
+        dict
+            综合分析结果（字段顺序与类型如下）：
+            - swap_status : str        : Swap 状态（"PASS" 或风险状态）。
+            - swap_max_mb : float      : Swap 最大使用量（MB）。
+            - swap_burst_ratio : float : Swap 超阈值占比。
+            - swap_burst_count : int   : Swap 超阈值次数。
+            - rw_peak_mb : float       : 读写峰值（MB）。
+            - rw_std_mb : float        : 读写标准差（MB）。
+            - rw_burst_ratio : float   : 读写突发占比。
+            - rw_idle_ratio : float    : 读写空闲占比。
+            - sys_burst : int          : 系统调用突发事件数。
+            - sys_burst_events : int   : 系统调用突发次数（cr + cw）。
+            - tags : list[str]         : 检测到的风险标签。
+            - risk : list[str]         : 风险描述。
+            - score : int              : 综合得分（0~100）。
+            - grade : str              : 等级（S, A, B, C, D, E）。
 
         Notes
         -----
-        - 建议输入已按照时间顺序排列的原始 I/O 数据，且包含完整字段。
-        - 差值处理采用 `.diff()` 提取周期变化值，因此首个点不参与计算。
-        - 分数评估体系采用惩罚累计机制，初始分数为 100，逐项扣除异常项得分。
+        - 所有输入及阈值均基于 MB 单位。
+        - 评分采用扣分制，根据各类风险标签扣除相应分值，最低为 0。
+        - 等级划分规则：
+            S: ≥95, A: ≥90, B: ≥80, C: ≥70, D: ≥60, E: <60。
         """
 
         # 🟦 ==== 默认结果 ====
         result = {
             "swap_status": "PASS",
-            "swap_max_kb": 0.0,
+            "swap_max_mb": 0.0,
             "swap_burst_ratio": 0.0,
             "swap_burst_count": 0,
-            "rw_peak_kb": 0.0,
-            "rw_std_kb": 0.0,
+            "rw_peak_mb": 0.0,
+            "rw_std_mb": 0.0,
             "rw_burst_ratio": 0.0,
             "rw_idle_ratio": 0.0,
             "sys_burst": 0.0,
@@ -634,82 +563,133 @@ class Orbis(object):
             "grade": "S"
         }
 
+        if len(io_data) < 10:
+            return {**result, "swap_status": "Few Data"}
+
         df = pd.DataFrame(io_data)
 
-        # 🟦 ==== 差值处理 ====
+        # 🟦 ==== 采样周期 ====
+        ts = pd.to_datetime(df["timestamp"], errors="coerce", utc=True)
+        valid_dt = ts.diff().dt.total_seconds()
+        sample_seconds = float(np.median(valid_dt[valid_dt > 0])) if (valid_dt > 0).any() else None
+
+        # 🟦 ==== 惩罚权重 ====
+        penalty_map = {
+            "rw_peak_high": 15,
+            "rw_burst": 10,
+            "rw_idle": 10,
+            "sys_burst": 5,
+            "swap_burst": 20
+        }
+
+        # 🟦 ==== 差分策略 ====
         io_cols = ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]
         df.loc[:, io_cols] = df[io_cols].astype(float).diff().fillna(0).clip(lower=0)
 
-        # 🟦 ==== 标签统计 ====
-        tags, penalties = [], []
-
         # 🟦 ==== RW峰值与抖动 ====
-        rw_vals = pd.concat([df["read_bytes"], df["write_bytes"]])
-        rw_peak = rw_vals.max()
-        rw_std = rw_vals.std()
-        result["rw_peak_kb"] = round(rw_peak, 2)
-        result["rw_std_kb"] = round(rw_std, 2)
-        if rw_peak > rw_peak_threshold:
-            penalties.append(15)
-            tags.append("rw_peak_high")
-            result["risk"].append("RW Peak High")
+        rw_series = np.r_[df["read_bytes"].values, df["write_bytes"].values]
+        if rw_series.size == 0:
+            rw_series = np.array([0.0])
+        rw_peak = float(np.max(rw_series))
+        rw_std = float(np.std(rw_series, ddof=1)) if rw_series.size > 1 else 0.0
+        result["rw_peak_mb"] = round(rw_peak, 2)
+        result["rw_std_mb"] = round(rw_std, 2)
 
         # 🟦 ==== 爆发段 ====
-        rw_burst_threshold = float(np.mean(rw_vals)) + float(np.std(rw_vals))
-        rw_burst_ratio = float(np.mean(rw_vals > rw_burst_threshold))
-        result["rw_burst_ratio"] = round(rw_burst_ratio, 2)
-        if rw_burst_ratio > 0.1:
-            penalties.append(10)
-            tags.append("rw_burst")
-            result["risk"].append("RW Burst")
+        if (rw := np.asarray(rw_series, dtype=float)).size > 0:
+            q1, q3 = np.percentile(rw, [25, 75])
+            q1, q3 = float(q1), float(q3)
+
+            if (iqr := max(q3 - q1, 0.0)) > 0.0: rw_burst_th = q3 + 1.5 * iqr
+            else: rw_burst_th = float(np.mean(rw)) + float(np.std(rw, ddof=1))
+
+        else:
+            rw_burst_th = float("inf")
+
+        rw_burst_ratio = float(np.mean(rw > rw_burst_th)) if math.isfinite(rw_burst_th) else 0.0
+        rw_burst_ratio = min(max(rw_burst_ratio, 0.0), 1.0)
+        result["rw_burst_ratio"] = round(rw_burst_ratio, 4)
 
         # 🟦 ==== Idle段 ====
-        idle_mask = ((df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1)) < idle_threshold)
-        idle_ratio = idle_mask.mean()
-        result["rw_idle_ratio"] = round(idle_ratio, 2)
-        if idle_ratio > 0.4:
-            penalties.append(10)
-            tags.append("rw_idle")
-            result["risk"].append("IO Idle")
+        io_sum = df[["read_bytes", "write_bytes", "rchar", "wchar"]].sum(axis=1).values
+        if sample_seconds and sample_seconds > 0:
+            # 以 MB/s 判定空闲 -> io_sum / T < idle_threshold
+            idle_ratio = float(np.mean((io_sum / sample_seconds) < idle_threshold))
+        else:
+            # 以 MB/. 判定空闲
+            idle_ratio = float(np.mean(io_sum < idle_threshold))
+        result["rw_idle_ratio"] = round(min(max(idle_ratio, 0.0), 1.0), 4)
 
         # 🟦 ==== 系统调用突变 ====
-        cr_burst = (df["syscr"] > df["syscr"].mean() + 2 * df["syscr"].std()).sum()
-        cw_burst = (df["syscw"] > df["syscw"].mean() + 2 * df["syscw"].std()).sum()
-        sys_burst_events = cr_burst + cw_burst
-        result["sys_burst"] = sys_burst_events
-        if sys_burst_events > 3:
-            penalties.append(5)
-            tags.append("sys_burst")
-            result["risk"].append("Sys Burst")
+        sys_events, sys_kinds = 0, 0
+        for col in ["syscr", "syscw"]:
+            if (s := df[col].values.astype(float)).size > 1:
+                mu, sd = float(np.mean(s)), float(np.std(s, ddof=1))
+                bursts = int(np.sum((s - mu) / sd > sys_burst_z)) if sd > 0 else 0
+            else:
+                bursts = 0
+            sys_events += bursts
+            if bursts > 0: sys_kinds += 1
+        result["sys_burst_events"] = int(sys_events)
+        result["sys_burst"] = int(sys_kinds)
 
         # 🟦 ==== Swap爆发 ====
-        swap_vals = df["swap"].astype(float) * 1024
-        swap_max = swap_vals.max()
-        result["swap_max_kb"] = round(swap_max, 2)
-        if swap_max > swap_threshold:
-            penalties.append(20)
+        swap_vals = df["swap"].astype(float).values
+        swap_max = float(np.max(swap_vals)) if swap_vals.size else 0.0
+        result["swap_max_mb"] = round(swap_max, 2)
+        swap_burst_mask = swap_vals > float(swap_threshold)
+        result["swap_burst_ratio"] = round(float(np.mean(swap_burst_mask)), 4)
+        result["swap_burst_count"] = int(np.sum(swap_burst_mask))
+
+        if swap_max > swap_threshold * 2: result["swap_status"] = "FAIL"
+        elif swap_max > swap_threshold: result["swap_status"] = "WARN"
+        else: result["swap_status"] = "PASS"
+
+        # 🟦 ==== 标签统计 ====
+        penalties, tags, risk = 0, [], []
+
+        # Notes: 可能是大文件 I / O 或突发读写导致。
+        if rw_peak > rw_peak_threshold:
+            penalties += penalty_map["rw_peak_high"]
+            tags.append("rw_peak_high")
+            risk.append("RW Peak High")
+
+        # Notes: I/O 不稳定，可能是后台任务反复读写。
+        if result["rw_burst_ratio"] > 0.10:
+            penalties += penalty_map["rw_burst"]
+            tags.append("rw_burst")
+            risk.append("RW Burst")
+
+        # Notes: I/O 资源利用率低，可能等待或阻塞严重。
+        if result["rw_idle_ratio"] > 0.40:
+            penalties += penalty_map["rw_idle"]
+            tags.append("rw_idle")
+            risk.append("IO Idle")
+
+        # Notes: 短时间内频繁系统调用，可能是异常轮询或批量 I/O。
+        if result["sys_burst_events"] > 3:
+            penalties += penalty_map["sys_burst"]
+            tags.append("sys_burst")
+            risk.append("Sys Burst")
+
+        # Notes: 物理内存不足或内存泄漏，导致频繁换页。
+        if result["swap_status"] in ("WARN", "FAIL"):
+            penalties += penalty_map["swap_burst"]
             tags.append("swap_burst")
-            result["risk"].append("Swap Burst")
-        swap_burst_mask = (swap_vals > swap_threshold)
-        result["swap_burst_ratio"] = round(swap_burst_mask.mean(), 2)
-        result["swap_burst_count"] = swap_burst_mask.sum()
+            risk.append("Swap Burst")
 
         # 🟦 ==== 综合输出 ====
-        score = max(100 - sum(penalties), 0)
-        result["score"], result["tags"] = score, tags
+        score = max(100 - penalties, 0)
+        result["score"] = int(score)
+        result["tags"] = tags
+        result["risk"] = risk
 
-        if score >= 95:
-            result["grade"] = "S"
-        elif score >= 90:
-            result["grade"] = "A"
-        elif score >= 80:
-            result["grade"] = "B"
-        elif score >= 70:
-            result["grade"] = "C"
-        elif score >= 60:
-            result["grade"] = "D"
-        else:
-            result["grade"] = "E"
+        if score >= 95: result["grade"] = "S"
+        elif score >= 90: result["grade"] = "A"
+        elif score >= 80: result["grade"] = "B"
+        elif score >= 70: result["grade"] = "C"
+        elif score >= 60: result["grade"] = "D"
+        else: result["grade"] = "E"
 
         return result
 

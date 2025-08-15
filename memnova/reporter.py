@@ -41,15 +41,15 @@ from memnova import const
 class Reporter(object):
     """Reporter"""
 
-    def __init__(self, src_total_place: str, nodes: str, classify_type: str, align: "Align"):
+    def __init__(self, src_total_place: str, scene: str, classify_type: str, align: "Align"):
         self.total_dir = os.path.join(src_total_place, const.TOTAL_DIR)
         self.before_time = time.time()
 
         self.align = align
 
-        nodes = nodes or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
+        scene = scene or time.strftime("%Y%m%d%H%M%S", time.localtime(self.before_time))
 
-        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{nodes}_{classify_type}")
+        self.group_dir = os.path.join(self.total_dir, const.TREE_DIR, f"{scene}_{classify_type}")
         if not (group_dir := Path(self.group_dir)).exists():
             group_dir.mkdir(parents=True, exist_ok=True)
 
@@ -58,7 +58,7 @@ class Reporter(object):
             assemblage.mkdir(parents=True, exist_ok=True)
 
         self.db_file = os.path.join(self.assemblage, const.DB_FILE)
-        self.team_file = os.path.join(self.assemblage, f"{const.APP_NAME}_team_{nodes}.yaml")
+        self.team_file = os.path.join(self.assemblage, f"{const.APP_NAME}_team_{scene}.yaml")
 
         self.background_tasks: list = []
 
@@ -110,7 +110,7 @@ class Reporter(object):
 
         return cur_time, cur_mark, cur_data
 
-    async def final_render(self, memories: dict) -> None:
+    async def final_render(self, memories: dict, *args, **kwargs) -> dict:
         """
         等待所有后台绘图任务完成，并更新耗时信息至内存面板。
         """
@@ -122,6 +122,19 @@ class Reporter(object):
         memories.update({
             "TMS": f"{time.time() - self.before_time:.1f} s"
         })
+
+        compilation, cur_time, headline, *_ = args
+        _, _, _, major_summary_items, minor_summary_items, *_ = args
+
+        return {
+            "report_list": compilation,
+            "title": f"{const.APP_DESC} Information",
+            "time": cur_time,
+            "headline": headline,
+            "major_summary_items": major_summary_items,
+            "minor_summary_items": minor_summary_items,
+            **kwargs
+        }
 
     # Workflow: ======================== MEM / GFX ========================
 
@@ -360,10 +373,10 @@ class Reporter(object):
         log_loc   = Path(group) / f"{data_dir}.log"
 
         # 🟦 ==== I/O 评分 ====
-        rw_peak_threshold, idle_threshold, swap_threshold = 102400, 10, 10240
+        rw_peak_threshold, idle_threshold, swap_threshold, sys_burst_z = 100.0, 0.01, 10.0, 2.5
         io_score = await loop.run_in_executor(
             executor, Orbis.analyze_io_score, io_data,
-            rw_peak_threshold, idle_threshold, swap_threshold
+            rw_peak_threshold, idle_threshold, swap_threshold, sys_burst_z
         )
 
         # 🔵 ==== I/O 绘图 ====
@@ -690,16 +703,9 @@ class Reporter(object):
             # 🟡 ==== 次要容器 ====
             minor_summary_items += self.build_minor_items(key_tuples, groups, grouped)
 
-        await self.final_render(memories)
-
-        return {
-            "report_list": compilation,
-            "title": f"{const.APP_DESC} Information",
-            "time": cur_time,
-            "headline": headline,
-            "major_summary_items": major_summary_items,
-            "minor_summary_items": minor_summary_items
-        }
+        return await self.final_render(
+            memories, compilation, cur_time, headline, major_summary_items, minor_summary_items
+        )
 
     async def gfx_rendition(
         self,
@@ -745,16 +751,9 @@ class Reporter(object):
         # 🟢 ==== 次要容器 ====
         minor_summary_items += self.build_minor_items(key_tuples, groups, grouped)
 
-        await self.final_render(memories)
-
-        return {
-            "report_list": compilation,
-            "title": f"{const.APP_DESC} Information",
-            "time": cur_time,
-            "headline": headline,
-            "major_summary_items": major_summary_items,
-            "minor_summary_items": minor_summary_items
-        }
+        return await self.final_render(
+            memories, compilation, cur_time, headline, major_summary_items, minor_summary_items
+        )
 
 
 if __name__ == '__main__':

@@ -155,7 +155,7 @@ class Templater(object):
             df.loc[:, col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
         df.loc[:, "activity"] = df["activity"].fillna("-")
 
-        # 🟡 ==== 滑动窗口均值 ====
+        # 🟡 ==== 滑窗均值 ====
         window_size = max(3, len(df) // 20)
         df.loc[:, "pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
 
@@ -164,7 +164,7 @@ class Templater(object):
         changed = mode_series.ne(mode_series.shift())
         df.loc[:, "block_id"] = changed.cumsum()
 
-        # 🟡 ==== 主统计 ====
+        # 🟡 ==== 全局统计 ====
         max_value, min_value, avg_value = df["pss"].max(), df["pss"].min(), df["pss"].mean()
         value_span = max_value - min_value
         if value_span < 1e-6:
@@ -178,22 +178,21 @@ class Templater(object):
 
         # 🟡 ==== 前后台区块统计 ====
         block_stats = df.groupby(["block_id", "mode"]).agg(
-            start_time=("x", "first"),
-            end_time=("x", "last"),
+            start_time=("x", "first"), end_time=("x", "last")
         ).reset_index()
 
         # 🟡 ==== 主线折线 & 极值 ====
-        pss_color = "#3564B0"  # 主线深蓝
-        rss_color = "#FEB96B"  # RSS淡橙
-        uss_color = "#90B2C8"  # USS淡蓝灰
-        avg_color = "#BDB5D5"  # 均值灰紫
-        max_color = "#FF5872"  # 峰值桃红
-        min_color = "#54E3AF"  # 谷值薄荷绿
+        pss_color = "#3564B0"
+        rss_color = "#FEB96B"
+        uss_color = "#90B2C8"
+        avg_color = "#BDB5D5"
+        max_color = "#FF5872"
+        # min_color = "#54E3AF"
         sld_color = "#A8BFFF"
 
         # 🟡 ==== 区块配色 ====
-        fg_color = "#8FE9FC"  # 前台湖蓝
-        bg_color = "#F1F1F1"  # 后台淡灰
+        fg_color = "#8FE9FC"
+        bg_color = "#F1F1F1"
         fg_alpha = 0.15
         bg_alpha = 0.35
 
@@ -246,15 +245,15 @@ class Templater(object):
         bg_max = background["pss"].max() if not background.empty else None
 
         # 🟡 ==== 标记极值 ====
-        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
+        df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "sizes"] = 7
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "shapes"] = "circle"
 
-        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"  # 后台最大
+        df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "colors"] = "#FFB366"
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "sizes"] = 7
         df.loc[(df["pss"] == bg_max) & (df["mode"] == "BG") & extreme, "shapes"] = "square"
 
-        df.loc[(df["pss"] == max_value) & (~extreme), "colors"] = max_color  # 全局最大
+        df.loc[(df["pss"] == max_value) & (~extreme), "colors"] = max_color
         df.loc[(df["pss"] == max_value) & (~extreme), "sizes"] = 7
         df.loc[(df["pss"] == max_value) & (~extreme), "shapes"] = "circle"
 
@@ -440,14 +439,14 @@ class Templater(object):
         p.xaxis.major_label_orientation = 0.5
 
         # 🟢 ==== 颜色定义 ====
-        main_color = "#A9A9A9"
+        dur_color = "#A9A9A9"
         avg_color = "#8700FF"
         max_color = "#FF69B4"
 
         # 🟢 ==== 主折线 ====
         p.line(
             "timestamp_s", "duration_ms",
-            source=source, line_width=2, color=main_color, alpha=0.6, legend_label="Frame Duration"
+            source=source, line_width=2, color=dur_color, alpha=0.6, legend_label="Frame Duration"
         )
 
         # 🟢 ==== 点图 ====
