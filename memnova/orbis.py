@@ -587,6 +587,9 @@ class Orbis(object):
         io_cols = ["read_bytes", "write_bytes", "rchar", "wchar", "syscr", "syscw"]
         df.loc[:, io_cols] = df[io_cols].astype(float).diff().fillna(0).clip(lower=0)
 
+        if len(df) < 10:
+            return {**result, "swap_status": "Few Data"}
+
         # 🟦 ==== RW峰值与抖动 ====
         rw_series = np.r_[df["read_bytes"].values, df["write_bytes"].values]
         if rw_series.size == 0:
