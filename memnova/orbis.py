@@ -11,7 +11,9 @@
 import math
 import numpy as np
 import pandas as pd
-from scipy.stats import linregress
+from scipy.stats import (
+    linregress, zscore
+)
 
 
 class Orbis(object):
@@ -628,8 +630,7 @@ class Orbis(object):
         sys_events, sys_kinds = 0, 0
         for col in ["syscr", "syscw"]:
             if (s := df[col].values.astype(float)).size > 1:
-                mu, sd = float(np.mean(s)), float(np.std(s, ddof=1))
-                bursts = int(np.sum((s - mu) / sd > sys_burst_z)) if sd > 0 else 0
+                bursts = int(np.sum(zscore(s, ddof=1) > sys_burst_z))
             else:
                 bursts = 0
             sys_events += bursts
