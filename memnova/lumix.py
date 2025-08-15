@@ -160,10 +160,6 @@ class Lumix(object):
             df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"],
             s=20, color=max_color, zorder=3, label="Max"
         )
-        ax.scatter(
-            df.loc[df["pss"] == min_val, "num_x"], df.loc[df["pss"] == min_val, "pss"],
-            s=20, color=min_color, zorder=3, label="Min"
-        )
 
         # 🟡 ==== 设置轴与样式 ====
         ax.set_title("Memory Usage Over Time (PSS)")
@@ -185,8 +181,7 @@ class Lumix(object):
             Line2D([0], [0], color=uss_color, linewidth=1.1, linestyle=":", label="USS"),
             Line2D([0], [0], color=sld_color, linestyle="--", label="Sliding Avg"),
             Line2D([0], [0], color=avg_color, linestyle=":", label="PSS AVG"),
-            Line2D([0], [0], marker="o", color=max_color, linestyle="None", markersize=7, label="Max"),
-            Line2D([0], [0], marker="o", color=min_color, linestyle="None", markersize=7, label="Min"),
+            Line2D([0], [0], marker="o", color=max_color, linestyle="None", markersize=7, label="Max")
         ]
 
         # 🟡 ==== 展示图例（主图例+堆叠区图例） ====
