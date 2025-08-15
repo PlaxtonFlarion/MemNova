@@ -243,7 +243,7 @@ class Templater(object):
         bg_df = df[df["mode"] == "BG"]
 
         fg_max = fg_df["pss"].max() if not fg_df.empty else None
-        bg_max = bg_df["pss"].max() if not bg_df.empty else Non
+        bg_max = bg_df["pss"].max() if not bg_df.empty else None
 
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
