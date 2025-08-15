@@ -239,11 +239,11 @@ class Templater(object):
         df.loc[:, "sizes"] = 3
 
         # 🟡 ==== 分区极值 ====
-        fg_df = df[df["mode"] == "FG"]
-        bg_df = df[df["mode"] == "BG"]
+        foreground = df[df["mode"] == "FG"]
+        background = df[df["mode"] == "BG"]
 
-        fg_max = fg_df["pss"].max() if not fg_df.empty else None
-        bg_max = bg_df["pss"].max() if not bg_df.empty else None
+        fg_max = foreground["pss"].max() if not foreground.empty else None
+        bg_max = background["pss"].max() if not background.empty else None
 
         # 🟡 ==== 标记极值 ====
         df.loc[(df["pss"] == fg_max) & (df["mode"] == "FG") & extreme, "colors"] = "#FF90A0"  # 前台最大
