@@ -408,13 +408,11 @@ class Lumix(object):
         io_summary = (
             f"Grade: {kwargs['grade']}\n"
             f"Score: {kwargs['score']}\n"
-            f"Peak RW: {kwargs['rw_peak_mb']} MB\n"
-            f"RW Std: {kwargs['rw_std_mb']} MB\n"
-            f"RW Burst Ratio: {kwargs['rw_burst_ratio']:.2%}\n"
-            f"Idle Ratio: {kwargs['rw_idle_ratio']:.2%}\n"
-            f"Swap Max: {kwargs.get('swap_max_mb', 0)} MB\n"
-            f"Swap Burst: {kwargs.get('swap_burst_count', 0)} / {kwargs.get('swap_burst_ratio', 0):.2%}\n"
-            f"Sys Burst Events: {kwargs['sys_burst']}\n"
+            f"RW Burst: {kwargs['rw_burst_ratio']:.2%}\n"
+            f"RW Idle: {kwargs['rw_idle_ratio']:.2%}\n"
+            f"Swap: {kwargs['swap_status']}\n"
+            f"SwapMax: {kwargs['swap_max_mb']} MB\n"
+            f"BurstEvt: {kwargs['sys_burst_events']}\n"
         )
         if kwargs["tags"]:
             io_summary += f"Tags: {', '.join(kwargs['tags'])}"

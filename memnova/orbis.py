@@ -563,6 +563,7 @@ class Orbis(object):
             "grade": "S"
         }
 
+        # 🟦 ==== 数据校验 ====
         if len(io_data) < 10:
             return {**result, "swap_status": "Few Data"}
 
