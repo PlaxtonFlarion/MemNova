@@ -233,7 +233,7 @@ class Templater(object):
             alpha=0.4
         )
 
-        # 🟡 ==== 默认极值 ====
+        # 🟡 ==== 默认样式 ====
         df.loc[:, "shapes"] = "circle"
         df.loc[:, "colors"] = pss_color
         df.loc[:, "sizes"] = 3
