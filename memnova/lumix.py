@@ -14,6 +14,9 @@ import matplotlib.dates as md
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+from matplotlib.dates import (
+    AutoDateLocator, ConciseDateFormatter
+)
 from loguru import logger
 
 
@@ -409,8 +412,21 @@ class Lumix(object):
         ax2 = ax1.twinx()
 
         # 🔵 ==== 时间轴 ====
-        ts = pd.to_datetime(df["timestamp"])
-        x = (ts - ts.iloc[0]).dt.total_seconds()
+        ts = pd.to_datetime(df["timestamp"], errors="coerce")
+        # 避免 NaT 造成报错
+        ts = ts.ffill().bfill()  
+        # 估计中位采样周期
+        dt = ts.diff().dt.total_seconds()
+        med_interval = float(np.median(dt[dt > 0])) if (dt > 0).any() else None
+        # 配置时间轴格式器
+        locator = AutoDateLocator()
+        formatter = ConciseDateFormatter(locator)
+        ax1.xaxis.set_major_locator(locator)
+        ax1.xaxis.set_major_formatter(formatter)
+        ax2.xaxis.set_major_locator(locator)
+        ax2.xaxis.set_major_formatter(formatter)
+        # 让时间标签不重叠
+        fig.autofmt_xdate()
 
         # 🔵 ==== 字节量主轴（MB） ====
         byte_fields = [
@@ -424,7 +440,7 @@ class Lumix(object):
             vals = df[col].astype(float).diff().fillna(0)
             vals = vals.clip(lower=0)   # 负值归零
             ax1.plot(
-                x, vals,
+                ts, vals,
                 color=color, label=label, marker=marker, linewidth=1.1, markersize=2.2, alpha=0.95
             )
             byte_handles.append(
@@ -440,7 +456,7 @@ class Lumix(object):
             vals = df[col].astype(float).diff().fillna(0)
             vals = vals.clip(lower=0)   # 负值归零
             ax2.plot(
-                x, vals,
+                ts, vals,
                 color=color, label=label, marker=marker, linewidth=1.2, markersize=2.5, alpha=0.88, linestyle="--"
             )
             count_handles.append(
