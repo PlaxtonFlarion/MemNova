@@ -405,18 +405,6 @@ class Lumix(object):
         """
         df = pd.DataFrame(io_data)
 
-        io_summary = (
-            f"Grade: {kwargs['grade']}\n"
-            f"Score: {kwargs['score']}\n"
-            f"RW Burst: {kwargs['rw_burst_ratio']:.2%}\n"
-            f"RW Idle: {kwargs['rw_idle_ratio']:.2%}\n"
-            f"Swap: {kwargs['swap_status']}\n"
-            f"SwapMax: {kwargs['swap_max_mb']} MB\n"
-            f"BurstEvt: {kwargs['sys_burst_events']}\n"
-        )
-        if kwargs["tags"]:
-            io_summary += f"Tags: {', '.join(kwargs['tags'])}"
-
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()
 
@@ -489,6 +477,18 @@ class Lumix(object):
         )
 
         # 🔵 ==== 展示评分 ====
+        io_summary = (
+            f"Grade: {kwargs['grade']}\n"
+            f"Score: {kwargs['score']}\n"
+            f"RW Burst: {kwargs['rw_burst_ratio']:.2%}\n"
+            f"RW Idle: {kwargs['rw_idle_ratio']:.2%}\n"
+            f"Swap: {swap_status}\n"
+            f"SwapMax: {kwargs['swap_max_mb']} MB\n"
+            f"BurstEvt: {kwargs['sys_burst_events']}\n"
+        )
+        if kwargs["tags"]:
+            io_summary += f"Tags: {', '.join(kwargs['tags'])}"
+            
         ax1.text(
             0.008, 0.98, io_summary,
             transform=ax1.transAxes,
