@@ -437,7 +437,7 @@ class Lumix(object):
             vals = vals.clip(lower=0)   # 负值归零
             ax1.plot(
                 x, vals,
-                color=color, label=label, marker=marker, linewidth=1.4, markersize=2.5, alpha=0.95
+                color=color, label=label, marker=marker, linewidth=1.1, markersize=2.2, alpha=0.95
             )
             byte_handles.append(
                 Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2)
@@ -453,7 +453,7 @@ class Lumix(object):
             vals = vals.clip(lower=0)   # 负值归零
             ax2.plot(
                 x, vals,
-                color=color, label=label, marker=marker, linewidth=1.5, markersize=2.8, alpha=0.88, linestyle="--"
+                color=color, label=label, marker=marker, linewidth=1.2, markersize=2.5, alpha=0.88, linestyle="--"
             )
             count_handles.append(
                 Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2, linestyle="--")
@@ -472,8 +472,8 @@ class Lumix(object):
                 handles.append(Patch(facecolor="#FFD6D6", edgecolor="none", alpha=0.3, label="Swap FAIL"))
 
         # 🔵 ==== 坐标轴和标题 ====
-        ax1.set_ylabel("Delta (MB/s)", fontsize=12)
-        ax2.set_ylabel("Syscalls (Count/s)", fontsize=12)
+        ax1.set_ylabel("Delta (MB/interval)", fontsize=12)
+        ax2.set_ylabel("Syscalls (Count/interval)", fontsize=12)
         ax1.set_xlabel("Time (s)", fontsize=12)
         ax1.set_title("I/O Timeline", fontsize=16)
         ax1.grid(True, linestyle="--", alpha=0.35, zorder=0)
