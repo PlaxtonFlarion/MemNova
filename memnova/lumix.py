@@ -46,12 +46,6 @@ class Lumix(object):
         -------
         str
             保存的图片文件路径。
-
-        Notes
-        -----
-        - 图表包含 PSS 主曲线、RSS/USS 辅助曲线、滑动平均线，以及 Java Heap/Native Heap/Graphics 堆叠区。
-        - 前台/后台区块以不同底色区分，并标注均值带、极值点。
-        - 图例由主曲线与堆叠区两部分构成，评分信息显示在图表左上角。
         """
         df = pd.DataFrame(mem_data)
 
@@ -115,7 +109,7 @@ class Lumix(object):
 
         # 🟡 ==== 画布 ====
         fig, ax = plt.subplots(figsize=(16, 6))
-        
+
         # 🟡 ==== 时间轴格式器 ====
         locator = AutoDateLocator()
         formatter = ConciseDateFormatter(locator)
@@ -266,13 +260,6 @@ class Lumix(object):
         -------
         str
             保存的图片文件路径。
-
-        Notes
-        -----
-        - 主折线为帧耗时（ms），附带平均线、最大耗时线及 16.67ms 基准线（对应 60 FPS）。
-        - 附加多帧率参考线（30/45/90/120 FPS）用于快速对比性能表现。
-        - 滚动、拖拽、掉帧区间以不同颜色背景高亮标识。
-        - 左上角展示系统层与应用层 FPS 的均值、最大值、评分与等级。
         """
         timestamps = [f["timestamp_ms"] / 1000 for f in raw_frames]
         durations = [f["duration_ms"] for f in raw_frames]
@@ -406,20 +393,13 @@ class Lumix(object):
         -------
         str
             保存的图片文件路径。
-
-        Notes
-        -----
-        - 主轴（左）显示读写字节量变化（MB/s），含 Read Bytes、Write Bytes、RChar、WChar 四条曲线。
-        - 副轴（右）显示系统调用变化（Count/s），含 Syscr、Syscw 两条曲线。
-        - 评分信息（等级、得分、峰值、抖动、空闲占比、Swap、系统调用爆发等）显示在图表左上角。
-        - 对负值进行归零处理，确保数据可视化的稳定性。
         """
         df = pd.DataFrame(io_data)
 
         # 🔵 ==== 时间轴 ====
         ts = pd.to_datetime(df["timestamp"], errors="coerce")
-        ts = ts.ffill().bfill()  
-        
+        ts = ts.ffill().bfill()
+
         # 🔵 ==== 中位采样周期 ====
         dt = ts.diff().dt.total_seconds()
         med_interval = float(np.median(dt[dt > 0])) if (dt > 0).any() else None
@@ -477,7 +457,7 @@ class Lumix(object):
         # 🔵 ==== Swap 背景染色 ====
         swap_status = kwargs.get("swap_status", "PASS").upper()
         match swap_status:
-            case "WARN": 
+            case "WARN":
                 ax1.axhspan(*ax1.get_ylim(), color="#FFF5CC", alpha=0.3, zorder=-1)
                 handles.append(Patch(facecolor="#FFF5CC", edgecolor="none", alpha=0.3, label="Swap WARN"))
             case "FAIL":
@@ -514,7 +494,7 @@ class Lumix(object):
         )
         if kwargs["tags"]:
             io_summary += f"Tags: {', '.join(kwargs['tags'])}"
-            
+
         ax1.text(
             0.008, 0.98, io_summary,
             transform=ax1.transAxes,

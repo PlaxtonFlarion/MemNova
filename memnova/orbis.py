@@ -128,19 +128,21 @@ class Orbis(object):
         result : dict
             返回结构化的趋势评分字典，字段说明如下：
 
-            - trend : str              : 趋势类型，包括 Upward ↑、Downward ↓、Stable →、Wave ~ 等。
-            - trend_score : float      : 趋势得分，范围 [-1.0, 1.0]，反映趋势强度与方向性。
-            - jitter_index : float     : 抖动指数，衡量数据的波动幅度，值越大表示不稳定性越高。
-            - r_squared : float        : 线性拟合的决定系数 R²，用于量化趋势拟合优度。
-            - slope : float            : 拟合直线的斜率，正值表示上升，负值表示下降。
-            - avg, max, min : float    : 内存数据的均值、最大值与最小值，单位与输入一致。
-            - color : str              : 趋势对应的推荐颜色，用于图表高亮或 UI 渲染。
-            - poly_trend : str         : 多项式趋势形态标识（如 U-shape ↑↓、∩-shape ↓↑、Linear ~）。
-            - poly_r2 : float          : 二阶多项式拟合的决定系数 R²，反映非线性趋势拟合效果。
-            - poly_coef : list[float]  : 多项式拟合的系数列表 [a, b, c]，对应公式 ax² + bx + c。
-            - window_slope : float     : 滑动窗口中所有局部斜率的平均值。
-            - window_slope_max : float : 滑动窗口中观察到的最大上升斜率。
-            - window_slope_min : float : 滑动窗口中观察到的最大下降斜率。
+            - trend            : str         : 趋势类型，包括 Upward ↑、Downward ↓、Stable →、Wave ~ 等。
+            - trend_score      : float       : 趋势得分，范围 [-1.0, 1.0]，反映趋势强度与方向性。
+            - jitter_index     : float       : 抖动指数，衡量数据的波动幅度，值越大表示不稳定性越高。
+            - r_squared        : float       : 线性拟合的决定系数 R²，用于量化趋势拟合优度。
+            - slope            : float       : 拟合直线的斜率，正值表示上升，负值表示下降。
+            - avg              : float       : 内存数据的均值，单位与输入一致。
+            - max              : float       : 内存数据的最大值，单位与输入一致。
+            - min              : float       : 内存数据的最小值，单位与输入一致。
+            - color            : str         : 趋势对应的推荐颜色，用于图表高亮或 UI 渲染。
+            - poly_trend       : str         : 多项式趋势形态标识（如 U-shape ↑↓、∩-shape ↓↑、Linear ~）。
+            - poly_r2          : float       : 二阶多项式拟合的决定系数 R²，反映非线性趋势拟合效果。
+            - poly_coef        : list[float] : 多项式拟合的系数列表 [a, b, c]，对应公式 ax² + bx + c。
+            - window_slope     : float       : 滑动窗口中所有局部斜率的平均值。
+            - window_slope_max : float       : 滑动窗口中观察到的最大上升斜率。
+            - window_slope_min : float       : 滑动窗口中观察到的最大下降斜率。
 
         Notes
         -----
@@ -298,31 +300,31 @@ class Orbis(object):
         result : dict
             返回包含评分、等级、波动性与局部指标的分析结果，字段说明如下：
 
-            - level : str                    : 综合评分等级（S~E），反映系统图形性能档次。
-            - score : float                  : 综合得分（0~1），由多个子评分加权计算而得。
-            - color : str                    : 根据评分等级推荐的十六进制颜色值。
-            - frame_count : int              : 总帧数，用于评估采样数据覆盖量。
-            - duration_s : float             : 采样时长，单位为秒。
-            - min_fps : float                : 最小帧率指标。
-            - avg_fps : float                : 平均帧率指标。
-            - max_fps : float                : 最大帧率指标。
-            - p95_fps : float                : 第 95 百分位帧率，反映极端性能情况。
-            - p99_fps : float                : 第 99 百分位帧率，反映极端性能情况。
-            - fps_std : float                : 帧率标准差，用于衡量帧率波动性。
-            - jank_ratio : float             : 掉帧比例（帧耗时 > 16.67ms），反映系统轻度卡顿情况。
-            - high_latency_ratio : float     : 高延迟帧比例（帧耗时 > 16.67ms），衡量非理想帧时间的占比。
-            - severe_latency_ratio : float   : 严重延迟帧比例（帧耗时 > 32ms），衡量明显卡顿的频率。
-            - max_frame_time : float         : 单帧最大耗时（单位 ms）。
-            - min_frame_time : float         : 单帧最小耗时（单位 ms）。
-            - longest_low_fps : float        : 连续低帧率段的最长时长（FPS < 30）。
-            - roll_avg_fps : float or None   : 滑动区间下的平均帧率，若无滑动则为 None。
-            - roll_jnk_ratio : float or None : 滑动区间下的卡顿比例，若无滑动则为 None。
-            - drag_avg_fps : float or None   : 拖拽区间下的平均帧率，若无拖拽则为 None。
-            - drag_jnk_ratio : float or None : 拖拽区间下的卡顿比例，若无拖拽则为 None。
-            - score_jank : float             : 卡顿评分，基于卡顿时长对总时长的占比计算。
-            - score_latency : float          : 延迟评分，基于高延迟帧占比评估响应能力。
-            - score_fps_var : float          : 帧率波动评分，结合稳定性与平均帧率计算。
-            - score_motion : float           : 动作流畅性评分，评估交互区与卡顿区的重叠程度。
+            - level                : str           : 综合评分等级（S~E），反映系统图形性能档次。
+            - score                : float         : 综合得分（0~1），由多个子评分加权计算而得。
+            - color                : str           : 根据评分等级推荐的十六进制颜色值。
+            - frame_count          : int           : 总帧数，用于评估采样数据覆盖量。
+            - duration_s           : float         : 采样时长，单位为秒。
+            - min_fps              : float         : 最小帧率指标。
+            - avg_fps              : float         : 平均帧率指标。
+            - max_fps              : float         : 最大帧率指标。
+            - p95_fps              : float         : 第 95 百分位帧率，反映极端性能情况。
+            - p99_fps              : float         : 第 99 百分位帧率，反映极端性能情况。
+            - fps_std              : float         : 帧率标准差，用于衡量帧率波动性。
+            - jank_ratio           : float         : 掉帧比例（帧耗时 > 16.67ms），反映系统轻度卡顿情况。
+            - high_latency_ratio   : float         : 高延迟帧比例（帧耗时 > 16.67ms），衡量非理想帧时间的占比。
+            - severe_latency_ratio : float         : 严重延迟帧比例（帧耗时 > 32ms），衡量明显卡顿的频率。
+            - max_frame_time       : float         : 单帧最大耗时（单位 ms）。
+            - min_frame_time       : float         : 单帧最小耗时（单位 ms）。
+            - longest_low_fps      : float         : 连续低帧率段的最长时长（FPS < 30）。
+            - roll_avg_fps         : float or None : 滑动区间下的平均帧率，若无滑动则为 None。
+            - roll_jnk_ratio       : float or None : 滑动区间下的卡顿比例，若无滑动则为 None。
+            - drag_avg_fps         : float or None : 拖拽区间下的平均帧率，若无拖拽则为 None。
+            - drag_jnk_ratio       : float or None : 拖拽区间下的卡顿比例，若无拖拽则为 None。
+            - score_jank           : float         : 卡顿评分，基于卡顿时长对总时长的占比计算。
+            - score_latency        : float         : 延迟评分，基于高延迟帧占比评估响应能力。
+            - score_fps_var        : float         : 帧率波动评分，结合稳定性与平均帧率计算。
+            - score_motion         : float         : 动作流畅性评分，评估交互区与卡顿区的重叠程度。
 
         Notes
         -----
@@ -500,13 +502,13 @@ class Orbis(object):
         ----------
         io_data : list[dict]
             I/O 指标时间序列，每个元素应包含以下字段（单位均为 MB 或计数）：
-            - read_bytes : float  : 读数据量（MB）
+            - read_bytes  : float : 读数据量（MB）
             - write_bytes : float : 写数据量（MB）
-            - rchar : float       : 读字符数（MB）
-            - wchar : float       : 写字符数（MB）
-            - syscr : float       : 系统调用 - 读次数
-            - syscw : float       : 系统调用 - 写次数
-            - swap : float        : Swap 使用量（MB）
+            - rchar       : float : 读字符数（MB）
+            - wchar       : float : 写字符数（MB）
+            - syscr       : float : 系统调用 - 读次数
+            - syscw       : float : 系统调用 - 写次数
+            - swap        : float : Swap 使用量（MB）
 
         rw_peak_threshold : float, default=100.0
             读写峰值判定阈值，超过此值视为高峰风险。
@@ -524,20 +526,20 @@ class Orbis(object):
         -------
         dict
             综合分析结果（字段顺序与类型如下）：
-            - swap_status : str        : Swap 状态（"PASS" 或风险状态）。
-            - swap_max_mb : float      : Swap 最大使用量（MB）。
-            - swap_burst_ratio : float : Swap 超阈值占比。
-            - swap_burst_count : int   : Swap 超阈值次数。
-            - rw_peak_mb : float       : 读写峰值（MB）。
-            - rw_std_mb : float        : 读写标准差（MB）。
-            - rw_burst_ratio : float   : 读写突发占比。
-            - rw_idle_ratio : float    : 读写空闲占比。
-            - sys_burst : int          : 系统调用突发事件数。
-            - sys_burst_events : int   : 系统调用突发次数（cr + cw）。
-            - tags : list[str]         : 检测到的风险标签。
-            - risk : list[str]         : 风险描述。
-            - score : int              : 综合得分（0~100）。
-            - grade : str              : 等级（S, A, B, C, D, E）。
+            - swap_status      : str       : Swap 状态（"PASS" 或风险状态）。
+            - swap_max_mb      : float     : Swap 最大使用量（MB）。
+            - swap_burst_ratio : float     : Swap 超阈值占比。
+            - swap_burst_count : int       : Swap 超阈值次数。
+            - rw_peak_mb       : float     : 读写峰值（MB）。
+            - rw_std_mb        : float     : 读写标准差（MB）。
+            - rw_burst_ratio   : float     : 读写突发占比。
+            - rw_idle_ratio    : float     : 读写空闲占比。
+            - sys_burst        : int       : 系统调用突发事件数。
+            - sys_burst_events : int       : 系统调用突发次数（cr + cw）。
+            - tags             : list[str] : 检测到的风险标签。
+            - risk             : list[str] : 风险描述。
+            - score            : int       : 综合得分（0~100）。
+            - grade            : str       : 等级（S, A, B, C, D, E）。
 
         Notes
         -----
