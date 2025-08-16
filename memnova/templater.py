@@ -363,8 +363,9 @@ class Templater(object):
             - `duration_ms`  : 当前帧渲染耗时（毫秒）。
             - `is_jank`      : 是否掉帧（布尔值）。
             - `frame_type`   : 帧类型描述（如 App / SurfaceFlinger）。
-            - `fps_sys` / `fps_app` : 系统与应用帧率。
-            - `layer_name`   : 图层名称（可选）。
+            - `fps_sys`      : 系统帧率。
+            - `fps_app`      : 应用帧率。
+            - `layer_name`   : 图层名称。
 
         roll_ranges : list of dict or None
             滚动操作的时间区间，每个元素包含：
