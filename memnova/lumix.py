@@ -60,6 +60,10 @@ class Lumix(object):
         df.loc[:, "pss"] = pd.to_numeric(df["pss"], errors="coerce")
         df = df.dropna(subset=["pss"])
 
+        # 🟡 ==== 中位采样周期 ====
+        dt = df["x"].diff().dt.total_seconds()
+        med_interval = float(np.median(dt[dt > 0])) if (dt > 0).any() else None
+
         # 🟡 ==== 滑窗均值 ====
         window_size = max(3, len(df) // 20)
         df.loc[:, "pss_sliding_avg"] = df["pss"].rolling(window=window_size, min_periods=1).mean()
@@ -109,8 +113,10 @@ class Lumix(object):
         fg_alpha = 0.15
         bg_alpha = 0.35
 
-        # 🟡 ==== 绘图 ====
+        # 🟡 ==== 画布 ====
         fig, ax = plt.subplots(figsize=(16, 6))
+        
+        # 🟡 ==== 时间轴格式器 ====
         locator = AutoDateLocator()
         formatter = ConciseDateFormatter(locator)
         ax.xaxis.set_major_locator(locator)
@@ -164,7 +170,8 @@ class Lumix(object):
         )
 
         # 🟡 ==== 设置轴与样式 ====
-        ax.set_title("Memory Usage Over Time (PSS)")
+        subtitle = f" (median interval ≈ {med_interval:.1f}s)" if med_interval else ""
+        ax.set_title(f"Memory Usage Over Time (PSS){subtitle}")
         ax.set_xlabel("Timestamp")
         ax.set_ylabel("PSS (MB)")
         ax.grid(True, linestyle="--", alpha=0.4)
@@ -277,6 +284,7 @@ class Lumix(object):
         max_dur = np.max(durations) if durations else 0
         ths_dur = 16.67
 
+        # 🟢 ==== 画布 ====
         fig, ax1 = plt.subplots(figsize=(16, 6))
 
         # 🟢 ==== 颜色定义 ====
@@ -408,24 +416,25 @@ class Lumix(object):
         """
         df = pd.DataFrame(io_data)
 
+        # 🔵 ==== 时间轴 ====
+        ts = pd.to_datetime(df["timestamp"], errors="coerce")
+        ts = ts.ffill().bfill()  
+        
+        # 🔵 ==== 中位采样周期 ====
+        dt = ts.diff().dt.total_seconds()
+        med_interval = float(np.median(dt[dt > 0])) if (dt > 0).any() else None
+
+        # 🔵 ==== 画布 ====
         fig, ax1 = plt.subplots(figsize=(16, 6))
         ax2 = ax1.twinx()
 
-        # 🔵 ==== 时间轴 ====
-        ts = pd.to_datetime(df["timestamp"], errors="coerce")
-        # 避免 NaT 造成报错
-        ts = ts.ffill().bfill()  
-        # 估计中位采样周期
-        dt = ts.diff().dt.total_seconds()
-        med_interval = float(np.median(dt[dt > 0])) if (dt > 0).any() else None
-        # 配置时间轴格式器
+        # 🔵 ==== 时间轴格式器 ====
         locator = AutoDateLocator()
         formatter = ConciseDateFormatter(locator)
         ax1.xaxis.set_major_locator(locator)
         ax1.xaxis.set_major_formatter(formatter)
         ax2.xaxis.set_major_locator(locator)
         ax2.xaxis.set_major_formatter(formatter)
-        # 让时间标签不重叠
         fig.autofmt_xdate()
 
         # 🔵 ==== 字节量主轴（MB） ====
