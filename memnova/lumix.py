@@ -459,6 +459,18 @@ class Lumix(object):
                 Line2D([0], [0], color=color, marker=marker, label=label, linewidth=2, linestyle="--")
             )
 
+        handles = byte_handles + count_handles
+
+        # 🔵 ==== Swap 背景染色 ====
+        swap_status = kwargs.get("swap_status", "PASS").upper()
+        match swap_status:
+            case "WARN": 
+                ax1.axhspan(*ax1.get_ylim(), color="#FFF5CC", alpha=0.3, zorder=-1)
+                handles.append(Patch(facecolor="#FFF5CC", edgecolor="none", alpha=0.3, label="Swap WARN"))
+            case "FAIL":
+                ax1.axhspan(*ax1.get_ylim(), color="#FFD6D6", alpha=0.3, zorder=-1)
+                handles.append(Patch(facecolor="#FFD6D6", edgecolor="none", alpha=0.3, label="Swap FAIL"))
+
         # 🔵 ==== 坐标轴和标题 ====
         ax1.set_ylabel("Delta (MB/s)", fontsize=12)
         ax2.set_ylabel("Syscalls (Count/s)", fontsize=12)
@@ -467,7 +479,6 @@ class Lumix(object):
         ax1.grid(True, linestyle="--", alpha=0.35, zorder=0)
 
         # 🔵 ==== 图例 ====
-        handles = byte_handles + count_handles
         ax1.legend(
             handles=handles,
             loc="upper right",
