@@ -10,7 +10,6 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.dates as md
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
@@ -113,9 +112,11 @@ class Lumix(object):
 
         # 🟡 ==== 绘图 ====
         fig, ax = plt.subplots(figsize=(16, 6))
-        ax.xaxis_date()
-        ax.xaxis.set_major_formatter(md.DateFormatter("%H:%M:%S"))
-        ax.xaxis.set_major_locator(md.AutoDateLocator())
+        locator = AutoDateLocator()
+        formatter = ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+        fig.autofmt_xdate()
 
         # 🟡 ==== 前后台区块底色 ====
         for _, row in block_stats.iterrows():
@@ -478,8 +479,9 @@ class Lumix(object):
         # 🔵 ==== 坐标轴和标题 ====
         ax1.set_ylabel("Delta (MB/interval)", fontsize=12)
         ax2.set_ylabel("Syscalls (Count/interval)", fontsize=12)
-        ax1.set_xlabel("Time (s)", fontsize=12)
-        ax1.set_title("I/O Timeline", fontsize=16)
+        ax1.set_xlabel("Timestamp", fontsize=12)
+        subtitle = f" (median interval ≈ {med_interval:.1f}s)" if med_interval else ""
+        ax1.set_title(f"I/O Timeline{subtitle}", fontsize=16)
         ax1.grid(True, linestyle="--", alpha=0.35, zorder=0)
 
         # 🔵 ==== 图例 ====
