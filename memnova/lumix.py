@@ -57,7 +57,6 @@ class Lumix(object):
 
         df.loc[:, "x"] = pd.to_datetime(df["timestamp"], format="%Y-%m-%d %H:%M:%S", errors="coerce")
         df = df.dropna(subset=["x"])
-        df.loc[:, "num_x"] = md.date2num(df["x"])
         df.loc[:, "pss"] = pd.to_numeric(df["pss"], errors="coerce")
         df = df.dropna(subset=["pss"])
 
@@ -81,7 +80,7 @@ class Lumix(object):
 
         # 🟡 ==== 区块统计 ====
         block_stats = df.groupby(["block_id", "mode"]).agg(
-            start_time=("num_x", "first"), end_time=("num_x", "last")
+            start_time=("x", "first"), end_time=("x", "last")
         ).reset_index()
 
         # 🟡 ==== 判断内存趋势 ====
@@ -130,7 +129,7 @@ class Lumix(object):
         stack_colors = ["#FFD6E0", "#D4E7FF", "#CAE7E1"]
         stack_labels = ["Java Heap", "Native Heap", "Graphics"]
         ax.stackplot(
-            df["num_x"],
+            df["x"],
             df["summary_java_heap"],
             df["summary_native_heap"],
             df["summary_graphics"],
@@ -140,13 +139,13 @@ class Lumix(object):
         )
 
         # 🟡 ==== PSS主线 / RSS折线 / USS折线 ====
-        ax.plot(df["num_x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
-        ax.plot(df["num_x"], df["rss"], color=rss_color, linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
-        ax.plot(df["num_x"], df["uss"], color=uss_color, linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
+        ax.plot(df["x"], df["pss"], color=pss_color, linewidth=1.2, label="PSS")
+        ax.plot(df["x"], df["rss"], color=rss_color, linewidth=1.1, linestyle="--", alpha=0.75, label="RSS")
+        ax.plot(df["x"], df["uss"], color=uss_color, linewidth=1.1, linestyle=":", alpha=0.75, label="USS")
 
         # 🟡 ==== 滑动平均 ====
         ax.plot(
-            df["num_x"], df["pss_sliding_avg"],
+            df["x"], df["pss_sliding_avg"],
             color=sld_color, linestyle="--", linewidth=0.8, alpha=0.8, label="Sliding Avg"
         )
 
@@ -160,7 +159,7 @@ class Lumix(object):
 
         # 🟡 ==== 极值点 ====
         ax.scatter(
-            df.loc[df["pss"] == max_val, "num_x"], df.loc[df["pss"] == max_val, "pss"],
+            df.loc[df["pss"] == max_val, "x"], df.loc[df["pss"] == max_val, "pss"],
             s=20, color=max_color, zorder=3, label="Max"
         )
 
