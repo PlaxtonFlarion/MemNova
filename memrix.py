@@ -184,7 +184,7 @@ class Memrix(object):
         # ⛔️ ==== 等待 MEM 数据存储完毕 ====
         if self.background:
             logger.info(f"Awaiting background sync ...")
-            await asyncio.gather(*self.background)
+            await asyncio.gather(*self.background, return_exceptions=True)
 
         # ⛔️ ==== 结束 Perfetto采集 / 队列 / 动画 ====
         for arg in args:
