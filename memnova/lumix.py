@@ -283,21 +283,13 @@ class Lumix(object):
         drag_color = "#FFD39B"
         jank_color = "#F24C4C"
 
-        # 🟢 ==== 主线 / 平均线 / 最高线 ====
+        # 🟢 ==== 主折线 ====
         ax1.plot(timestamps, durations, label="Frame Duration", color=dur_color, linewidth=1.2)
+
+        # 🟢 ==== 平均线 + 最高线 + 阈值线 ====
         ax1.axhline(avg_dur, linestyle=":", linewidth=1.0, color=avg_color, alpha=0.88)
         ax1.axhline(max_dur, linestyle="--", linewidth=1.0, color=max_color, alpha=0.88)
         ax1.axhline(ths_dur, linestyle="--", linewidth=1.0, color=ths_color, alpha=0.88)
-
-        # 🟢 ==== 多帧率基准线 ====
-        fps_marks = {
-            "120 FPS": {"ms": 1000 / 120, "color": "#BBBBBB"},
-            "90 FPS": {"ms": 1000 / 90, "color": "#999999"},
-            "45 FPS": {"ms": 1000 / 45, "color": "#999999"},
-            "30 FPS": {"ms": 1000 / 30, "color": "#BBBBBB"}
-        }
-        for label, style in fps_marks.items():
-            ax1.axhline(style["ms"], linestyle="--", linewidth=0.5, color=style["color"])
 
         # 🟢 ==== 滑动区 / 拖拽区 / 掉帧区 背景区块绘制 ====
         for r in roll_ranges:
@@ -320,17 +312,15 @@ class Lumix(object):
             f"Level: {kwargs['level']}"
         )
 
-        # 🟢 ==== 自定义图例（颜色区块 + 主线 + 60 FPS）====
+        # 🟢 ==== 自定义图例 ====
         legend_elements = [
             Line2D([0], [0], color=dur_color, lw=1.2, label="Frame Duration"),
             Line2D([0], [0], color=avg_color, lw=1.0, linestyle=":", label=f"Avg: {avg_dur:.1f}ms"),
             Line2D([0], [0], color=max_color, lw=1.0, linestyle="--", label=f"Max: {max_dur:.1f}ms"),
             Line2D([0], [0], color=ths_color, lw=1.0, linestyle='--', label="16.67ms / 60 FPS"),
-            Line2D([0], [0], color="#999999", lw=0.5, linestyle='--', label="45 FPS / 90 FPS"),
-            Line2D([0], [0], color="#BBBBBB", lw=0.5, linestyle='--', label="30 FPS / 120 FPS"),
             Patch(facecolor=roll_color, edgecolor="none", label="Scroll Region"),
             Patch(facecolor=drag_color, edgecolor="none", label="Drag Region"),
-            Patch(facecolor=jank_color, edgecolor="none", label="Jank Region"),
+            Patch(facecolor=jank_color, edgecolor="none", label="Jank Region")
         ]
 
         ax1.legend(
