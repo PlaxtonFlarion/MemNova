@@ -187,7 +187,7 @@ class Lumix(object):
             Line2D([0], [0], marker="o", color=max_color, linestyle="None", markersize=7, label="Max")
         ]
 
-        # 🟡 ==== 展示图例（主图例+堆叠区图例） ====
+        # 🟡 ==== 展示图例 ====
         ax.legend(
             handles=stack_handles + line_handles,
             loc="upper right",
