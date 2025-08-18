@@ -276,9 +276,10 @@ class Lumix(object):
 
         # 🟢 ==== 颜色定义 ====
         dur_color = "#585858"
-        avg_color = "#448AFF"
-        max_color = "#FF4081"
-        ths_color = "#FF0000"
+        avg_color = "#8700FF"
+        max_color = "#FF69B4"
+        ths_color = "#1E90FF
+        
         roll_color = "#A2C8E6"
         drag_color = "#FFD39B"
         jank_color = "#F24C4C"
