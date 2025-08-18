@@ -278,7 +278,7 @@ class Lumix(object):
         dur_color = "#585858"
         avg_color = "#8700FF"
         max_color = "#FF69B4"
-        ths_color = "#1E90FF
+        ths_color = "#1E90FF"
         
         roll_color = "#A2C8E6"
         drag_color = "#FFD39B"
