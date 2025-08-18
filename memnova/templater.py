@@ -443,6 +443,7 @@ class Templater(object):
         dur_color = "#A9A9A9"
         avg_color = "#8700FF"
         max_color = "#FF69B4"
+        ths_color = "#1E90FF"
 
         # 🟢 ==== 主折线 ====
         p.line(
@@ -459,15 +460,15 @@ class Templater(object):
         # 🟢 ==== 平均线 + 最高线 + 阈值线 ====
         p.line(
             [x_start, x_close], [y_avg, y_avg],
-            line_color=avg_color, line_dash="dotted", line_width=1, legend_label=f"Avg: {y_avg:.1f}ms"
+            line_color=avg_color, line_dash="dotted", line_width=1.0, legend_label=f"Avg: {y_avg:.1f}ms"
         )
         p.line(
             [x_start, x_close], [y_max, y_max],
-            line_color=max_color, line_dash="dashed", line_width=1, legend_label=f"Max: {y_max:.1f}ms"
+            line_color=max_color, line_dash="dashed", line_width=1.0, legend_label=f"Max: {y_max:.1f}ms"
         )
         p.line(
             [x_start, x_close], [16.67, 16.67],
-            line_color="#1E90FF", line_dash="dashed", line_width=1.5, legend_label="16.67ms / 60 FPS"
+            line_color=ths_color, line_dash="dashed", line_width=1.0, legend_label="16.67ms / 60 FPS"
         )
 
         # 🟢 ==== Quad 绘制背景区间 ====
