@@ -186,7 +186,7 @@ class Memrix(object):
             logger.info(f"Awaiting background sync ...")
             await asyncio.gather(*self.background, return_exceptions=True)
 
-        # ⛔️ ==== 结束 Perfetto采集 / 队列 / 动画 ====
+        # ⛔️ ==== 结束 采集 / 队列 / 动画 ====
         for arg in args:
             if isinstance(arg, asyncio.Task):
                 try:
